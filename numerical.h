@@ -158,6 +158,10 @@ int atomicGenSystem(const float k, const triElem *elem, const int numElem,
 int qrSolver(const cuFloatComplex *A, const int mA, const int nA, const int ldA, 
         cuFloatComplex *B, const int nB, const int ldB);
 
+int bemSolver(const float k, const triElem *elem, const int numElem, 
+        const cartCoord *nod, const int numNod, const cartCoord *chief, const int numCHIEF, 
+        const cartCoord *src, const int numSrc, cuFloatComplex *B, const int ldb);
+
 
 
 #endif /* NUMERICAL_H */

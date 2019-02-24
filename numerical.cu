@@ -853,3 +853,131 @@ int qrSolver(const cuFloatComplex *A, const int mA, const int nA, const int ldA,
     return EXIT_SUCCESS;
 }
 
+int bemSolver(const float k, const triElem *elem, const int numElem, 
+        const cartCoord *nod, const int numNod, const cartCoord *chief, const int numCHIEF, 
+        const cartCoord *src, const int numSrc, cuFloatComplex *B, const int ldb)
+{
+    int i, j;
+    cudaEvent_t start, stop;
+    cudaEventCreate(&start);
+    cudaEventCreate(&stop);
+    
+    //Move elements to GPU
+    triElem *elem_d;
+    CUDA_CALL(cudaMalloc(&elem_d,numElem*sizeof(triElem)));
+    CUDA_CALL(cudaMemcpy(elem_d,elem,numElem*sizeof(triElem),cudaMemcpyHostToDevice));
+    
+    //Move points to GPU
+    cartCoord *pt_h = (cartCoord*)malloc((numNod+numCHIEF)*sizeof(cartCoord));
+    for(i=0;i<numNod;i++) {
+        pt_h[i] = nod[i];
+    }
+    for(i=0;i<numCHIEF;i++) {
+        pt_h[numNod+i] = chief[i];
+    }
+    
+    cartCoord *pt_d;
+    CUDA_CALL(cudaMalloc(&pt_d,(numNod+numCHIEF)*sizeof(cartCoord)));
+    CUDA_CALL(cudaMemcpy(pt_d,pt_h,(numNod+numCHIEF)*sizeof(cartCoord),cudaMemcpyHostToDevice));
+    
+    //Generate the system
+    cuFloatComplex *A = (cuFloatComplex*)malloc((numNod+numCHIEF)*numNod*sizeof(cuFloatComplex));
+    for(i=0;i<numNod+numCHIEF;i++) {
+        for(j=0;j<numNod;j++) {
+            if(i==j) {
+                A[IDXC0(i,j,numNod+numCHIEF)] = make_cuFloatComplex(1,0);
+            } else {
+                A[IDXC0(i,j,numNod+numCHIEF)] = make_cuFloatComplex(0,0);
+            }
+        }
+    }
+    
+    //Initialization of B
+    for(i=0;i<numNod+numCHIEF;i++) {
+        for(j=0;j<numSrc;j++) {
+            B[IDXC0(i,j,ldb)] = ptSrc(k,STRENGTH,src[j],pt_h[i]);
+        }
+    }
+    
+    cuFloatComplex *A_d, *B_d;
+    CUDA_CALL(cudaMalloc(&A_d,(numNod+numCHIEF)*numNod*sizeof(cuFloatComplex)));
+    CUDA_CALL(cudaMemcpy(A_d,A,(numNod+numCHIEF)*numNod*sizeof(cuFloatComplex),cudaMemcpyHostToDevice));
+    
+    CUDA_CALL(cudaMalloc(&B_d,(numNod+numCHIEF)*numSrc*sizeof(cuFloatComplex)));
+    CUDA_CALL(cudaMemcpy(B_d,B,(numNod+numCHIEF)*numSrc*sizeof(cuFloatComplex),cudaMemcpyHostToDevice));
+    
+    int xNumBlocks, xWidth = 16, yNumBlocks, yWidth = 16;
+    xNumBlocks = (numNod+numCHIEF+xWidth-1)/xWidth;
+    yNumBlocks = (numElem+yWidth-1)/yWidth;
+    dim3 gridLayout, blockLayout;
+    gridLayout.x = xNumBlocks;
+    gridLayout.y = yNumBlocks;
+    
+    blockLayout.x = xWidth;
+    blockLayout.y = yWidth;
+    
+    
+    cudaEventRecord(start);
+    atomicPtsElems_nsgl<<<gridLayout,blockLayout>>>(k,pt_d,numNod,0,numNod+numCHIEF-1,
+            elem_d,numElem,A_d,numNod+numCHIEF,B_d,numSrc,ldb);
+    atomicPtsElems_sgl<<<yNumBlocks,yWidth>>>(k,pt_d,elem_d,numElem,A_d,numNod+numCHIEF,
+            B_d,numSrc,ldb);
+    
+    
+    //Solving the system
+    cusolverDnHandle_t cusolverH = NULL;
+    CUSOLVER_CALL(cusolverDnCreate(&cusolverH));
+    
+    //A = QR
+    int lwork;
+    CUSOLVER_CALL(cusolverDnCgeqrf_bufferSize(cusolverH,numNod+numCHIEF,numNod,A_d
+            ,numNod+numCHIEF,&lwork));
+    
+    cuFloatComplex *workspace_d;
+    CUDA_CALL(cudaMalloc(&workspace_d,lwork*sizeof(cuFloatComplex)));
+    cuFloatComplex *tau_d;
+    CUDA_CALL(cudaMalloc(&tau_d,(numNod+numCHIEF)*sizeof(cuFloatComplex)));
+    int *deviceInfo_d, deviceInfo;
+    CUDA_CALL(cudaMalloc(&deviceInfo_d,sizeof(int)));
+    
+    CUDA_CALL(cudaEventRecord(start));
+    CUSOLVER_CALL(cusolverDnCgeqrf(cusolverH,numNod+numCHIEF,numNod,A_d,numNod+numCHIEF,
+            tau_d,workspace_d,lwork,deviceInfo_d));
+    CUDA_CALL(cudaMemcpy(&deviceInfo,deviceInfo_d,sizeof(int),cudaMemcpyDeviceToHost));
+    
+    //B = (Q^H)*B
+    CUSOLVER_CALL(cusolverDnCunmqr(cusolverH,CUBLAS_SIDE_LEFT,CUBLAS_OP_C,numNod+numCHIEF,numSrc,
+            numNod,A_d,numNod+numCHIEF,tau_d,B_d,ldb,workspace_d,lwork,deviceInfo_d));
+    CUDA_CALL(cudaMemcpy(&deviceInfo,deviceInfo_d,sizeof(int),cudaMemcpyDeviceToHost));
+    
+    //Solve Rx = B
+    cuFloatComplex alpha = make_cuFloatComplex(1,0);
+    cublasHandle_t cublasH;
+    CUBLAS_CALL(cublasCreate_v2(&cublasH));
+    CUBLAS_CALL(cublasCtrsm_v2(cublasH,CUBLAS_SIDE_LEFT,CUBLAS_FILL_MODE_UPPER,
+            CUBLAS_OP_N,CUBLAS_DIAG_NON_UNIT,numNod,numSrc,&alpha,A_d,numNod+numCHIEF,B_d,ldb));
+    CUDA_CALL(cudaEventRecord(stop));
+    
+    CUDA_CALL(cudaMemcpy(B,B_d,ldb*numSrc*sizeof(cuFloatComplex),cudaMemcpyDeviceToHost));
+    CUDA_CALL(cudaEventSynchronize(stop));
+    
+    float milliseconds = 0;
+    CUDA_CALL(cudaEventElapsedTime(&milliseconds,start,stop));
+    printf("Elapsed system solving time: %f milliseconds.\n",milliseconds);
+    
+    //release memory
+    CUDA_CALL(cudaEventDestroy(start));
+    CUDA_CALL(cudaEventDestroy(stop));
+    CUDA_CALL(cudaFree(A_d));
+    CUDA_CALL(cudaFree(B_d));
+    CUDA_CALL(cudaFree(tau_d));
+    CUDA_CALL(cudaFree(workspace_d));
+    CUDA_CALL(cudaFree(deviceInfo_d));
+    CUBLAS_CALL(cublasDestroy_v2(cublasH));
+    CUSOLVER_CALL(cusolverDnDestroy(cusolverH));
+    CUDA_CALL(cudaFree(elem_d));
+    CUDA_CALL(cudaFree(pt_d));
+    free(A);
+    return EXIT_SUCCESS;
+}
+
