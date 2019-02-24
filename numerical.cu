@@ -205,7 +205,7 @@ bool inBdry(const bool *flag, const int numFlag) {
 int genCHIEF(const cartCoord *pt, const int numPt, const triElem *elem, const int numElem, 
         cartCoord *pCHIEF, const int numCHIEF) {
     int i, cnt;
-    float threshold_inner = 0.0001;
+    float threshold_inner = 0.0000001;
     float *dist_h = (float*)malloc(numPt*sizeof(float));
     float minDist; //minimum distance between the chief point to all surface nodes
     float *dist_d;
@@ -767,17 +767,19 @@ int atomicGenSystem(const float k, const triElem *elem, const int numElem,
     cudaEventRecord(start);
     atomicPtsElems_nsgl<<<gridLayout,blockLayout>>>(k,pt_d,numNod,0,numNod+numCHIEF-1,
             elem_d,numElem,A_d,lda,B_d,numSrc,ldb);
-    printf("k = %f\n",k);
-    CUDA_CALL(cudaMemcpy(A,A_d,(numNod+numCHIEF)*numNod*sizeof(cuFloatComplex),cudaMemcpyDeviceToHost));
+    
+    //CUDA_CALL(cudaMemcpy(A,A_d,(numNod+numCHIEF)*numNod*sizeof(cuFloatComplex),cudaMemcpyDeviceToHost));
     //printCuFloatComplexMat(A,numNod+numCHIEF,numNod,numNod+numCHIEF);
     atomicPtsElems_sgl<<<yNumBlocks,yWidth>>>(k,pt_d,elem_d,numElem,A_d,lda,B_d,numSrc,ldb);
     cudaEventRecord(stop);
-    CUDA_CALL(cudaMemcpy(A,A_d,(numNod+numCHIEF)*numNod*sizeof(cuFloatComplex),cudaMemcpyDeviceToHost));
-    CUDA_CALL(cudaMemcpy(B,B_d,(numNod+numCHIEF)*numSrc*sizeof(cuFloatComplex),cudaMemcpyDeviceToHost));
     cudaEventSynchronize(stop);
     float milliseconds = 0;
     cudaEventElapsedTime(&milliseconds,start,stop);
     printf("Elapsed system generation time: %f milliseconds.\n",milliseconds);
+    CUDA_CALL(cudaMemcpy(A,A_d,(numNod+numCHIEF)*numNod*sizeof(cuFloatComplex),cudaMemcpyDeviceToHost));
+    CUDA_CALL(cudaMemcpy(B,B_d,(numNod+numCHIEF)*numSrc*sizeof(cuFloatComplex),cudaMemcpyDeviceToHost));
+    
+    
     CUDA_CALL(cudaFree(A_d));
     CUDA_CALL(cudaFree(B_d));
     CUDA_CALL(cudaFree(elem_d));

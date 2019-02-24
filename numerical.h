@@ -36,7 +36,7 @@
 #endif
 
 #ifndef INTORDER
-#define INTORDER 6
+#define INTORDER 3
 #endif
 
 #ifndef NUMCHIEF
@@ -121,7 +121,7 @@ while(0)
 #endif
 
 #ifndef EPS
-#define EPS 0.0001
+#define EPS 0.0000001
 #endif
 
 int genGaussParams(const int n, float *pt, float *wgt);
