@@ -110,45 +110,47 @@ __host__ __device__ cartCoord scalarProd(const float lambda, const cartCoord v)
 __host__ __device__ bool ray_intersect_triangle(const cartCoord O, const cartCoord dir, 
         const cartCoord nod[3])
 {
-	/*vert0 is chosen as reference point*/
-	cartCoord E1, E2;
-        E1 = cartCoordSub(nod[1],nod[0]);
-        E2 = cartCoordSub(nod[2],nod[0]);
-	/*cross product of dir and v0 to v1*/
-	cartCoord P = crossProd(dir,E2);
-	float det = dotProd(P,E1);
-	if (abs(det)<EPS) {
-            return false;
-	}
-	/*Computation of parameter u*/
-	cartCoord T = cartCoordSub(O,nod[0]);
-	float u = 1.0f/det*dotProd(P,T);
-	if (u < 0 || u>1) {
-            return false;
-	}
-	/*Computation of parameter v*/
-	cartCoord Q = crossProd(T,E1);
-	float v = 1.0f/det*dotProd(Q,dir);
-	if (v<0 || u+v>1) {
-            return false;
-	}
-	/*Computation of parameter t*/
-	float t = 1.0f/det*dotProd(Q,E2);
-	if (t < EPS) {
-            return false;
-	}
-	return true;
+    /*vert0 is chosen as reference point*/
+    cartCoord E1, E2;
+    E1 = cartCoordSub(nod[1],nod[0]);
+    E2 = cartCoordSub(nod[2],nod[0]);
+    /*cross product of dir and v0 to v1*/
+    cartCoord P = crossProd(dir,E2);
+    float det = dotProd(P,E1);
+    if(abs(det)<EPS) {
+        return false;
+    }
+    /*Computation of parameter u*/
+    cartCoord T = cartCoordSub(O,nod[0]);
+    float u = 1.0f/det*dotProd(P,T);
+    if(u<0 || u>1) {
+        return false;
+    }
+    /*Computation of parameter v*/
+    cartCoord Q = crossProd(T,E1);
+    float v = 1.0f/det*dotProd(Q,dir);
+    if(v<0 || u+v>1) {
+        return false;
+    }
+    /*Computation of parameter t*/
+    float t = 1.0f/det*dotProd(Q,E2);
+    if(t<EPS) {
+        return false;
+    }
+    return true;
 }
 
 __global__ void rayTrisInt(const cartCoord pt_s, const cartCoord dir, const cartCoord *nod, 
         const triElem *elem, const int numElem, bool *flag)
 {
-    // decides if a point pnt is in a closed surface elems
+    // decides if a point pnt is in a closed surface elem
     int idx = blockDim.x*blockIdx.x+threadIdx.x;
     if(idx<numElem) {
         cartCoord pt[3];
         for(int i=0;i<3;i++) {
-            pt[i] = nod[elem[idx].nodes[i]];
+            pt[i].coords[0] = nod[elem[idx].nodes[i]].coords[0];
+            pt[i].coords[1] = nod[elem[idx].nodes[i]].coords[1];
+            pt[i].coords[2] = nod[elem[idx].nodes[i]].coords[2];
         }
         flag[idx] = ray_intersect_triangle(pt_s,dir,pt);
     }
@@ -240,10 +242,11 @@ int genCHIEF(const cartCoord *pt, const int numPt, const triElem *elem, const in
             chief.coords[2] = zrand;
             printCartCoord(&chief,1);
             gridWidth = (numElem+blockWidth-1)/blockWidth;
-            rayTrisInt<<<gridWidth,blockWidth>>>(chief,dir,pt,elem,numElem,flag_d);
+            rayTrisInt<<<gridWidth,blockWidth>>>(chief,dir,pt_d,elem_d,numElem,flag_d);
             gridWidth = (numPt+blockWidth-1)/blockWidth;
-            distPntPnts<<<gridWidth,blockWidth>>>(chief,pt,numPt,dist_d);
+            distPntPnts<<<gridWidth,blockWidth>>>(chief,pt_d,numPt,dist_d);
             CUDA_CALL(cudaMemcpy(dist_h,dist_d,numPt*sizeof(float),cudaMemcpyDeviceToHost));
+            //printFltMat(dist_h,1,numPt,1);
             CUDA_CALL(cudaMemcpy(flag_h,flag_d,numElem*sizeof(bool),cudaMemcpyDeviceToHost));
             minDist = dist_h[0];
             for(i=1;i<numPt;i++) {
@@ -252,11 +255,9 @@ int genCHIEF(const cartCoord *pt, const int numPt, const triElem *elem, const in
                 }
             }
             //printf("The minimum distance is %f, threshold is %f\n",dist_min,threshold_inner);
-            //printf("inSurf: %d\n", inSurf(flags_h, numElems));
+            //printf("inSurf: %d\n", inSurf(flags_h, numElem));
         } while (!inBdry(flag_h,numElem) || minDist<threshold_inner);
-        for(int j=0;j<3;j++) {
-            pCHIEF[cnt].coords[i] = chief.coords[i];
-        }
+        pCHIEF[cnt] = chief;
         cnt++;
     }
     CURAND_CALL(curandDestroyGenerator(gen));
@@ -303,17 +304,16 @@ __device__ void g_h_c_nsgl(const float k, const cartCoord x, const cartCoord p[3
         p[0].coords[0]-p[2].coords[0],p[0].coords[1]-p[2].coords[1],p[0].coords[2]-p[2].coords[2]
     },
     {
-        p[1].coords[0]-p[2].coords[0],p[1].coords[1]-p[2].coords[1],p[1].coords[2] - p[2].coords[2]
-    },
-            &normal,&vertCrossProd);
+        p[1].coords[0]-p[2].coords[0],p[1].coords[1]-p[2].coords[1],p[1].coords[2]-p[2].coords[2]
+    },&normal,&vertCrossProd);
     vertCrossProd = vertCrossProd*0.25f;
     //printf("vert: %f\n",vertCrossProd);
     
     //printf("normal=(%f,%f,%f)\n",normal.coords[0],normal.coords[1],normal.coords[2]);
     const float prodRhoOmega = density*omega;
     const float fourPI = 4.0f*PI;
-    //printf("density*omega = %f\n",prodRhoOmega);
-    //Compute integrals for g, h and c
+    const float recipFourPI = 1.0/fourPI;
+    
     for(int n=0;n<INTORDER;n++) {
         eta2 = INTPT[n];
         wn = INTWGT[n];
@@ -341,7 +341,7 @@ __device__ void g_h_c_nsgl(const float k, const cartCoord x, const cartCoord p[3
             prpn2 = ((y.coords[0]-x.coords[0])*normal.coords[0]+(y.coords[1]-x.coords[1])*normal.coords[1]
                     +(y.coords[2]-x.coords[2])*normal.coords[2])/radius;
             //printf("prpn2=%f\n",prpn2);
-            pPsiLpn2 = -1.0f/fourPI/(radius*radius)*prpn2;
+            pPsiLpn2 = -recipFourPI/(radius*radius)*prpn2;
             //printf("%f\n",pPsiLpn2);
             Psi = make_cuFloatComplex(__cosf(-k*radius)/(fourPI*radius),__sinf(-k*radius)/(fourPI*radius));
             pPsipn2 = cuCmulf(Psi,make_cuFloatComplex(-1.0f/radius,-k));
@@ -365,3 +365,401 @@ __device__ void g_h_c_nsgl(const float k, const cartCoord x, const cartCoord p[3
     gCoeff[1] = make_cuFloatComplex(-prodRhoOmega*cuCimagf(gCoeff[1]),prodRhoOmega*cuCrealf(gCoeff[1]));
     gCoeff[2] = make_cuFloatComplex(-prodRhoOmega*cuCimagf(gCoeff[2]),prodRhoOmega*cuCrealf(gCoeff[2]));
 }
+
+__device__ void g_h_c_sgl(const float k, const cartCoord x_sgl1, const cartCoord x_sgl2, 
+        const cartCoord x_sgl3, const cartCoord p[3], 
+        cuFloatComplex gCoeff_sgl1[3], cuFloatComplex hCoeff_sgl1[3], float *cCoeff_sgl1,
+        cuFloatComplex gCoeff_sgl2[3], cuFloatComplex hCoeff_sgl2[3], float *cCoeff_sgl2,
+        cuFloatComplex gCoeff_sgl3[3], cuFloatComplex hCoeff_sgl3[3], float *cCoeff_sgl3) 
+{
+    //Initalization of g, h and c
+    for(int i=0;i<3;i++) {
+        gCoeff_sgl1[i] = make_cuFloatComplex(0,0);
+        hCoeff_sgl1[i] = make_cuFloatComplex(0,0);
+        gCoeff_sgl2[i] = make_cuFloatComplex(0,0);
+        hCoeff_sgl2[i] = make_cuFloatComplex(0,0);
+        gCoeff_sgl3[i] = make_cuFloatComplex(0,0);
+        hCoeff_sgl3[i] = make_cuFloatComplex(0,0);
+    }
+    *cCoeff_sgl1 = 0;
+    *cCoeff_sgl2 = 0;
+    *cCoeff_sgl3 = 0;
+    
+    //Local variables
+    float eta1, eta2, wn, wm, xi1_sgl1, xi2_sgl1, xi3_sgl1, xi1_sgl2, xi2_sgl2, xi3_sgl2,
+            xi1_sgl3, xi2_sgl3, xi3_sgl3, rho, theta, vertCrossProd, temp, 
+            temp_gh[3], omega = k*speed, pPsiLpn2, radius, prpn2;
+    cartCoord y_sgl1, y_sgl2, y_sgl3, normal, rVec;
+    cuFloatComplex Psi, pPsipn2;
+    crossNorm(
+    {
+        p[0].coords[0]-p[2].coords[0],p[0].coords[1]-p[2].coords[1],p[0].coords[2]-p[2].coords[2]
+    },
+    {
+        p[1].coords[0]-p[2].coords[0],p[1].coords[1]-p[2].coords[1],p[1].coords[2]-p[2].coords[2]
+    },&normal,&vertCrossProd);
+    vertCrossProd = vertCrossProd*0.25f;
+    //printf("vert: %f\n",vertCrossProd);
+    
+    //printf("normal=(%f,%f,%f)\n",normal.coords[0],normal.coords[1],normal.coords[2]);
+    const float prodRhoOmega = density*omega;
+    const float fourPI = 4.0f*PI;
+    const float recipFourPI = 1.0/fourPI;
+    //printf("density*omega = %f\n",prodRhoOmega);
+    //Compute integrals for g, h and c
+    for(int n=0;n<INTORDER;n++) {
+        eta2 = INTPT[n];
+        wn = INTWGT[n];
+        theta = 0.5f+0.5f*eta2;
+        for(int m=0;m<INTORDER;m++) {
+            eta1 = INTPT[m];
+            wm = INTWGT[m];
+            rho = 0.5f+0.5f*eta1;
+            temp = wn*wm*rho*vertCrossProd;
+            
+            xi1_sgl3 = rho*(1-theta);
+            xi2_sgl3 = rho-xi1_sgl3; //rho*theta
+            xi3_sgl3 = 1-xi1_sgl3-xi2_sgl3;
+            
+            xi1_sgl1 = 1-rho;
+            xi2_sgl1 = rho-xi2_sgl3; //rho-rho*theta
+            xi3_sgl1 = 1-xi1_sgl1-xi2_sgl1;
+            
+            xi1_sgl2 = xi2_sgl3; //rho*theta
+            xi2_sgl2 = 1-rho;
+            xi3_sgl2 = 1-xi1_sgl2-xi2_sgl2;
+            
+            
+            
+            //printf("xi1 = %f, xi2 = %f\n",xi1,xi2);
+            y_sgl1= {
+                p[0].coords[0]*xi1_sgl1+p[1].coords[0]*xi2_sgl1+p[2].coords[0]*xi3_sgl1, 
+                p[0].coords[1]*xi1_sgl1+p[1].coords[1]*xi2_sgl1+p[2].coords[1]*xi3_sgl1, 
+                p[0].coords[2]*xi1_sgl1+p[1].coords[2]*xi2_sgl1+p[2].coords[2]*xi3_sgl1
+            };
+            y_sgl2= {
+                p[0].coords[0]*xi1_sgl2+p[1].coords[0]*xi2_sgl2+p[2].coords[0]*xi3_sgl2, 
+                p[0].coords[1]*xi1_sgl2+p[1].coords[1]*xi2_sgl2+p[2].coords[1]*xi3_sgl2, 
+                p[0].coords[2]*xi1_sgl2+p[1].coords[2]*xi2_sgl2+p[2].coords[2]*xi3_sgl2
+            };
+            y_sgl3= {
+                p[0].coords[0]*xi1_sgl3+p[1].coords[0]*xi2_sgl3+p[2].coords[0]*xi3_sgl3, 
+                p[0].coords[1]*xi1_sgl3+p[1].coords[1]*xi2_sgl3+p[2].coords[1]*xi3_sgl3, 
+                p[0].coords[2]*xi1_sgl3+p[1].coords[2]*xi2_sgl3+p[2].coords[2]*xi3_sgl3
+            };
+            
+            //update coefficients with singularity on node 1
+            rVec = cartCoordSub(y_sgl1,x_sgl1);
+            radius = sqrtf(rVec.coords[0]*rVec.coords[0]+rVec.coords[1]*rVec.coords[1]+rVec.coords[2]*rVec.coords[2]);
+            //printf("radius = %f\n",radius);
+            prpn2 = ((y_sgl1.coords[0]-x_sgl1.coords[0])*normal.coords[0]+(y_sgl1.coords[1]-x_sgl1.coords[1])*normal.coords[1]
+                    +(y_sgl1.coords[2]-x_sgl1.coords[2])*normal.coords[2])/radius;
+            //printf("prpn2=%f\n",prpn2);
+            pPsiLpn2 = -recipFourPI/(radius*radius)*prpn2;
+            //printf("%f\n",pPsiLpn2);
+            Psi = make_cuFloatComplex(__cosf(-k*radius)/(fourPI*radius),__sinf(-k*radius)/(fourPI*radius));
+            pPsipn2 = cuCmulf(Psi,make_cuFloatComplex(-1.0f/radius,-k));
+            pPsipn2 = make_cuFloatComplex(prpn2*cuCrealf(pPsipn2),prpn2*cuCimagf(pPsipn2));
+            temp_gh[0] = temp*xi1_sgl1;
+            temp_gh[1] = temp*xi2_sgl1;
+            temp_gh[2] = temp*xi3_sgl1;
+            
+            gCoeff_sgl1[0] = cuCaddf(gCoeff_sgl1[0],make_cuFloatComplex(temp_gh[0]*cuCrealf(Psi),temp_gh[0]*cuCimagf(Psi)));
+            gCoeff_sgl1[1] = cuCaddf(gCoeff_sgl1[1],make_cuFloatComplex(temp_gh[1]*cuCrealf(Psi),temp_gh[1]*cuCimagf(Psi)));
+            gCoeff_sgl1[2] = cuCaddf(gCoeff_sgl1[2],make_cuFloatComplex(temp_gh[2]*cuCrealf(Psi),temp_gh[2]*cuCimagf(Psi)));
+            
+            hCoeff_sgl1[0] = cuCaddf(hCoeff_sgl1[0],make_cuFloatComplex(temp_gh[0]*cuCrealf(pPsipn2),temp_gh[0]*cuCimagf(pPsipn2)));
+            hCoeff_sgl1[1] = cuCaddf(hCoeff_sgl1[1],make_cuFloatComplex(temp_gh[1]*cuCrealf(pPsipn2),temp_gh[1]*cuCimagf(pPsipn2)));
+            hCoeff_sgl1[2] = cuCaddf(hCoeff_sgl1[2],make_cuFloatComplex(temp_gh[2]*cuCrealf(pPsipn2),temp_gh[2]*cuCimagf(pPsipn2)));
+            
+            *cCoeff_sgl1 += temp*pPsiLpn2;
+            
+            //update coefficients with singularity on node 2
+            rVec = cartCoordSub(y_sgl2,x_sgl2);
+            radius = sqrtf(rVec.coords[0]*rVec.coords[0]+rVec.coords[1]*rVec.coords[1]+rVec.coords[2]*rVec.coords[2]);
+            //printf("radius = %f\n",radius);
+            prpn2 = ((y_sgl1.coords[0]-x_sgl1.coords[0])*normal.coords[0]+(y_sgl1.coords[1]-x_sgl1.coords[1])*normal.coords[1]
+                    +(y_sgl1.coords[2]-x_sgl1.coords[2])*normal.coords[2])/radius;
+            //printf("prpn2=%f\n",prpn2);
+            pPsiLpn2 = -recipFourPI/(radius*radius)*prpn2;
+            //printf("%f\n",pPsiLpn2);
+            Psi = make_cuFloatComplex(__cosf(-k*radius)/(fourPI*radius),__sinf(-k*radius)/(fourPI*radius));
+            pPsipn2 = cuCmulf(Psi,make_cuFloatComplex(-1.0f/radius,-k));
+            pPsipn2 = make_cuFloatComplex(prpn2*cuCrealf(pPsipn2),prpn2*cuCimagf(pPsipn2));
+            temp_gh[0] = temp*xi1_sgl2;
+            temp_gh[1] = temp*xi2_sgl2;
+            temp_gh[2] = temp*xi3_sgl2;
+            
+            gCoeff_sgl2[0] = cuCaddf(gCoeff_sgl2[0],make_cuFloatComplex(temp_gh[0]*cuCrealf(Psi),temp_gh[0]*cuCimagf(Psi)));
+            gCoeff_sgl2[1] = cuCaddf(gCoeff_sgl2[1],make_cuFloatComplex(temp_gh[1]*cuCrealf(Psi),temp_gh[1]*cuCimagf(Psi)));
+            gCoeff_sgl2[2] = cuCaddf(gCoeff_sgl2[2],make_cuFloatComplex(temp_gh[2]*cuCrealf(Psi),temp_gh[2]*cuCimagf(Psi)));
+            
+            hCoeff_sgl2[0] = cuCaddf(hCoeff_sgl2[0],make_cuFloatComplex(temp_gh[0]*cuCrealf(pPsipn2),temp_gh[0]*cuCimagf(pPsipn2)));
+            hCoeff_sgl2[1] = cuCaddf(hCoeff_sgl2[1],make_cuFloatComplex(temp_gh[1]*cuCrealf(pPsipn2),temp_gh[1]*cuCimagf(pPsipn2)));
+            hCoeff_sgl2[2] = cuCaddf(hCoeff_sgl2[2],make_cuFloatComplex(temp_gh[2]*cuCrealf(pPsipn2),temp_gh[2]*cuCimagf(pPsipn2)));
+            
+            *cCoeff_sgl2 += temp*pPsiLpn2;
+            
+            //update coefficients with singularity on node 3
+            rVec = cartCoordSub(y_sgl3,x_sgl3);
+            radius = sqrtf(rVec.coords[0]*rVec.coords[0]+rVec.coords[1]*rVec.coords[1]+rVec.coords[2]*rVec.coords[2]);
+            //printf("radius = %f\n",radius);
+            prpn2 = ((y_sgl1.coords[0]-x_sgl1.coords[0])*normal.coords[0]+(y_sgl1.coords[1]-x_sgl1.coords[1])*normal.coords[1]
+                    +(y_sgl1.coords[2]-x_sgl1.coords[2])*normal.coords[2])/radius;
+            //printf("prpn2=%f\n",prpn2);
+            pPsiLpn2 = -recipFourPI/(radius*radius)*prpn2;
+            //printf("%f\n",pPsiLpn2);
+            Psi = make_cuFloatComplex(__cosf(-k*radius)/(fourPI*radius),__sinf(-k*radius)/(fourPI*radius));
+            pPsipn2 = cuCmulf(Psi,make_cuFloatComplex(-1.0f/radius,-k));
+            pPsipn2 = make_cuFloatComplex(prpn2*cuCrealf(pPsipn2),prpn2*cuCimagf(pPsipn2));
+            temp_gh[0] = temp*xi1_sgl3;
+            temp_gh[1] = temp*xi2_sgl3;
+            temp_gh[2] = temp*xi3_sgl3;
+            
+            gCoeff_sgl3[0] = cuCaddf(gCoeff_sgl3[0],make_cuFloatComplex(temp_gh[0]*cuCrealf(Psi),temp_gh[0]*cuCimagf(Psi)));
+            gCoeff_sgl3[1] = cuCaddf(gCoeff_sgl3[1],make_cuFloatComplex(temp_gh[1]*cuCrealf(Psi),temp_gh[1]*cuCimagf(Psi)));
+            gCoeff_sgl3[2] = cuCaddf(gCoeff_sgl3[2],make_cuFloatComplex(temp_gh[2]*cuCrealf(Psi),temp_gh[2]*cuCimagf(Psi)));
+            
+            hCoeff_sgl3[0] = cuCaddf(hCoeff_sgl3[0],make_cuFloatComplex(temp_gh[0]*cuCrealf(pPsipn2),temp_gh[0]*cuCimagf(pPsipn2)));
+            hCoeff_sgl3[1] = cuCaddf(hCoeff_sgl3[1],make_cuFloatComplex(temp_gh[1]*cuCrealf(pPsipn2),temp_gh[1]*cuCimagf(pPsipn2)));
+            hCoeff_sgl3[2] = cuCaddf(hCoeff_sgl3[2],make_cuFloatComplex(temp_gh[2]*cuCrealf(pPsipn2),temp_gh[2]*cuCimagf(pPsipn2)));
+            
+            *cCoeff_sgl3 += temp*pPsiLpn2;
+        }
+    }
+    gCoeff_sgl1[0] = make_cuFloatComplex(-prodRhoOmega*cuCimagf(gCoeff_sgl1[0]),prodRhoOmega*cuCrealf(gCoeff_sgl1[0]));
+    gCoeff_sgl1[1] = make_cuFloatComplex(-prodRhoOmega*cuCimagf(gCoeff_sgl1[1]),prodRhoOmega*cuCrealf(gCoeff_sgl1[1]));
+    gCoeff_sgl1[2] = make_cuFloatComplex(-prodRhoOmega*cuCimagf(gCoeff_sgl1[2]),prodRhoOmega*cuCrealf(gCoeff_sgl1[2]));
+    
+    gCoeff_sgl2[0] = make_cuFloatComplex(-prodRhoOmega*cuCimagf(gCoeff_sgl2[0]),prodRhoOmega*cuCrealf(gCoeff_sgl2[0]));
+    gCoeff_sgl2[1] = make_cuFloatComplex(-prodRhoOmega*cuCimagf(gCoeff_sgl2[1]),prodRhoOmega*cuCrealf(gCoeff_sgl2[1]));
+    gCoeff_sgl2[2] = make_cuFloatComplex(-prodRhoOmega*cuCimagf(gCoeff_sgl2[2]),prodRhoOmega*cuCrealf(gCoeff_sgl2[2]));
+    
+    gCoeff_sgl3[0] = make_cuFloatComplex(-prodRhoOmega*cuCimagf(gCoeff_sgl3[0]),prodRhoOmega*cuCrealf(gCoeff_sgl3[0]));
+    gCoeff_sgl3[1] = make_cuFloatComplex(-prodRhoOmega*cuCimagf(gCoeff_sgl3[1]),prodRhoOmega*cuCrealf(gCoeff_sgl3[1]));
+    gCoeff_sgl3[2] = make_cuFloatComplex(-prodRhoOmega*cuCimagf(gCoeff_sgl3[2]),prodRhoOmega*cuCrealf(gCoeff_sgl3[2]));
+}
+
+__host__ __device__ cuFloatComplex ptSrc(const float k, const float amp, const cartCoord srcLoc, const cartCoord evalLoc)
+{
+    float fourPI = 4.0f*PI;
+    cartCoord rVec = cartCoordSub(evalLoc,srcLoc);
+    float radius = sqrtf(rVec.coords[0]*rVec.coords[0]+rVec.coords[1]*rVec.coords[1]+rVec.coords[2]*rVec.coords[2]);
+    return make_cuFloatComplex(amp*cosf(-k*radius)/(fourPI*radius),amp*sinf(-k*radius)/(fourPI*radius));
+}
+
+__global__ void atomicPtsElems_nsgl(const float k, const cartCoord *pt, const int numNod, 
+        const int idxPntStart, const int idxPntEnd, const triElem *elem, const int numElem, 
+        cuFloatComplex *A, const int lda, cuFloatComplex *B, const int numSrcs, const int ldb) {
+    int xIdx = blockIdx.x*blockDim.x+threadIdx.x; //Index for points
+    int yIdx = blockIdx.y*blockDim.y+threadIdx.y; //Index for elements
+    //The thread with indices xIdx and yIdx process the point xIdx and elem yIdx
+    if(xIdx>=idxPntStart && xIdx<=idxPntEnd && yIdx<numElem && xIdx!=elem[yIdx].nodes[0] 
+            && xIdx!=elem[yIdx].nodes[1] && xIdx!=elem[yIdx].nodes[2]) {
+        int i, j;
+        cuFloatComplex hCoeff[3], gCoeff[3], bc, pCoeffs[3], temp;
+        float cCoeff;
+        cartCoord triNod[3];
+        triNod[0] = pt[elem[yIdx].nodes[0]];
+        triNod[1] = pt[elem[yIdx].nodes[1]];
+        triNod[2] = pt[elem[yIdx].nodes[2]];
+        g_h_c_nsgl(k,pt[xIdx],triNod,gCoeff,hCoeff,&cCoeff);
+        
+        //Update the A matrix
+        bc = cuCdivf(elem[yIdx].bc[0],elem[yIdx].bc[1]);
+        for(i=0;i<3;i++) {
+            pCoeffs[i] = cuCsubf(hCoeff[i],cuCmulf(bc,gCoeff[i]));
+        }
+        
+        for(i=0;i<3;i++) {
+            //atomicFloatComplexAdd(&A[IDXC0(xIdx,elem[yIdx].nodes[i],lda)],pCoeffs[i]);
+            atomicAdd(&A[IDXC0(xIdx,elem[yIdx].nodes[i],lda)].x,cuCrealf(pCoeffs[i]));
+            atomicAdd(&A[IDXC0(xIdx,elem[yIdx].nodes[i],lda)].y,cuCimagf(pCoeffs[i]));
+        }
+        
+        //Update from C coefficients
+        if(xIdx<numNod) {
+            //atomicFloatComplexSub(&A[IDXC0(xIdx,xIdx,lda)],make_cuFloatComplex(cCoeff,0));
+            atomicAdd(&A[IDXC0(xIdx,xIdx,lda)].x,-cCoeff);
+        }
+        
+        //Update the B matrix
+        bc = cuCdivf(elem[yIdx].bc[2],elem[yIdx].bc[1]);
+        //printf("bc: \n");
+        //printComplexMatrix(&bc,1,1,1);
+        for(i=0;i<numSrcs;i++) {
+            for(j=0;j<3;j++) {
+                //atomicFloatComplexSub(&B[IDXC0(xIdx,i,ldb)],cuCmulf(bc,gCoeff[j]));
+                temp = cuCmulf(bc,gCoeff[j]);
+                atomicAdd(&B[IDXC0(xIdx,i,ldb)].x,-cuCrealf(temp));
+                atomicAdd(&B[IDXC0(xIdx,i,ldb)].y,-cuCimagf(temp));
+            }
+        }
+    }
+}
+
+__global__ void atomicPtsElems_sgl(const float k, const cartCoord *pt, const triElem *elem, 
+        const int numElem, cuFloatComplex *A, const int lda, cuFloatComplex *B, 
+        const int numSrcs, const int ldb) {
+    int idx = blockIdx.x*blockDim.x+threadIdx.x;
+    if(idx < numElem) {
+        int i, j;
+        cuFloatComplex hCoeff_sgl1[3], hCoeff_sgl2[3], hCoeff_sgl3[3], 
+                gCoeff_sgl1[3], gCoeff_sgl2[3], gCoeff_sgl3[3], pCoeffs_sgl1[3], 
+                pCoeffs_sgl2[3], pCoeffs_sgl3[3], bc, temp;
+        float cCoeff_sgl1, cCoeff_sgl2, cCoeff_sgl3;
+        
+        cartCoord nod[3];
+        for(i=0;i<3;i++) {
+            nod[i] = pt[elem[idx].nodes[i]];
+        }
+        // Compute h and g coefficients
+        g_h_c_sgl(k,pt[elem[idx].nodes[0]],pt[elem[idx].nodes[1]],pt[elem[idx].nodes[2]],
+                nod,gCoeff_sgl1,hCoeff_sgl1,&cCoeff_sgl1,gCoeff_sgl2,hCoeff_sgl2,&cCoeff_sgl2,
+                gCoeff_sgl3,hCoeff_sgl3,&cCoeff_sgl3);
+        
+        //Compute p coefficients
+        bc = cuCdivf(elem[idx].bc[0],elem[idx].bc[1]);
+        for(j=0;j<3;j++) {
+            pCoeffs_sgl1[j] = cuCsubf(hCoeff_sgl1[j],cuCmulf(bc,gCoeff_sgl1[j]));
+            pCoeffs_sgl2[j] = cuCsubf(hCoeff_sgl2[j],cuCmulf(bc,gCoeff_sgl2[j]));
+            pCoeffs_sgl3[j] = cuCsubf(hCoeff_sgl3[j],cuCmulf(bc,gCoeff_sgl3[j]));
+        }
+        
+        //Update matrix A using pCoeffs
+        for(j=0;j<3;j++) {
+            //atomicFloatComplexAdd(&A[IDXC0(elem[idx].nodes[0],elem[idx].nodes[j],lda)],
+            //        pCoeffs_sgl1[j]);
+            atomicAdd(&A[IDXC0(elem[idx].nodes[0],elem[idx].nodes[j],lda)].x,
+                    cuCrealf(pCoeffs_sgl1[j]));
+            atomicAdd(&A[IDXC0(elem[idx].nodes[0],elem[idx].nodes[j],lda)].y,
+                    cuCimagf(pCoeffs_sgl1[j]));
+            //atomicFloatComplexAdd(&A[IDXC0(elem[idx].nodes[1],elem[idx].nodes[j],lda)],
+            //        pCoeffs_sgl2[j]);
+            atomicAdd(&A[IDXC0(elem[idx].nodes[1],elem[idx].nodes[j],lda)].x,
+                    cuCrealf(pCoeffs_sgl2[j]));
+            atomicAdd(&A[IDXC0(elem[idx].nodes[1],elem[idx].nodes[j],lda)].y,
+                    cuCimagf(pCoeffs_sgl2[j]));
+            //atomicFloatComplexAdd(&A[IDXC0(elem[idx].nodes[2],elem[idx].nodes[j],lda)],
+            //        pCoeffs_sgl3[j]);
+            atomicAdd(&A[IDXC0(elem[idx].nodes[2],elem[idx].nodes[j],lda)].x,
+                    cuCrealf(pCoeffs_sgl3[j]));
+            atomicAdd(&A[IDXC0(elem[idx].nodes[2],elem[idx].nodes[j],lda)].y,
+                    cuCimagf(pCoeffs_sgl3[j]));
+        }
+        
+        //atomicFloatComplexSub(&A[IDXC0(elem[idx].nodes[0],elem[idx].nodes[0],lda)],
+        //        make_cuFloatComplex(cCoeff_sgl1,0));
+        atomicAdd(&A[IDXC0(elem[idx].nodes[0],elem[idx].nodes[0],lda)].x,
+                -cCoeff_sgl1);
+        //atomicFloatComplexSub(&A[IDXC0(elem[idx].nodes[1],elem[idx].nodes[1],lda)],
+        //        make_cuFloatComplex(cCoeff_sgl2,0));
+        atomicAdd(&A[IDXC0(elem[idx].nodes[1],elem[idx].nodes[1],lda)].x,
+                -cCoeff_sgl2);
+        //atomicFloatComplexSub(&A[IDXC0(elem[idx].nodes[2],elem[idx].nodes[2],lda)],
+        //        make_cuFloatComplex(cCoeff_sgl3,0));
+        atomicAdd(&A[IDXC0(elem[idx].nodes[2],elem[idx].nodes[2],lda)].x,
+                -cCoeff_sgl3);
+        
+        //Update matrix B using g Coefficients
+        bc = cuCdivf(elem[idx].bc[2],elem[idx].bc[1]);
+        for(i=0;i<numSrcs;i++) {
+            for(j=0;j<3;j++) {
+                //atomicFloatComplexSub(&B[IDXC0(elem[idx].nodes[0],i,ldb)],
+                //        cuCmulf(bc,gCoeff_sgl1[j]));
+                temp = cuCmulf(bc,gCoeff_sgl1[j]);
+                atomicAdd(&B[IDXC0(elem[idx].nodes[0],i,ldb)].x,-cuCrealf(temp));
+                atomicAdd(&B[IDXC0(elem[idx].nodes[0],i,ldb)].y,-cuCimagf(temp));
+                //atomicFloatComplexSub(&B[IDXC0(elem[idx].nodes[1],i,ldb)],
+                //        cuCmulf(bc,gCoeff_sgl2[j]));
+                temp = cuCmulf(bc,gCoeff_sgl2[j]);
+                atomicAdd(&B[IDXC0(elem[idx].nodes[1],i,ldb)].x,-cuCrealf(temp));
+                atomicAdd(&B[IDXC0(elem[idx].nodes[1],i,ldb)].y,-cuCimagf(temp));
+                //atomicFloatComplexSub(&B[IDXC0(elem[idx].nodes[2],i,ldb)],
+                //        cuCmulf(bc,gCoeff_sgl3[j]));
+                temp = cuCmulf(bc,gCoeff_sgl3[j]);
+                atomicAdd(&B[IDXC0(elem[idx].nodes[2],i,ldb)].x,-cuCrealf(temp));
+                atomicAdd(&B[IDXC0(elem[idx].nodes[2],i,ldb)].y,-cuCimagf(temp));
+            }
+        }
+    }
+}
+
+int atomicGenSystem(const float k, const triElem *elem, const int numElem, 
+        const cartCoord *pt, const int numNod, const int numCHIEF, 
+        const cartCoord *src, const int numSrcs, cuFloatComplex *A, const int lda, 
+        cuFloatComplex *B, const int ldb) {
+    //Initialization of A
+    cudaEvent_t start, stop;
+    cudaEventCreate(&start);
+    cudaEventCreate(&stop);
+    int i, j;
+    for(i=0;i<numNod+numCHIEF;i++) {
+        for(j=0;j<numNod;j++) {
+            if(i==j) {
+                A[IDXC0(i,j,lda)] = make_cuFloatComplex(1,0);
+            } else {
+                A[IDXC0(i,j,lda)] = make_cuFloatComplex(0,0);
+            }
+        }
+    }
+    
+    //Initialization of B
+    for(i=0;i<numNod+numCHIEF;i++) {
+        for(j=0;j<numSrcs;j++) {
+            B[IDXC0(i,j,ldb)] = ptSrc(k,STRENGTH,src[j],pt[i]);
+        }
+    }
+    
+    //Move elements to GPU
+    triElem *elem_d;
+    CUDA_CALL(cudaMalloc(&elem_d,numElem*sizeof(triElem)));
+    CUDA_CALL(cudaMemcpy(elem_d,elem,numElem*sizeof(triElem),cudaMemcpyHostToDevice));
+    
+    //Move points to GPU
+    cartCoord *pt_d;
+    CUDA_CALL(cudaMalloc(&pt_d,(numNod+numCHIEF)*sizeof(cartCoord)));
+    CUDA_CALL(cudaMemcpy(pt_d,pt,(numNod+numCHIEF)*sizeof(cartCoord),cudaMemcpyHostToDevice));
+    
+    
+    cuFloatComplex *A_d, *B_d;
+    CUDA_CALL(cudaMalloc(&A_d,(numNod+numCHIEF)*numNod*sizeof(cuFloatComplex)));
+    CUDA_CALL(cudaMemcpy(A_d,A,(numNod+numCHIEF)*numNod*sizeof(cuFloatComplex),cudaMemcpyHostToDevice));
+    
+    CUDA_CALL(cudaMalloc(&B_d,(numNod+numCHIEF)*numSrcs*sizeof(cuFloatComplex)));
+    CUDA_CALL(cudaMemcpy(B_d,B,(numNod+numCHIEF)*numSrcs*sizeof(cuFloatComplex),cudaMemcpyHostToDevice));
+    
+    
+    
+    int xNumBlocks, xWidth = 16, yNumBlocks, yWidth = 16;
+    xNumBlocks = (numNod+numCHIEF+xWidth-1)/xWidth;
+    yNumBlocks = (numElem+yWidth-1)/yWidth;
+    //xNumBlocks = 2;
+    //yNumBlocks = 2;
+    dim3 gridLayout, blockLayout;
+    gridLayout.x = xNumBlocks;
+    gridLayout.y = yNumBlocks;
+    
+    blockLayout.x = xWidth;
+    blockLayout.y = yWidth;
+    
+    cudaEventRecord(start);
+    atomicPtsElems_nsgl<<<gridLayout,blockLayout>>>(k,pt_d,numNod,0,numNod+numCHIEF-1,
+            elem_d,numElem,A_d,lda,B_d,numSrcs,ldb);
+    atomicPtsElems_sgl<<<yNumBlocks,yWidth>>>(k,pt_d,elem_d,numElem,A_d,lda,
+            B_d,numSrcs,ldb);
+    cudaEventRecord(stop);
+    CUDA_CALL(cudaMemcpy(A,A_d,(numNod+numCHIEF)*numNod*sizeof(cuFloatComplex),cudaMemcpyDeviceToHost));
+    CUDA_CALL(cudaMemcpy(B,B_d,(numNod+numCHIEF)*numSrcs*sizeof(cuFloatComplex),cudaMemcpyDeviceToHost));
+    cudaEventSynchronize(stop);
+    float milliseconds = 0;
+    cudaEventElapsedTime(&milliseconds,start,stop);
+    printf("Elapsed system generation time: %f milliseconds.\n",milliseconds);
+    CUDA_CALL(cudaFree(A_d));
+    CUDA_CALL(cudaFree(B_d));
+    CUDA_CALL(cudaFree(elem_d));
+    CUDA_CALL(cudaFree(pt_d));
+    
+    return EXIT_SUCCESS;
+}
+

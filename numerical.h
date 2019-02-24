@@ -25,7 +25,11 @@
 #include "dataStruct.h"
 
 #ifndef PI
-#define PI 3.1415926535897932
+#define PI (3.1415926535897932f)
+#endif
+
+#ifndef STRENGTH
+#define STRENGTH (1.0f)
 #endif
 
 #ifndef INTORDER
@@ -101,7 +105,7 @@ while(0)
 #endif
 
 #ifndef EPS
-#define EPS 0.00005
+#define EPS 0.0001
 #endif
 
 int genGaussParams(const int n, float *pt, float *wgt);

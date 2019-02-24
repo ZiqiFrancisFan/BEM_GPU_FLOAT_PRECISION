@@ -10,13 +10,14 @@
 #include "numerical.h"
 int main () {
     int numPt, numElem;
-    findNum("cube.obj",&numPt,&numElem);
+    findNum("sphere.obj",&numPt,&numElem);
     cartCoord *pt = (cartCoord*)malloc(numPt*sizeof(cartCoord));
     triElem *elem = (triElem*)malloc(numElem*sizeof(triElem));
-    readOBJ("cube.obj",pt,elem);
+    readOBJ("sphere.obj",pt,elem);
     cartCoord chief[3];
     genCHIEF(pt,numPt,elem,numElem,chief,3);
     printCartCoord(chief,3);
+    printf("Completed.\n");
     free(pt);
     free(elem);
 }
