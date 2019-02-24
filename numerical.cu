@@ -880,6 +880,7 @@ int bemSolver(const float k, const triElem *elem, const int numElem,
     CUDA_CALL(cudaMalloc(&pt_d,(numNod+numCHIEF)*sizeof(cartCoord)));
     CUDA_CALL(cudaMemcpy(pt_d,pt_h,(numNod+numCHIEF)*sizeof(cartCoord),cudaMemcpyHostToDevice));
     
+    CUDA_CALL(cudaEventRecord(start));
     //Generate the system
     cuFloatComplex *A = (cuFloatComplex*)malloc((numNod+numCHIEF)*numNod*sizeof(cuFloatComplex));
     for(i=0;i<numNod+numCHIEF;i++) {
@@ -916,13 +917,10 @@ int bemSolver(const float k, const triElem *elem, const int numElem,
     blockLayout.x = xWidth;
     blockLayout.y = yWidth;
     
-    
-    cudaEventRecord(start);
     atomicPtsElems_nsgl<<<gridLayout,blockLayout>>>(k,pt_d,numNod,0,numNod+numCHIEF-1,
             elem_d,numElem,A_d,numNod+numCHIEF,B_d,numSrc,ldb);
     atomicPtsElems_sgl<<<yNumBlocks,yWidth>>>(k,pt_d,elem_d,numElem,A_d,numNod+numCHIEF,
             B_d,numSrc,ldb);
-    
     
     //Solving the system
     cusolverDnHandle_t cusolverH = NULL;
@@ -940,7 +938,7 @@ int bemSolver(const float k, const triElem *elem, const int numElem,
     int *deviceInfo_d, deviceInfo;
     CUDA_CALL(cudaMalloc(&deviceInfo_d,sizeof(int)));
     
-    CUDA_CALL(cudaEventRecord(start));
+    
     CUSOLVER_CALL(cusolverDnCgeqrf(cusolverH,numNod+numCHIEF,numNod,A_d,numNod+numCHIEF,
             tau_d,workspace_d,lwork,deviceInfo_d));
     CUDA_CALL(cudaMemcpy(&deviceInfo,deviceInfo_d,sizeof(int),cudaMemcpyDeviceToHost));
@@ -957,9 +955,8 @@ int bemSolver(const float k, const triElem *elem, const int numElem,
     CUBLAS_CALL(cublasCtrsm_v2(cublasH,CUBLAS_SIDE_LEFT,CUBLAS_FILL_MODE_UPPER,
             CUBLAS_OP_N,CUBLAS_DIAG_NON_UNIT,numNod,numSrc,&alpha,A_d,numNod+numCHIEF,B_d,ldb));
     CUDA_CALL(cudaEventRecord(stop));
-    
-    CUDA_CALL(cudaMemcpy(B,B_d,ldb*numSrc*sizeof(cuFloatComplex),cudaMemcpyDeviceToHost));
     CUDA_CALL(cudaEventSynchronize(stop));
+    CUDA_CALL(cudaMemcpy(B,B_d,ldb*numSrc*sizeof(cuFloatComplex),cudaMemcpyDeviceToHost));
     
     float milliseconds = 0;
     CUDA_CALL(cudaEventElapsedTime(&milliseconds,start,stop));
