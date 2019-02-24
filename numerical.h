@@ -22,19 +22,35 @@
 #include <cuda_runtime.h>
 #include <curand.h>
 
+#include <cublas_v2.h>
+#include <cusolverDn.h>
+
 #include "dataStruct.h"
 
 #ifndef PI
-#define PI (3.1415926535897932f)
+#define PI 3.1415926535897932f
 #endif
 
 #ifndef STRENGTH
-#define STRENGTH (1.0f)
+#define STRENGTH 0.0f
 #endif
 
 #ifndef INTORDER
-#define INTORDER 5
+#define INTORDER 6
 #endif
+
+#ifndef NUMCHIEF
+#define NUMCHIEF 5
+#endif
+
+extern __constant__ float density;
+
+extern __constant__ float speed;
+
+//Integral points and weights
+extern __constant__ float INTPT[INTORDER]; 
+
+extern __constant__ float INTWGT[INTORDER];
 
 #ifndef IDXC0
 #define IDXC0(row,col,ld) ((ld)*(col)+(row))
@@ -110,7 +126,12 @@ while(0)
 
 int genGaussParams(const int n, float *pt, float *wgt);
 
+int gaussPtsToDevice(const float *evalPt, const float *wgt);
+
 void printFltMat(const float *A, const int numRow, const int numCol, const int lda);
+
+void printCuFloatComplexMat(const cuFloatComplex *A, const int numRow, const int numCol, 
+        const int lda);
 
 __host__ __device__ cartCoord scalarProd(const float lambda, const cartCoord v);
 
@@ -128,6 +149,14 @@ __global__ void rayTrisInt(const cartCoord pt_s, const cartCoord dir, const cart
 
 int genCHIEF(const cartCoord *pt, const int numPt, const triElem *elem, const int numElem, 
         cartCoord *pCHIEF, const int numCHIEF);
+
+int atomicGenSystem(const float k, const triElem *elem, const int numElem, 
+        const cartCoord *pt, const int numNod, const cartCoord *chief, const int numCHIEF, 
+        const cartCoord *src, const int numSrcs, cuFloatComplex *A, const int lda, 
+        cuFloatComplex *B, const int ldb);
+
+int qrSolver(const cuFloatComplex *A, const int mA, const int nA, const int ldA, 
+        cuFloatComplex *B, const int nB, const int ldB);
 
 
 

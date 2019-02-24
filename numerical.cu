@@ -58,11 +58,29 @@ int genGaussParams(const int n, float *pt, float *wgt)
     return EXIT_SUCCESS;
 }
 
+int gaussPtsToDevice(const float *evalPt, const float *wgt) 
+{
+    CUDA_CALL(cudaMemcpyToSymbol(INTPT,evalPt,INTORDER*sizeof(float),0,cudaMemcpyHostToDevice));
+    CUDA_CALL(cudaMemcpyToSymbol(INTWGT,wgt,INTORDER*sizeof(float),0,cudaMemcpyHostToDevice));
+    return EXIT_SUCCESS;
+}
+
 void printFltMat(const float *A, const int numRow, const int numCol, const int lda) 
 {
     for(int i=0;i<numRow;i++) {
         for(int j=0;j<numCol;j++) {
             printf("%f ",A[IDXC0(i,j,lda)]);
+        }
+        printf("\n");
+    }
+}
+
+void printCuFloatComplexMat(const cuFloatComplex *A, const int numRow, const int numCol, 
+        const int lda)
+{
+    for(int i=0;i<numRow;i++) {
+        for(int j=0;j<numCol;j++) {
+            printf("(%f,%f) ",cuCrealf(A[IDXC0(i,j,lda)]),cuCimagf(A[IDXC0(i,j,lda)]));
         }
         printf("\n");
     }
@@ -187,7 +205,7 @@ bool inBdry(const bool *flag, const int numFlag) {
 int genCHIEF(const cartCoord *pt, const int numPt, const triElem *elem, const int numElem, 
         cartCoord *pCHIEF, const int numCHIEF) {
     int i, cnt;
-    float threshold_inner = 0.001;
+    float threshold_inner = 0.0001;
     float *dist_h = (float*)malloc(numPt*sizeof(float));
     float minDist; //minimum distance between the chief point to all surface nodes
     float *dist_d;
@@ -240,7 +258,7 @@ int genCHIEF(const cartCoord *pt, const int numPt, const triElem *elem, const in
             chief.coords[0] = xrand;
             chief.coords[1] = yrand;
             chief.coords[2] = zrand;
-            printCartCoord(&chief,1);
+            //(&chief,1);
             gridWidth = (numElem+blockWidth-1)/blockWidth;
             rayTrisInt<<<gridWidth,blockWidth>>>(chief,dir,pt_d,elem_d,numElem,flag_d);
             gridWidth = (numPt+blockWidth-1)/blockWidth;
@@ -307,13 +325,11 @@ __device__ void g_h_c_nsgl(const float k, const cartCoord x, const cartCoord p[3
         p[1].coords[0]-p[2].coords[0],p[1].coords[1]-p[2].coords[1],p[1].coords[2]-p[2].coords[2]
     },&normal,&vertCrossProd);
     vertCrossProd = vertCrossProd*0.25f;
-    //printf("vert: %f\n",vertCrossProd);
-    
-    //printf("normal=(%f,%f,%f)\n",normal.coords[0],normal.coords[1],normal.coords[2]);
+    //printf("%f\n",normal.coords[0]);
     const float prodRhoOmega = density*omega;
     const float fourPI = 4.0f*PI;
-    const float recipFourPI = 1.0/fourPI;
-    
+    const float recipFourPI = 1.0f/fourPI;
+    //printf("%f\n",k);
     for(int n=0;n<INTORDER;n++) {
         eta2 = INTPT[n];
         wn = INTWGT[n];
@@ -336,7 +352,8 @@ __device__ void g_h_c_nsgl(const float k, const cartCoord x, const cartCoord p[3
             //printf("x: (%f,%f,%f), y: (%f,%f,%f)\n",x.coords[0],x.coords[1],x.coords[2],
             //        y.coords[0],y.coords[1],y.coords[2]);
             rVec = cartCoordSub(y,x);
-            radius = sqrtf(rVec.coords[0]*rVec.coords[0]+rVec.coords[1]*rVec.coords[1]+rVec.coords[2]*rVec.coords[2]);
+            radius = __fsqrt_rn(rVec.coords[0]*rVec.coords[0]+rVec.coords[1]*rVec.coords[1]
+                    +rVec.coords[2]*rVec.coords[2]);
             //printf("radius = %f\n",radius);
             prpn2 = ((y.coords[0]-x.coords[0])*normal.coords[0]+(y.coords[1]-x.coords[1])*normal.coords[1]
                     +(y.coords[2]-x.coords[2])*normal.coords[2])/radius;
@@ -550,7 +567,7 @@ __host__ __device__ cuFloatComplex ptSrc(const float k, const float amp, const c
 
 __global__ void atomicPtsElems_nsgl(const float k, const cartCoord *pt, const int numNod, 
         const int idxPntStart, const int idxPntEnd, const triElem *elem, const int numElem, 
-        cuFloatComplex *A, const int lda, cuFloatComplex *B, const int numSrcs, const int ldb) {
+        cuFloatComplex *A, const int lda, cuFloatComplex *B, const int numSrc, const int ldb) {
     int xIdx = blockIdx.x*blockDim.x+threadIdx.x; //Index for points
     int yIdx = blockIdx.y*blockDim.y+threadIdx.y; //Index for elements
     //The thread with indices xIdx and yIdx process the point xIdx and elem yIdx
@@ -587,7 +604,7 @@ __global__ void atomicPtsElems_nsgl(const float k, const cartCoord *pt, const in
         bc = cuCdivf(elem[yIdx].bc[2],elem[yIdx].bc[1]);
         //printf("bc: \n");
         //printComplexMatrix(&bc,1,1,1);
-        for(i=0;i<numSrcs;i++) {
+        for(i=0;i<numSrc;i++) {
             for(j=0;j<3;j++) {
                 //atomicFloatComplexSub(&B[IDXC0(xIdx,i,ldb)],cuCmulf(bc,gCoeff[j]));
                 temp = cuCmulf(bc,gCoeff[j]);
@@ -600,7 +617,7 @@ __global__ void atomicPtsElems_nsgl(const float k, const cartCoord *pt, const in
 
 __global__ void atomicPtsElems_sgl(const float k, const cartCoord *pt, const triElem *elem, 
         const int numElem, cuFloatComplex *A, const int lda, cuFloatComplex *B, 
-        const int numSrcs, const int ldb) {
+        const int numSrc, const int ldb) {
     int idx = blockIdx.x*blockDim.x+threadIdx.x;
     if(idx < numElem) {
         int i, j;
@@ -663,7 +680,7 @@ __global__ void atomicPtsElems_sgl(const float k, const cartCoord *pt, const tri
         
         //Update matrix B using g Coefficients
         bc = cuCdivf(elem[idx].bc[2],elem[idx].bc[1]);
-        for(i=0;i<numSrcs;i++) {
+        for(i=0;i<numSrc;i++) {
             for(j=0;j<3;j++) {
                 //atomicFloatComplexSub(&B[IDXC0(elem[idx].nodes[0],i,ldb)],
                 //        cuCmulf(bc,gCoeff_sgl1[j]));
@@ -686,14 +703,33 @@ __global__ void atomicPtsElems_sgl(const float k, const cartCoord *pt, const tri
 }
 
 int atomicGenSystem(const float k, const triElem *elem, const int numElem, 
-        const cartCoord *pt, const int numNod, const int numCHIEF, 
-        const cartCoord *src, const int numSrcs, cuFloatComplex *A, const int lda, 
+        const cartCoord *nod, const int numNod, const cartCoord *chief, const int numCHIEF, 
+        const cartCoord *src, const int numSrc, cuFloatComplex *A, const int lda, 
         cuFloatComplex *B, const int ldb) {
-    //Initialization of A
+    int i, j;
     cudaEvent_t start, stop;
     cudaEventCreate(&start);
     cudaEventCreate(&stop);
-    int i, j;
+    
+    //Move elements to GPU
+    triElem *elem_d;
+    CUDA_CALL(cudaMalloc(&elem_d,numElem*sizeof(triElem)));
+    CUDA_CALL(cudaMemcpy(elem_d,elem,numElem*sizeof(triElem),cudaMemcpyHostToDevice));
+    
+    //Move points to GPU
+    cartCoord *pt_h = (cartCoord*)malloc((numNod+numCHIEF)*sizeof(cartCoord));
+    for(i=0;i<numNod;i++) {
+        pt_h[i] = nod[i];
+    }
+    for(i=0;i<numCHIEF;i++) {
+        pt_h[numNod+i] = chief[i];
+    }
+    
+    cartCoord *pt_d;
+    CUDA_CALL(cudaMalloc(&pt_d,(numNod+numCHIEF)*sizeof(cartCoord)));
+    CUDA_CALL(cudaMemcpy(pt_d,pt_h,(numNod+numCHIEF)*sizeof(cartCoord),cudaMemcpyHostToDevice));
+    
+    //Initialization of A
     for(i=0;i<numNod+numCHIEF;i++) {
         for(j=0;j<numNod;j++) {
             if(i==j) {
@@ -706,36 +742,21 @@ int atomicGenSystem(const float k, const triElem *elem, const int numElem,
     
     //Initialization of B
     for(i=0;i<numNod+numCHIEF;i++) {
-        for(j=0;j<numSrcs;j++) {
-            B[IDXC0(i,j,ldb)] = ptSrc(k,STRENGTH,src[j],pt[i]);
+        for(j=0;j<numSrc;j++) {
+            B[IDXC0(i,j,ldb)] = ptSrc(k,STRENGTH,src[j],pt_h[i]);
         }
     }
-    
-    //Move elements to GPU
-    triElem *elem_d;
-    CUDA_CALL(cudaMalloc(&elem_d,numElem*sizeof(triElem)));
-    CUDA_CALL(cudaMemcpy(elem_d,elem,numElem*sizeof(triElem),cudaMemcpyHostToDevice));
-    
-    //Move points to GPU
-    cartCoord *pt_d;
-    CUDA_CALL(cudaMalloc(&pt_d,(numNod+numCHIEF)*sizeof(cartCoord)));
-    CUDA_CALL(cudaMemcpy(pt_d,pt,(numNod+numCHIEF)*sizeof(cartCoord),cudaMemcpyHostToDevice));
-    
     
     cuFloatComplex *A_d, *B_d;
     CUDA_CALL(cudaMalloc(&A_d,(numNod+numCHIEF)*numNod*sizeof(cuFloatComplex)));
     CUDA_CALL(cudaMemcpy(A_d,A,(numNod+numCHIEF)*numNod*sizeof(cuFloatComplex),cudaMemcpyHostToDevice));
     
-    CUDA_CALL(cudaMalloc(&B_d,(numNod+numCHIEF)*numSrcs*sizeof(cuFloatComplex)));
-    CUDA_CALL(cudaMemcpy(B_d,B,(numNod+numCHIEF)*numSrcs*sizeof(cuFloatComplex),cudaMemcpyHostToDevice));
-    
-    
+    CUDA_CALL(cudaMalloc(&B_d,(numNod+numCHIEF)*numSrc*sizeof(cuFloatComplex)));
+    CUDA_CALL(cudaMemcpy(B_d,B,(numNod+numCHIEF)*numSrc*sizeof(cuFloatComplex),cudaMemcpyHostToDevice));
     
     int xNumBlocks, xWidth = 16, yNumBlocks, yWidth = 16;
     xNumBlocks = (numNod+numCHIEF+xWidth-1)/xWidth;
     yNumBlocks = (numElem+yWidth-1)/yWidth;
-    //xNumBlocks = 2;
-    //yNumBlocks = 2;
     dim3 gridLayout, blockLayout;
     gridLayout.x = xNumBlocks;
     gridLayout.y = yNumBlocks;
@@ -745,12 +766,14 @@ int atomicGenSystem(const float k, const triElem *elem, const int numElem,
     
     cudaEventRecord(start);
     atomicPtsElems_nsgl<<<gridLayout,blockLayout>>>(k,pt_d,numNod,0,numNod+numCHIEF-1,
-            elem_d,numElem,A_d,lda,B_d,numSrcs,ldb);
-    atomicPtsElems_sgl<<<yNumBlocks,yWidth>>>(k,pt_d,elem_d,numElem,A_d,lda,
-            B_d,numSrcs,ldb);
+            elem_d,numElem,A_d,lda,B_d,numSrc,ldb);
+    printf("k = %f\n",k);
+    CUDA_CALL(cudaMemcpy(A,A_d,(numNod+numCHIEF)*numNod*sizeof(cuFloatComplex),cudaMemcpyDeviceToHost));
+    //printCuFloatComplexMat(A,numNod+numCHIEF,numNod,numNod+numCHIEF);
+    atomicPtsElems_sgl<<<yNumBlocks,yWidth>>>(k,pt_d,elem_d,numElem,A_d,lda,B_d,numSrc,ldb);
     cudaEventRecord(stop);
     CUDA_CALL(cudaMemcpy(A,A_d,(numNod+numCHIEF)*numNod*sizeof(cuFloatComplex),cudaMemcpyDeviceToHost));
-    CUDA_CALL(cudaMemcpy(B,B_d,(numNod+numCHIEF)*numSrcs*sizeof(cuFloatComplex),cudaMemcpyDeviceToHost));
+    CUDA_CALL(cudaMemcpy(B,B_d,(numNod+numCHIEF)*numSrc*sizeof(cuFloatComplex),cudaMemcpyDeviceToHost));
     cudaEventSynchronize(stop);
     float milliseconds = 0;
     cudaEventElapsedTime(&milliseconds,start,stop);
@@ -759,6 +782,71 @@ int atomicGenSystem(const float k, const triElem *elem, const int numElem,
     CUDA_CALL(cudaFree(B_d));
     CUDA_CALL(cudaFree(elem_d));
     CUDA_CALL(cudaFree(pt_d));
+    
+    return EXIT_SUCCESS;
+}
+
+int qrSolver(const cuFloatComplex *A, const int mA, const int nA, const int ldA, 
+        cuFloatComplex *B, const int nB, const int ldB) {
+    cudaEvent_t start, stop;
+    CUDA_CALL(cudaEventCreate(&start));
+    CUDA_CALL(cudaEventCreate(&stop));
+    cusolverDnHandle_t cusolverH = NULL;
+    CUSOLVER_CALL(cusolverDnCreate(&cusolverH));
+    
+    
+    cuFloatComplex *A_d;
+    CUDA_CALL(cudaMalloc(&A_d,ldA*nA*sizeof(cuFloatComplex)));
+    CUDA_CALL(cudaMemcpy(A_d,A,ldA*nA*sizeof(cuFloatComplex),cudaMemcpyHostToDevice));
+    
+    cuFloatComplex *B_d;
+    CUDA_CALL(cudaMalloc(&B_d,ldB*nB*sizeof(cuFloatComplex)));
+    CUDA_CALL(cudaMemcpy(B_d,B,ldB*nB*sizeof(cuFloatComplex),cudaMemcpyHostToDevice));
+    
+    //A = QR
+    int lwork;
+    CUSOLVER_CALL(cusolverDnCgeqrf_bufferSize(cusolverH,mA,nA,A_d,ldA,&lwork));
+    
+    cuFloatComplex *workspace_d;
+    CUDA_CALL(cudaMalloc(&workspace_d,lwork*sizeof(cuFloatComplex)));
+    cuFloatComplex *tau_d;
+    CUDA_CALL(cudaMalloc(&tau_d,max(mA,nA)*sizeof(cuFloatComplex)));
+    int *deviceInfo_d, deviceInfo;
+    CUDA_CALL(cudaMalloc(&deviceInfo_d,sizeof(int)));
+    
+    CUDA_CALL(cudaEventRecord(start));
+    CUSOLVER_CALL(cusolverDnCgeqrf(cusolverH,mA,nA,A_d,ldA,tau_d,workspace_d,lwork,
+            deviceInfo_d));
+    CUDA_CALL(cudaMemcpy(&deviceInfo,deviceInfo_d,sizeof(int),cudaMemcpyDeviceToHost));
+    
+    //B = (Q^H)*B
+    CUSOLVER_CALL(cusolverDnCunmqr(cusolverH,CUBLAS_SIDE_LEFT,CUBLAS_OP_C,mA,nB,
+            nA,A_d,ldA,tau_d,B_d,ldB,workspace_d,lwork,deviceInfo_d));
+    CUDA_CALL(cudaMemcpy(&deviceInfo,deviceInfo_d,sizeof(int),cudaMemcpyDeviceToHost));
+    
+    //Solve Rx = B
+    cuFloatComplex alpha = make_cuFloatComplex(1,0);
+    cublasHandle_t cublasH;
+    CUBLAS_CALL(cublasCreate_v2(&cublasH));
+    CUBLAS_CALL(cublasCtrsm_v2(cublasH,CUBLAS_SIDE_LEFT,CUBLAS_FILL_MODE_UPPER,
+            CUBLAS_OP_N,CUBLAS_DIAG_NON_UNIT,nA,nB,&alpha,A_d,ldA,B_d,ldB));
+    CUDA_CALL(cudaEventRecord(stop));
+    
+    CUDA_CALL(cudaMemcpy(B,B_d,ldB*nB*sizeof(cuFloatComplex),cudaMemcpyDeviceToHost));
+    CUDA_CALL(cudaEventSynchronize(stop));
+    
+    float milliseconds = 0;
+    CUDA_CALL(cudaEventElapsedTime(&milliseconds,start,stop));
+    printf("Elapsed system solving time: %f milliseconds.\n",milliseconds);
+    CUDA_CALL(cudaEventDestroy(start));
+    CUDA_CALL(cudaEventDestroy(stop));
+    CUDA_CALL(cudaFree(A_d));
+    CUDA_CALL(cudaFree(B_d));
+    CUDA_CALL(cudaFree(tau_d));
+    CUDA_CALL(cudaFree(workspace_d));
+    CUDA_CALL(cudaFree(deviceInfo_d));
+    CUBLAS_CALL(cublasDestroy_v2(cublasH));
+    CUSOLVER_CALL(cusolverDnDestroy(cusolverH));
     
     return EXIT_SUCCESS;
 }
