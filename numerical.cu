@@ -565,6 +565,7 @@ __host__ __device__ cuFloatComplex ptSrc(const float k, const float amp, const c
     return make_cuFloatComplex(amp*cosf(-k*radius)/(fourPI*radius),amp*sinf(-k*radius)/(fourPI*radius));
 }
 
+
 __global__ void atomicPtsElems_nsgl(const float k, const cartCoord *pt, const int numNod, 
         const int idxPntStart, const int idxPntEnd, const triElem *elem, const int numElem, 
         cuFloatComplex *A, const int lda, cuFloatComplex *B, const int numSrc, const int ldb) {
@@ -868,35 +869,49 @@ int bemSolver(const float k, const triElem *elem, const int numElem,
     CUDA_CALL(cudaMemcpy(elem_d,elem,numElem*sizeof(triElem),cudaMemcpyHostToDevice));
     
     //Move points to GPU
-    cartCoord *pt_h = (cartCoord*)malloc((numNod+numCHIEF)*sizeof(cartCoord));
-    for(i=0;i<numNod;i++) {
-        pt_h[i] = nod[i];
-    }
-    for(i=0;i<numCHIEF;i++) {
-        pt_h[numNod+i] = chief[i];
-    }
+    // cartCoord *pt_h = (cartCoord*)malloc((numNod+numCHIEF)*sizeof(cartCoord));
+    // for(i=0;i<numNod;i++) {
+    //     pt_h[i] = nod[i];
+    // }
+    // for(i=0;i<numCHIEF;i++) {
+    //     pt_h[numNod+i] = chief[i];
+    // }
     
     cartCoord *pt_d;
-    CUDA_CALL(cudaMalloc(&pt_d,(numNod+numCHIEF)*sizeof(cartCoord)));
-    CUDA_CALL(cudaMemcpy(pt_d,pt_h,(numNod+numCHIEF)*sizeof(cartCoord),cudaMemcpyHostToDevice));
+    CUDA_CALL(cudaMalloc(&pt_d, (numNod + numCHIEF) * sizeof(cartCoord)));
+    CUDA_CALL(cudaMemcpy(pt_d, nod, numNod * sizeof(cartCoord),cudaMemcpyHostToDevice));
+    CUDA_CALL(cudaMemcpy(pt_d + numNod, chief, numCHIEF * sizeof(cartCoord),cudaMemcpyHostToDevice));
     
     CUDA_CALL(cudaEventRecord(start));
     //Generate the system
     cuFloatComplex *A = (cuFloatComplex*)malloc((numNod+numCHIEF)*numNod*sizeof(cuFloatComplex));
-    for(i=0;i<numNod+numCHIEF;i++) {
-        for(j=0;j<numNod;j++) {
-            if(i==j) {
-                A[IDXC0(i,j,numNod+numCHIEF)] = make_cuFloatComplex(1,0);
-            } else {
-                A[IDXC0(i,j,numNod+numCHIEF)] = make_cuFloatComplex(0,0);
-            }
-        }
+    memset(A, 0, (numNod+numCHIEF)*numNod*sizeof(cuFloatComplex));
+
+    for(i=0;i<numNod+numCHIEF;i++) 
+    {
+        A[IDXC0(i,i,numNod+numCHIEF)] = make_cuFloatComplex(1,0);
+        // for(j=0;j<numNod;j++) 
+        // {
+        //     if(i==j) 
+        //     {
+        //         A[IDXC0(i,j,numNod+numCHIEF)] = make_cuFloatComplex(1,0);
+        //     } 
+        //     else 
+        //     {
+        //         A[IDXC0(i,j,numNod+numCHIEF)] = make_cuFloatComplex(0,0);
+        //     }
+        // }
     }
     
     //Initialization of B
-    for(i=0;i<numNod+numCHIEF;i++) {
-        for(j=0;j<numSrc;j++) {
-            B[IDXC0(i,j,ldb)] = ptSrc(k,STRENGTH,src[j],pt_h[i]);
+    for(i=0;i<numNod+numCHIEF;i++) 
+    {
+        for(j=0;j<numSrc;j++) 
+        {
+            if(i < numNod)
+                B[IDXC0(i,j,ldb)] = ptSrc(k,STRENGTH,src[j],nod[i]);
+            else
+                B[IDXC0(i,j,ldb)] = ptSrc(k,STRENGTH,src[j],chief[i - numNod]);
         }
     }
     
