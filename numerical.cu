@@ -890,6 +890,7 @@ int bemSolver(const float k, const triElem *elem, const int numElem,
     for(i=0;i<numNod+numCHIEF;i++) 
     {
         A[IDXC0(i,i,numNod+numCHIEF)] = make_cuFloatComplex(1,0);
+// 
         // for(j=0;j<numNod;j++) 
         // {
         //     if(i==j) 
