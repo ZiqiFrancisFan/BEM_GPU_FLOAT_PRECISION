@@ -1,1 +1,6 @@
-make: *** No rule to make target 'main.cpp', needed by 'main.o'.  Stop.
+g++ -I/usr/local/cuda/include -I/usr/local/cuda/include/crt -I/usr/include/python2.7 -I. -std=c++11 -O3  -c main.c
+/usr/local/cuda/bin/nvcc -use_fast_math -dc -I/usr/local/cuda/include -I/usr/local/cuda/include/crt -I/usr/include/python2.7 -I. -std=c++11 -O3   -Xcompiler -std=c++11 -Xcompiler -O3  -Xptxas -O3 -Xptxas -allow-expensive-optimizations=true -maxrregcount 255  -gencode arch=compute_61,code=sm_61 -gencode arch=compute_61,code=compute_61 numerical.cu
+/usr/local/cuda/bin/nvcc  -ccbin g++ -use_fast_math -dc -I/usr/local/cuda/include -I/usr/local/cuda/include/crt -I/usr/include/python2.7 -I. -std=c++11 -O3   -Xcompiler -std=c++11 -Xcompiler -O3  -Xptxas -O3 -Xptxas -allow-expensive-optimizations=true -maxrregcount 255  -gencode arch=compute_61,code=sm_61 -gencode arch=compute_61,code=compute_61 mesh.c
+cc1: warning: command line option ‘-std=c++11’ is valid for C++/ObjC++ but not for C
+# nvcc -ccbin /usr/bin/gcc -arch=sm_61 -l=curand -l=cublas -lcusolver -L/usr/local/lib -lgsl -lgslcblas main.o numerical.o mesh.o -o main
+/usr/local/cuda/bin/nvcc  -ccbin g++ -use_fast_math  -std=c++11 -O3   -Xcompiler -std=c++11 -Xcompiler -O3  -Xptxas -O3 -Xptxas -allow-expensive-optimizations=true -maxrregcount 255   -gencode arch=compute_61,code=sm_61 -gencode arch=compute_61,code=compute_61 -o main main.o numerical.o mesh.o  -lcudart -lcublas -lcurand -lstdc++ -lpthread -lm -lcudart -lcublas -lcurand -lcusolver -lcufft -lcusparse  -lstdc++ -lm -lgsl -lgslcblas

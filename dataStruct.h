@@ -33,6 +33,13 @@ extern "C" {
         float coords[3];
     };
     
+    struct sphCoord
+    {
+        double r;
+        double theta;
+        double phi;
+    };
+    
     typedef struct triElem triElem;
     
     typedef struct cartCoord cartCoord;

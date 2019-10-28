@@ -565,6 +565,12 @@ __host__ __device__ cuFloatComplex ptSrc(const float k, const float amp, const c
     return make_cuFloatComplex(amp*cosf(-k*radius)/(fourPI*radius),amp*sinf(-k*radius)/(fourPI*radius));
 }
 
+__host__ __device__ cuFloatComplex dirSrc(const float k, const float strength, const cartCoord dir, const cartCoord evalLoc)
+{
+    float theta = -k*dotProd(dir,evalLoc);
+    return make_cuFloatComplex(strength*cosf(theta),strength*sinf(theta));
+}
+
 
 __global__ void atomicPtsElems_nsgl(const float k, const cartCoord *pt, const int numNod, 
         const int idxPntStart, const int idxPntEnd, const triElem *elem, const int numElem, 
@@ -994,3 +1000,212 @@ int bemSolver(const float k, const triElem *elem, const int numElem,
     return EXIT_SUCCESS;
 }
 
+int bemSolver_dir(const float k, const triElem *elem, const int numElem, 
+        const cartCoord *nod, const int numNod, const cartCoord *chief, const int numCHIEF, 
+        const cartCoord *dir, const int numSrc, cuFloatComplex *B, const int ldb)
+{
+    int i, j;
+    cudaEvent_t start, stop;
+    cudaEventCreate(&start);
+    cudaEventCreate(&stop);
+    
+    //Move elements to GPU
+    triElem *elem_d;
+    CUDA_CALL(cudaMalloc(&elem_d,numElem*sizeof(triElem)));
+    CUDA_CALL(cudaMemcpy(elem_d,elem,numElem*sizeof(triElem),cudaMemcpyHostToDevice));
+    
+    //Move points to GPU
+    // cartCoord *pt_h = (cartCoord*)malloc((numNod+numCHIEF)*sizeof(cartCoord));
+    // for(i=0;i<numNod;i++) {
+    //     pt_h[i] = nod[i];
+    // }
+    // for(i=0;i<numCHIEF;i++) {
+    //     pt_h[numNod+i] = chief[i];
+    // }
+    
+    cartCoord *pt_d;
+    CUDA_CALL(cudaMalloc(&pt_d, (numNod + numCHIEF) * sizeof(cartCoord)));
+    CUDA_CALL(cudaMemcpy(pt_d, nod, numNod * sizeof(cartCoord),cudaMemcpyHostToDevice));
+    CUDA_CALL(cudaMemcpy(pt_d + numNod, chief, numCHIEF * sizeof(cartCoord),cudaMemcpyHostToDevice));
+    
+    CUDA_CALL(cudaEventRecord(start));
+    //Generate the system
+    cuFloatComplex *A = (cuFloatComplex*)malloc((numNod+numCHIEF)*numNod*sizeof(cuFloatComplex));
+    memset(A, 0, (numNod+numCHIEF)*numNod*sizeof(cuFloatComplex));
+
+    for(i=0;i<numNod+numCHIEF;i++) 
+    {
+        A[IDXC0(i,i,numNod+numCHIEF)] = make_cuFloatComplex(1,0);
+// 
+        // for(j=0;j<numNod;j++) 
+        // {
+        //     if(i==j) 
+        //     {
+        //         A[IDXC0(i,j,numNod+numCHIEF)] = make_cuFloatComplex(1,0);
+        //     } 
+        //     else 
+        //     {
+        //         A[IDXC0(i,j,numNod+numCHIEF)] = make_cuFloatComplex(0,0);
+        //     }
+        // }
+    }
+    
+    //Initialization of B
+    for(i=0;i<numNod+numCHIEF;i++) 
+    {
+        for(j=0;j<numSrc;j++) 
+        {
+            if(i < numNod)
+                //B[IDXC0(i,j,ldb)] = ptSrc(k,STRENGTH,src[j],nod[i]);
+                B[IDXC0(i,j,ldb)] = dirSrc(k,STRENGTH,dir[j],nod[i]);
+            else
+                //B[IDXC0(i,j,ldb)] = ptSrc(k,STRENGTH,src[j],chief[i - numNod]);
+                B[IDXC0(i,j,ldb)] = dirSrc(k,STRENGTH,dir[j],chief[i-numNod]);
+        }
+    }
+    
+    cuFloatComplex *A_d, *B_d;
+    CUDA_CALL(cudaMalloc(&A_d,(numNod+numCHIEF)*numNod*sizeof(cuFloatComplex)));
+    CUDA_CALL(cudaMemcpy(A_d,A,(numNod+numCHIEF)*numNod*sizeof(cuFloatComplex),cudaMemcpyHostToDevice));
+    
+    CUDA_CALL(cudaMalloc(&B_d,(numNod+numCHIEF)*numSrc*sizeof(cuFloatComplex)));
+    CUDA_CALL(cudaMemcpy(B_d,B,(numNod+numCHIEF)*numSrc*sizeof(cuFloatComplex),cudaMemcpyHostToDevice));
+    
+    int xNumBlocks, xWidth = 16, yNumBlocks, yWidth = 16;
+    xNumBlocks = (numNod+numCHIEF+xWidth-1)/xWidth;
+    yNumBlocks = (numElem+yWidth-1)/yWidth;
+    dim3 gridLayout, blockLayout;
+    gridLayout.x = xNumBlocks;
+    gridLayout.y = yNumBlocks;
+    
+    blockLayout.x = xWidth;
+    blockLayout.y = yWidth;
+    
+    atomicPtsElems_nsgl<<<gridLayout,blockLayout>>>(k,pt_d,numNod,0,numNod+numCHIEF-1,
+            elem_d,numElem,A_d,numNod+numCHIEF,B_d,numSrc,ldb);
+    atomicPtsElems_sgl<<<yNumBlocks,yWidth>>>(k,pt_d,elem_d,numElem,A_d,numNod+numCHIEF,
+            B_d,numSrc,ldb);
+    
+    //Solving the system
+    cusolverDnHandle_t cusolverH = NULL;
+    CUSOLVER_CALL(cusolverDnCreate(&cusolverH));
+    
+    //A = QR
+    int lwork;
+    CUSOLVER_CALL(cusolverDnCgeqrf_bufferSize(cusolverH,numNod+numCHIEF,numNod,A_d
+            ,numNod+numCHIEF,&lwork));
+    
+    cuFloatComplex *workspace_d;
+    CUDA_CALL(cudaMalloc(&workspace_d,lwork*sizeof(cuFloatComplex)));
+    cuFloatComplex *tau_d;
+    CUDA_CALL(cudaMalloc(&tau_d,(numNod+numCHIEF)*sizeof(cuFloatComplex)));
+    int *deviceInfo_d, deviceInfo;
+    CUDA_CALL(cudaMalloc(&deviceInfo_d,sizeof(int)));
+    
+    
+    CUSOLVER_CALL(cusolverDnCgeqrf(cusolverH,numNod+numCHIEF,numNod,A_d,numNod+numCHIEF,
+            tau_d,workspace_d,lwork,deviceInfo_d));
+    CUDA_CALL(cudaMemcpy(&deviceInfo,deviceInfo_d,sizeof(int),cudaMemcpyDeviceToHost));
+    
+    //B = (Q^H)*B
+    CUSOLVER_CALL(cusolverDnCunmqr(cusolverH,CUBLAS_SIDE_LEFT,CUBLAS_OP_C,numNod+numCHIEF,numSrc,
+            numNod,A_d,numNod+numCHIEF,tau_d,B_d,ldb,workspace_d,lwork,deviceInfo_d));
+    CUDA_CALL(cudaMemcpy(&deviceInfo,deviceInfo_d,sizeof(int),cudaMemcpyDeviceToHost));
+    
+    //Solve Rx = B
+    cuFloatComplex alpha = make_cuFloatComplex(1,0);
+    cublasHandle_t cublasH;
+    CUBLAS_CALL(cublasCreate_v2(&cublasH));
+    CUBLAS_CALL(cublasCtrsm_v2(cublasH,CUBLAS_SIDE_LEFT,CUBLAS_FILL_MODE_UPPER,
+            CUBLAS_OP_N,CUBLAS_DIAG_NON_UNIT,numNod,numSrc,&alpha,A_d,numNod+numCHIEF,B_d,ldb));
+    CUDA_CALL(cudaEventRecord(stop));
+    CUDA_CALL(cudaEventSynchronize(stop));
+    CUDA_CALL(cudaMemcpy(B,B_d,ldb*numSrc*sizeof(cuFloatComplex),cudaMemcpyDeviceToHost));
+    
+    float milliseconds = 0;
+    CUDA_CALL(cudaEventElapsedTime(&milliseconds,start,stop));
+    printf("Elapsed system solving time: %f milliseconds.\n",milliseconds);
+    
+    //release memory
+    CUDA_CALL(cudaEventDestroy(start));
+    CUDA_CALL(cudaEventDestroy(stop));
+    CUDA_CALL(cudaFree(A_d));
+    CUDA_CALL(cudaFree(B_d));
+    CUDA_CALL(cudaFree(tau_d));
+    CUDA_CALL(cudaFree(workspace_d));
+    CUDA_CALL(cudaFree(deviceInfo_d));
+    CUBLAS_CALL(cublasDestroy_v2(cublasH));
+    CUSOLVER_CALL(cusolverDnDestroy(cusolverH));
+    CUDA_CALL(cudaFree(elem_d));
+    CUDA_CALL(cudaFree(pt_d));
+    free(A);
+    return EXIT_SUCCESS;
+}
+
+__host__ gsl_complex gsl_sf_bessel_hl(const int l, const double s)
+{
+    double x = gsl_sf_bessel_jl(l,s);
+    double y = gsl_sf_bessel_yl(l,s);
+    gsl_complex z = gsl_complex_rect(x,y);
+    return z;
+}
+
+double jprime(const int n, const double r)
+{
+    double result;
+    if(n == 0) {
+        result = -gsl_sf_bessel_jl(1,r);
+    } else {
+        result = gsl_sf_bessel_jl(n-1,r)-(n+1)*gsl_sf_bessel_jl(n,r)/r;
+    }
+    return result;
+}
+
+gsl_complex hprime(const int n, const double r)
+{
+    gsl_complex result;
+    if(n == 0) {
+        result = gsl_complex_negative(gsl_sf_bessel_hl(1,r));
+    } else {
+        result = gsl_complex_sub(gsl_sf_bessel_hl(n-1,r),gsl_complex_mul_real(gsl_sf_bessel_hl(n,r),(n+1)/r));
+    }
+    return result;
+}
+
+__host__ __device__ sphCoord cart2sph(const cartCoord s)
+{
+    sphCoord temp;
+    temp.r = sqrtf(powf(s.coords[0],2)+powf(s.coords[1],2)+powf(s.coords[2],2));
+    temp.theta = acosf(s.coords[2]/(temp.r));
+    temp.phi = atan2f(s.coords[1],s.coords[0]);
+    return temp;
+}
+
+void computeRigidSphereScattering(const cartCoord *pt, const int numPt, const double a, 
+        const double wavNum, const double strength)
+{
+    gsl_complex *p = (gsl_complex*)malloc(numPt*sizeof(gsl_complex));
+    sphCoord tempCoord;
+    gsl_complex result, temp_c;
+    //double temp;
+    const int truncNum = 30;
+    for(int i=0;i<numPt;i++)
+    {
+        result = gsl_complex_rect(0,0);
+        tempCoord = cart2sph(pt[i]);
+        for(int n = 0;n<truncNum;n++)
+        {
+            temp_c = gsl_complex_div(gsl_complex_rect(jprime(n,wavNum*a),0),hprime(n,wavNum*a));
+            temp_c = gsl_complex_mul(temp_c,gsl_sf_bessel_hl(n,wavNum*a));
+            temp_c = gsl_complex_sub(gsl_complex_rect(gsl_sf_bessel_jl(n,wavNum*a),0),temp_c);
+            temp_c = gsl_complex_mul(gsl_complex_pow_real(gsl_complex_rect(0,1),n),temp_c);
+            temp_c = gsl_complex_mul_real(temp_c,2*n+1);
+            temp_c = gsl_complex_mul_real(temp_c,gsl_sf_legendre_Pl(n,cos(tempCoord.theta)));
+            result = gsl_complex_add(result,temp_c);
+        }
+        result = gsl_complex_mul_real(result,strength);
+        p[i] = result;
+        printf("(%.8f,%.8f)\n",GSL_REAL(p[i]),GSL_IMAG(p[i]));
+    }
+    free(p);
+}

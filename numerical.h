@@ -27,12 +27,16 @@
 
 #include "dataStruct.h"
 
+#include <gsl/gsl_sf.h>
+#include <gsl/gsl_complex_math.h>
+#include <gsl/gsl_blas.h>
+
 #ifndef PI
 #define PI 3.1415926535897932f
 #endif
 
 #ifndef STRENGTH
-#define STRENGTH 0.0f
+#define STRENGTH 1.0f
 #endif
 
 #ifndef INTORDER
@@ -162,7 +166,12 @@ int bemSolver(const float k, const triElem *elem, const int numElem,
         const cartCoord *nod, const int numNod, const cartCoord *chief, const int numCHIEF, 
         const cartCoord *src, const int numSrc, cuFloatComplex *B, const int ldb);
 
+int bemSolver_dir(const float k, const triElem *elem, const int numElem, 
+        const cartCoord *nod, const int numNod, const cartCoord *chief, const int numCHIEF, 
+        const cartCoord *dir, const int numSrc, cuFloatComplex *B, const int ldb);
 
+void computeRigidSphereScattering(const cartCoord *pt, const int numPt, const double a, 
+        const double wavNum, const double strength);
 
 #endif /* NUMERICAL_H */
 

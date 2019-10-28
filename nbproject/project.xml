@@ -3,7 +3,7 @@
     <type>org.netbeans.modules.cnd.makeproject</type>
     <configuration>
         <data xmlns="http://www.netbeans.org/ns/make-project/1">
-            <name>BEM_GPU_OPT</name>
+            <name>BEM_GPU_C</name>
             <c-extensions>c</c-extensions>
             <cpp-extensions>cu</cpp-extensions>
             <header-extensions>h</header-extensions>

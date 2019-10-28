@@ -52,7 +52,7 @@ void readOBJ(const char *filename, cartCoord* p, triElem *e)
             e[j].nodes[2] = temp[2]-1;
             e[j].bc[0] = make_cuFloatComplex(0,0); // ca=0
             e[j].bc[1] = make_cuFloatComplex(1,0); // cb=1
-            e[j].bc[2] = make_cuFloatComplex(-1,0); // cc=0
+            e[j].bc[2] = make_cuFloatComplex(0,0); // cc=0
             j++;
         }
     }
