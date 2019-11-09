@@ -1,7 +1,14 @@
 This folder contains code for a fast implementation of the BEM acoustics.
 
 format to use the executable:
-main.out filename left_index right_index low_frequency high_frequency
+main.out -f filename -l left_index -r right_index low_frequency high_frequency source_type 
+
+filename: the name of the file including its suffix. Only supports .obj currently;
+left_index: node index of the left ear;
+right_index: node index of the right ear;
+low_frequency: lower frequency bound;
+high_frequency: higher frequency bound;
+source type: plane or point;
 
 example:
-main.out guo_equal.obj 7255 9803 25 20000
+main.out guo_equal.obj 7255 9803 25 20000 plane

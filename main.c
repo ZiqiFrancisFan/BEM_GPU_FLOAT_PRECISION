@@ -5,6 +5,7 @@
  */
 #include <stdio.h>
 #include <stdlib.h>
+#include <unistd.h>
 #include "dataStruct.h"
 #include "mesh.h"
 #include "numerical.h"
@@ -45,4 +46,22 @@ int main(int argc, char *argv[]) {
     free(pt);
     free(elem);
     free(B);
+}
+
+int parse_command(int argc, char *argv[])
+{   
+    char filename[50], src_type[50];
+    int left_index, right_index;
+    float low_freq, high_freq;
+    if(argc != 7)
+    {
+        printf("Input arguments not complete");
+        return EXIT_FAILURE;
+    } else
+    {
+        for(int i=0;i<=7;i++)
+        {
+            
+        }
+    }
 }
