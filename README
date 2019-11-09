@@ -1,1 +1,7 @@
-This folder contains code for a fast implementation of the BEM acoustics. 
+This folder contains code for a fast implementation of the BEM acoustics.
+
+format to use the executable:
+main.out filename left_index right_index low_frequency high_frequency
+
+example:
+main.out guo_equal.obj 7255 9803 25 20000
