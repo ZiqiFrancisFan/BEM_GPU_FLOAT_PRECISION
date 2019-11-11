@@ -219,15 +219,15 @@ int main(int argc, char *argv[]) {
         
         // float freq = 1000;
         int numFreqs = floor((high_freq-low_freq)/freq_interp)+1;
-        float left_hrtfs = (float*)malloc((numHorDirs+numVertDirs)*numFreqs*sizeof(float));
-        float right_hrtfs = (float*)malloc((numHorDirs+numVertDirs)*numFreqs*sizeof(float));
+        cuFloatComplex *left_hrtfs = (cuFloatComplex*)malloc((numHorDirs+numVertDirs)*numFreqs*sizeof(cuFloatComplex));
+        cuFloatComplex *right_hrtfs = (cuFloatComplex*)malloc((numHorDirs+numVertDirs)*numFreqs*sizeof(cuFloatComplex));
         cuFloatComplex* B = (cuFloatComplex*)malloc((numPt+NUMCHIEF)*(numHorDirs+numVertDirs)*sizeof(cuFloatComplex));
         const float speed = 343.21;
         float wavNum;
         int freqIdx = 0;
         for(float freq=low_freq;freq<=high_freq;freq+=freq_interp) {
             wavNum = 2*PI*freq/speed; //omega/c
-            HOST_CALL(bemSolver_dir(k,elem,numElem,pt,numPt,chief,NUMCHIEF,dirs,numHorDirs+numVertDirs,B,numPt+NUMCHIEF));
+            HOST_CALL(bemSolver_dir(wavNum,elem,numElem,pt,numPt,chief,NUMCHIEF,dirs,numHorDirs+numVertDirs,B,numPt+NUMCHIEF));
             for(int i=0;i<numHorDirs+numVertDirs;i++) {
                 left_hrtfs[i*numFreqs+freqIdx] = B[IDXC0(left_index,i,numPt+NUMCHIEF)];
                 right_hrtfs[i*numFreqs+freqIdx] = B[IDXC0(right_index,i,numPt+NUMCHIEF)];
@@ -237,6 +237,9 @@ int main(int argc, char *argv[]) {
         
         char left_file_name[50] = "left_hrtfs", right_file_name[50] = "right_hrtfs";
         HOST_CALL(write_hrtfs_to_file(left_hrtfs,right_hrtfs,numHorDirs+numVertDirs,numFreqs,left_file_name,right_file_name));
+        
+        free(left_hrtfs);
+        free(right_hrtfs);
     }
     
     
