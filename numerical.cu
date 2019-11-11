@@ -891,9 +891,10 @@ int bemSolver(const float k, const triElem *elem, const int numElem,
     CUDA_CALL(cudaEventRecord(start));
     //Generate the system
     cuFloatComplex *A = (cuFloatComplex*)malloc((numNod+numCHIEF)*numNod*sizeof(cuFloatComplex));
-    memset(A, 0, (numNod+numCHIEF)*numNod*sizeof(cuFloatComplex));
+    
+    memset(A,0,(numNod+numCHIEF)*numNod*sizeof(cuFloatComplex));
 
-    for(i=0;i<numNod+numCHIEF;i++) 
+    for(i=0;i<numNod;i++) 
     {
         A[IDXC0(i,i,numNod+numCHIEF)] = make_cuFloatComplex(1,0);
 // 
@@ -1024,30 +1025,18 @@ int bemSolver_dir(const float k, const triElem *elem, const int numElem,
     // }
     
     cartCoord *pt_d;
-    CUDA_CALL(cudaMalloc(&pt_d, (numNod + numCHIEF) * sizeof(cartCoord)));
-    CUDA_CALL(cudaMemcpy(pt_d, nod, numNod * sizeof(cartCoord),cudaMemcpyHostToDevice));
-    CUDA_CALL(cudaMemcpy(pt_d + numNod, chief, numCHIEF * sizeof(cartCoord),cudaMemcpyHostToDevice));
+    CUDA_CALL(cudaMalloc(&pt_d,(numNod+numCHIEF)*sizeof(cartCoord)));
+    CUDA_CALL(cudaMemcpy(pt_d,nod,numNod*sizeof(cartCoord),cudaMemcpyHostToDevice));
+    CUDA_CALL(cudaMemcpy(pt_d+numNod,chief,numCHIEF*sizeof(cartCoord),cudaMemcpyHostToDevice));
     
     CUDA_CALL(cudaEventRecord(start));
     //Generate the system
     cuFloatComplex *A = (cuFloatComplex*)malloc((numNod+numCHIEF)*numNod*sizeof(cuFloatComplex));
-    memset(A, 0, (numNod+numCHIEF)*numNod*sizeof(cuFloatComplex));
+    memset(A,0,(numNod+numCHIEF)*numNod*sizeof(cuFloatComplex));
 
-    for(i=0;i<numNod+numCHIEF;i++) 
+    for(i=0;i<numNod;i++) 
     {
         A[IDXC0(i,i,numNod+numCHIEF)] = make_cuFloatComplex(1,0);
-// 
-        // for(j=0;j<numNod;j++) 
-        // {
-        //     if(i==j) 
-        //     {
-        //         A[IDXC0(i,j,numNod+numCHIEF)] = make_cuFloatComplex(1,0);
-        //     } 
-        //     else 
-        //     {
-        //         A[IDXC0(i,j,numNod+numCHIEF)] = make_cuFloatComplex(0,0);
-        //     }
-        // }
     }
     
     //Initialization of B

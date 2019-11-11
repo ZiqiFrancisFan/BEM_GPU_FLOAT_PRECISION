@@ -164,6 +164,7 @@ int main(int argc, char *argv[]) {
     // read in the mesh
     int numPt, numElem;
     findNum(file_name,&numPt,&numElem);
+    printf("Total number of points: %d, total number of elements: %d\n",numPt,numElem);
     cartCoord *pt = (cartCoord*)malloc(numPt*sizeof(cartCoord));
     triElem *elem = (triElem*)malloc(numElem*sizeof(triElem));
     readOBJ(file_name,pt,elem);
@@ -171,13 +172,14 @@ int main(int argc, char *argv[]) {
     // generate CHIEF points
     cartCoord chief[NUMCHIEF];
     genCHIEF(pt,numPt,elem,numElem,chief,NUMCHIEF);
+    printf("CHIEF points generated.\n");
     
     // conduct computating;
-    cartCoord origin = {0,0,0}; // set up origin
-    
+    const cartCoord origin = {0,0,0}; // set up origin
     
     // plane wave
     if(strcmp(source_name,"plane")==0) {
+        printf("Plane wave used.\n");
         // compute the number of directions
         int numHorDirs = floor((high_phi-low_phi)/phi_interp)+1;
         int numVertDirs = floor((high_theta-low_theta)/theta_interp)+1;
@@ -187,11 +189,14 @@ int main(int argc, char *argv[]) {
         // set up horizontal directions
         for(int i=0;i<numHorDirs;i++) {
             float phi = low_phi+i*phi_interp;
-            float theta = 0;
+            phi = PI/180*phi;
+            float theta = 90;
+            theta = PI/180*theta;
             float r = 1;
             float x = r*sin(theta)*cos(phi);
             float y = r*sin(theta)*sin(phi);
             float z = 0;
+            //printf("(%f,%f,%f)\n",x,y,z);
             cartCoord tempPt = {x,y,z};
             cartCoord dir = cartCoordSub(origin,tempPt);
             float dirNrm = sqrt(pow(dir.coords[0],2)+pow(dir.coords[1],2)+pow(dir.coords[2],2));
@@ -204,9 +209,10 @@ int main(int argc, char *argv[]) {
         // set up vertical directions
         for(int i=0;i<numVertDirs;i++) {
             float theta = low_theta+i*theta_interp;
+            theta = PI/180*theta;
             float r = 1;
-            float x = 0;
-            float y = r*sin(theta);
+            float x = r*sin(theta);
+            float y = 0;
             float z = r*cos(theta);
             cartCoord tempPt = {x,y,z};
             cartCoord dir = cartCoordSub(origin,tempPt);
@@ -217,7 +223,11 @@ int main(int argc, char *argv[]) {
             dirs[numHorDirs+i] = dir;
         }
         
-        // float freq = 1000;
+        printf("Directions set up.\n");
+        
+        //for(int i=0;i<numHorDirs+numVertDirs;i++) {
+        //    printf("%dth direction: (%f,%f,%f)\n",i,dirs[i].coords[0],dirs[i].coords[1],dirs[i].coords[2]);
+        //}
         int numFreqs = floor((high_freq-low_freq)/freq_interp)+1;
         cuFloatComplex *left_hrtfs = (cuFloatComplex*)malloc((numHorDirs+numVertDirs)*numFreqs*sizeof(cuFloatComplex));
         cuFloatComplex *right_hrtfs = (cuFloatComplex*)malloc((numHorDirs+numVertDirs)*numFreqs*sizeof(cuFloatComplex));
@@ -226,37 +236,41 @@ int main(int argc, char *argv[]) {
         float wavNum;
         int freqIdx = 0;
         for(float freq=low_freq;freq<=high_freq;freq+=freq_interp) {
+            printf("Current frequency: %f\n",freq);
             wavNum = 2*PI*freq/speed; //omega/c
             HOST_CALL(bemSolver_dir(wavNum,elem,numElem,pt,numPt,chief,NUMCHIEF,dirs,numHorDirs+numVertDirs,B,numPt+NUMCHIEF));
+            //HOST_CALL(bemSolver_dir(k,elem,numElem,pt,numPt,chief,NUMCHIEF,&dir,1,B,numPt+NUMCHIEF));
             for(int i=0;i<numHorDirs+numVertDirs;i++) {
                 left_hrtfs[i*numFreqs+freqIdx] = B[IDXC0(left_index,i,numPt+NUMCHIEF)];
                 right_hrtfs[i*numFreqs+freqIdx] = B[IDXC0(right_index,i,numPt+NUMCHIEF)];
             }
+            freqIdx++;
         }
-        free(B);
         
         char left_file_name[50] = "left_hrtfs", right_file_name[50] = "right_hrtfs";
         HOST_CALL(write_hrtfs_to_file(left_hrtfs,right_hrtfs,numHorDirs+numVertDirs,numFreqs,left_file_name,right_file_name));
         
+        free(dirs);
+        free(B);
         free(left_hrtfs);
         free(right_hrtfs);
     }
     
     
     //cartCoord src = {10,10,10};
-    //cartCoord dir = {0,0,1};
+    cartCoord dir = {0,0,1};
     
     //printCartCoord(chief,NUMCHIEF);
     //printf("Completed.\n");
     
-    //cuFloatComplex *B = (cuFloatComplex*)malloc((numPt+NUMCHIEF)*sizeof(cuFloatComplex));
+    cuFloatComplex *B = (cuFloatComplex*)malloc((numPt+NUMCHIEF)*sizeof(cuFloatComplex));
     //HOST_CALL(bemSolver(k,elem,numElem,pt,numPt,chief,NUMCHIEF,&src,1,B,numPt+NUMCHIEF));
-    //HOST_CALL(bemSolver_dir(k,elem,numElem,pt,numPt,chief,NUMCHIEF,&dir,1,B,numPt+NUMCHIEF));
-    //printCuFloatComplexMat(B,numPt,1,numPt+NUMCHIEF);
-    //printf("Analytical solution: \n");
-    //computeRigidSphereScattering(pt,numPt,0.1,k,1.0);
+    HOST_CALL(bemSolver_dir(30,elem,numElem,pt,numPt,chief,NUMCHIEF,&dir,1,B,numPt+NUMCHIEF));
+    printCuFloatComplexMat(B,numPt,1,numPt+NUMCHIEF);
+    printf("Analytical solution: \n");
+    computeRigidSphereScattering(pt,numPt,0.1,30,1.0);
     
     free(pt);
     free(elem);
-    //free(B);
+    free(B);
 }
