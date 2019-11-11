@@ -1,7 +1,7 @@
 This folder contains code for a fast implementation of the BEM acoustics.
 
 format to use the executable:
-main.out --file filename --left left_index --right right_index 
+./main.a --file filename --left left_index --right right_index 
     --low_freq low_frequency --high_freq high_frequency --freq_interp frequency_interpolation 
     --source source_type --low_phi lower_phi --high_phi higher_phi --phi_interp phi_interplation 
     --low_theta lower_theta --high_theta higher_theta --theta_interp theta_interpolation
@@ -14,6 +14,4 @@ high_frequency: higher frequency bound;
 source type: plane or point;
 
 example:
-main.a --file guo_equal.obj --left 7255 --right 9803 --low_freq 25 --high_freq 20000 --freq_step 25 --source plane
- 
-main.out guo_equal.obj 7255 9803 25 20000 plane
+./main.a --file guo_equal.obj --left 7255 --right 9803 --low_freq 25 --high_freq 20000 --freq_step 25 --source plane

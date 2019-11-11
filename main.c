@@ -7,6 +7,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <getopt.h>
+#include <math.h>
 #include "dataStruct.h"
 #include "mesh.h"
 #include "numerical.h"
@@ -15,10 +16,10 @@ int main(int argc, char *argv[]) {
     // parse command line arguments
     int c;
     int option_index = 0;
-    char file_name[50], source_name[20];
-    int left_index, right_index;
-    float low_freq, high_freq, freq_interp, low_phi, high_phi, phi_interp, 
-            low_theta, high_theta, theta_interp;
+    char file_name[50] = "", source_name[20] = "";
+    int left_index = 0, right_index = 0;
+    float low_freq = 0, high_freq = 0, freq_interp = 0, low_phi = 0, high_phi = 0, phi_interp = 0, 
+            low_theta = 0, high_theta = 0, theta_interp = 0;
     struct option long_options[] = {
         {"file", required_argument, NULL, 0},
         {"left", required_argument, NULL, 1},
@@ -38,7 +39,7 @@ int main(int argc, char *argv[]) {
     // parse command line arguments
     while(1) {
         c = getopt_long(argc,argv,"",long_options,&option_index);
-        if(c==-1) 
+        if(c == -1) 
             break;
         switch(c) {
             case 0:
@@ -98,7 +99,63 @@ int main(int argc, char *argv[]) {
         }   
     }
     
-    // Gaussian quadrature evaluation points and weights
+    // provide default arguments to the file name and the source name
+    if(strcmp(file_name,"") == 0) {
+        strcpy(file_name,"sphere_100mm.obj");
+    }
+    if(strcmp(source_name,"") == 0) {
+        strcpy(source_name,"plane");
+    }
+    
+    // check evaluation points
+    if(left_index == 0 || right_index == 0) {
+        printf("Evaluation point missing.\n");
+        return EXIT_FAILURE;
+    }
+    
+    // check frequency
+    if(high_freq == 0) {
+        high_freq = low_freq;
+        freq_interp = 0;
+    }
+    if(high_freq < low_freq) {
+        printf("Upper frequency bound smaller than lower frequency bound!\n");
+        return EXIT_FAILURE;
+    }
+    if(low_freq < high_freq && freq_interp <= 0) {
+        printf("Frequency interpolation not set properly!\n");
+        return EXIT_FAILURE;
+    }
+    
+    // check phi
+    if(high_phi == 0) {
+        high_phi = low_phi;
+        phi_interp = 0; // compute a single phi
+    }
+    if(high_phi < low_phi) {
+        printf("Upper bound of phi smaller than lower bound of phi!\n");
+        return EXIT_FAILURE;
+    }
+    if(low_phi < high_phi && phi_interp <= 0) {
+        printf("Interpolation of phi not set properly!\n");
+        return EXIT_FAILURE;
+    }
+    
+    // check theta
+    if(high_theta == 0) {
+        high_theta = low_theta;
+        theta_interp = 0; // compute a single theta
+    }
+    if(high_theta < low_theta) {
+        printf("Upper bound of theta smaller than lower bound of theta!\n");
+        return EXIT_FAILURE;
+    }
+    if(low_theta < high_theta && theta_interp <= 0) {
+        printf("Interpolation of theta not set properly!\n");
+        return EXIT_FAILURE;
+    }
+    
+    // generate Gaussian-quadrature evaluation points and weights
     float intPt[INTORDER];
     float intWgt[INTORDER];
     HOST_CALL(genGaussParams(INTORDER,intPt,intWgt));
@@ -115,12 +172,52 @@ int main(int argc, char *argv[]) {
     cartCoord chief[NUMCHIEF];
     genCHIEF(pt,numPt,elem,numElem,chief,NUMCHIEF);
     
-    // create source directions or locations
-    if(strcpy(source_name,"plane")==0) {
-        // use directions 
+    // conduct computating;
+    cartCoord origin = {0,0,0}; // set up origin
+    
+    
+    // plane wave
+    if(strcmp(source_name,"plane")==0) {
+        // compute the number of directions
+        int numHorDirs = floor((high_phi-low_phi)/phi_interp)+1;
+        int numVertDirs = floor((high_theta-low_theta)/theta_interp)+1;
+        
+        cartCoord* dirs = (cartCoord*)malloc((numHorDirs+numVertDirs)*sizeof(cartCoord)); // memory for directions
+        
+        // set up horizontal directions
+        for(int i=0;i<numHorDirs;i++) {
+            float phi = low_phi+i*phi_interp;
+            float theta = 0;
+            float r = 1;
+            float x = r*sin(theta)*cos(phi);
+            float y = r*sin(theta)*sin(phi);
+            float z = 0;
+            cartCoord tempPt = {x,y,z};
+            cartCoord dir = cartCoordSub(origin,tempPt);
+            float dirNrm = sqrt(pow(dir.coords[0],2)+pow(dir.coords[1],2)+pow(dir.coords[2],2));
+            for(int j=0;j<3;j++) {
+                dir.coords[j]/=dirNrm;
+            }
+            dirs[i] = dir;
+        }
+        
+        // set up vertical directions
+        for(int i=0;i<numVertDirs;i++) {
+            float theta = low_theta+i*theta_interp;
+            float r = 1;
+            float x = 0;
+            float y = r*sin(theta);
+            float z = r*cos(theta);
+            cartCoord tempPt = {x,y,z};
+            cartCoord dir = cartCoordSub(origin,tempPt);
+            float dirNrm = sqrt(pow(dir.coords[0],2)+pow(dir.coords[1],2)+pow(dir.coords[2],2));
+            for(int j=0;j<3;j++) {
+                dir.coords[j]/=dirNrm;
+            }
+            dirs[numHorDirs+i] = dir;
+        }
+        
     }
-    
-    
     
     
     // float freq = 1000;
@@ -130,8 +227,6 @@ int main(int argc, char *argv[]) {
         k = 2*PI*freq/speed;
         
     }
-    
-    
     
     //cartCoord src = {10,10,10};
     cartCoord dir = {0,0,1};
