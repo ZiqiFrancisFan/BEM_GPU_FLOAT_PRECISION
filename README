@@ -14,4 +14,4 @@ high_frequency: higher frequency bound;
 source type: plane or point;
 
 example:
-./main.a --file guo_equal.obj --left 7255 --right 9803 --low_freq 25 --high_freq 20000 --freq_step 25 --source plane
+./main.a --file guo_equal.obj --left 7269 --right 15533 --low_freq 25 --high_freq 20000 --freq_step 25 --source plane

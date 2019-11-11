@@ -125,3 +125,43 @@ int findBB(const cartCoord *pt, const int numPt, const float threshold, float x[
     }
 }
 
+int write_hrtfs_to_file(const cuFloatComplex *HRTFs_le, const cuFloatComplex *HRTFs_re, 
+        const int numSrcs, const int numFreqs, const char *file_le, const char* file_re)
+{
+    // create two files for left and right ears
+    FILE *file_l = fopen(file_le, "w"), *file_r = fopen(file_re,"w");
+    if(file_l==NULL || file_r==NULL) {
+        printf("Failed to open file!\n");
+        return EXIT_FAILURE;
+    }
+    
+    // write left-ear hrtfs to file
+    int status, i, j;
+    for(i=0;i<numSrcs;i++) {
+        for(j=0;j<numFreqs;j++) {
+            status = fprintf(file_l,"(%f,%f) ",cuCrealf(HRTFs_le[IDXC0(i,j,numSrcs)]),
+                    cuCimagf(HRTFs_le[IDXC0(i,j,numSrcs)]));
+            if (status < 0) {
+                printf("Failed to write the current line to file.\n");
+                return EXIT_FAILURE;
+            }
+        }
+        fprintf(file_l,"\n");
+    }
+    
+    // write right-ear hrtfs to file
+    for(i=0;i<numSrcs;i++) {
+        for(j=0;j<numFreqs;j++) {
+            status = fprintf(file_r,"(%f,%f) ",cuCrealf(HRTFs_re[IDXC0(i,j,numSrcs)]),
+                    cuCimagf(HRTFs_re[IDXC0(i,j,numSrcs)]));
+            if (status < 0) {
+                printf("Failed to write the current line to file.\n");
+                return EXIT_FAILURE;
+            }
+        }
+        fprintf(file_r,"\n");
+    }
+    fclose(file_l);
+    fclose(file_r);
+    return EXIT_SUCCESS;
+}

@@ -217,31 +217,43 @@ int main(int argc, char *argv[]) {
             dirs[numHorDirs+i] = dir;
         }
         
-    }
-    
-    
-    // float freq = 1000;
-    const float speed = 343.21;
-    float k;
-    for(float freq = low_freq;freq <= high_freq; freq += freq_interp) {
-        k = 2*PI*freq/speed;
+        // float freq = 1000;
+        int numFreqs = floor((high_freq-low_freq)/freq_interp)+1;
+        float left_hrtfs = (float*)malloc((numHorDirs+numVertDirs)*numFreqs*sizeof(float));
+        float right_hrtfs = (float*)malloc((numHorDirs+numVertDirs)*numFreqs*sizeof(float));
+        cuFloatComplex* B = (cuFloatComplex*)malloc((numPt+NUMCHIEF)*(numHorDirs+numVertDirs)*sizeof(cuFloatComplex));
+        const float speed = 343.21;
+        float wavNum;
+        int freqIdx = 0;
+        for(float freq=low_freq;freq<=high_freq;freq+=freq_interp) {
+            wavNum = 2*PI*freq/speed; //omega/c
+            HOST_CALL(bemSolver_dir(k,elem,numElem,pt,numPt,chief,NUMCHIEF,dirs,numHorDirs+numVertDirs,B,numPt+NUMCHIEF));
+            for(int i=0;i<numHorDirs+numVertDirs;i++) {
+                left_hrtfs[i*numFreqs+freqIdx] = B[IDXC0(left_index,i,numPt+NUMCHIEF)];
+                right_hrtfs[i*numFreqs+freqIdx] = B[IDXC0(right_index,i,numPt+NUMCHIEF)];
+            }
+        }
+        free(B);
         
+        char left_file_name[50] = "left_hrtfs", right_file_name[50] = "right_hrtfs";
+        HOST_CALL(write_hrtfs_to_file(left_hrtfs,right_hrtfs,numHorDirs+numVertDirs,numFreqs,left_file_name,right_file_name));
     }
+    
     
     //cartCoord src = {10,10,10};
-    cartCoord dir = {0,0,1};
+    //cartCoord dir = {0,0,1};
     
     //printCartCoord(chief,NUMCHIEF);
     //printf("Completed.\n");
     
-    cuFloatComplex *B = (cuFloatComplex*)malloc((numPt+NUMCHIEF)*sizeof(cuFloatComplex));
+    //cuFloatComplex *B = (cuFloatComplex*)malloc((numPt+NUMCHIEF)*sizeof(cuFloatComplex));
     //HOST_CALL(bemSolver(k,elem,numElem,pt,numPt,chief,NUMCHIEF,&src,1,B,numPt+NUMCHIEF));
-    HOST_CALL(bemSolver_dir(k,elem,numElem,pt,numPt,chief,NUMCHIEF,&dir,1,B,numPt+NUMCHIEF));
-    printCuFloatComplexMat(B,numPt,1,numPt+NUMCHIEF);
-    printf("Analytical solution: \n");
-    computeRigidSphereScattering(pt,numPt,0.1,k,1.0);
+    //HOST_CALL(bemSolver_dir(k,elem,numElem,pt,numPt,chief,NUMCHIEF,&dir,1,B,numPt+NUMCHIEF));
+    //printCuFloatComplexMat(B,numPt,1,numPt+NUMCHIEF);
+    //printf("Analytical solution: \n");
+    //computeRigidSphereScattering(pt,numPt,0.1,k,1.0);
     
     free(pt);
     free(elem);
-    free(B);
+    //free(B);
 }
