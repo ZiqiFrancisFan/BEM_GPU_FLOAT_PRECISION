@@ -571,7 +571,7 @@ __host__ __device__ cuFloatComplex dirSrc(const float k, const float strength, c
     return make_cuFloatComplex(strength*cosf(theta),strength*sinf(theta));
 }
 
-
+// compute non-singular relationship between points and elements
 __global__ void atomicPtsElems_nsgl(const float k, const cartCoord *pt, const int numNod, 
         const int idxPntStart, const int idxPntEnd, const triElem *elem, const int numElem, 
         cuFloatComplex *A, const int lda, cuFloatComplex *B, const int numSrc, const int ldb) {
@@ -897,18 +897,6 @@ int bemSolver(const float k, const triElem *elem, const int numElem,
     for(i=0;i<numNod;i++) 
     {
         A[IDXC0(i,i,numNod+numCHIEF)] = make_cuFloatComplex(1,0);
-// 
-        // for(j=0;j<numNod;j++) 
-        // {
-        //     if(i==j) 
-        //     {
-        //         A[IDXC0(i,j,numNod+numCHIEF)] = make_cuFloatComplex(1,0);
-        //     } 
-        //     else 
-        //     {
-        //         A[IDXC0(i,j,numNod+numCHIEF)] = make_cuFloatComplex(0,0);
-        //     }
-        // }
     }
     
     //Initialization of B
@@ -1197,4 +1185,41 @@ void computeRigidSphereScattering(const cartCoord *pt, const int numPt, const do
         printf("(%.8f,%.8f)\n",GSL_REAL(p[i]),GSL_IMAG(p[i]));
     }
     free(p);
+}
+
+__device__ cuFloatComplex extrapolation_dir(const float wavNum, const cartCoord x, 
+        const triElem* elem, const int numElem, const cartCoord* pt, const int numPt, 
+        const cuFloatComplex* p, const float strength, const cartCoord dir)
+{
+    cuFloatComplex result = dirSrc(wavNum,strength,dir,x);
+    cuFloatComplex temp;
+    for(int i=0;i<numElem;i++) {
+        cartCoord nod[3];
+        for(int j=0;j<3;j++) {
+            nod[j] = pt[elem[i].nodes[j]];
+        }
+        cuFloatComplex gCoeff[3], hCoeff[3]; 
+        float cCoeff[3];
+        g_h_c_nsgl(wavNum,x,nod,gCoeff,hCoeff,cCoeff);
+        for(int j=0;j<3;j++) {
+            temp = cuCdivf(elem[i].bc[2],elem[i].bc[1]);
+            temp = cuCmulf(temp,gCoeff[j]);
+            result = cuCsubf(result,temp);
+            temp = cuCdivf(elem[i].bc[0],elem[i].bc[1]);
+            temp = cuCmulf(temp,gCoeff[j]);
+            temp = cuCsubf(hCoeff[j],temp);
+            temp = cuCmulf(temp,p[elem[i].nodes[j]]);
+        }
+    }
+    return result;
+}
+
+__global__ void extrapolation_dirs(const float wavNum, const cartCoord* expPt, const int numExpPt,
+        const triElem* elem, const int numElem, const cartCoord* pt, const int numPt, 
+        const cuFloatComplex* p, const float strength, const cartCoord dir, cuFloatComplex *p_exp)
+{
+    int idx = blockIdx.x*blockDim.x+threadIdx.x;
+    if(idx < numExpPt) {
+        p_exp[idx] = extrapolation_dir(wavNum,expPt[idx],elem,numElem,pt,numPt,p,strength,dir);
+    }
 }
