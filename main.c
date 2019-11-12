@@ -265,10 +265,19 @@ int main(int argc, char *argv[]) {
     
     cuFloatComplex *B = (cuFloatComplex*)malloc((numPt+NUMCHIEF)*sizeof(cuFloatComplex));
     //HOST_CALL(bemSolver(k,elem,numElem,pt,numPt,chief,NUMCHIEF,&src,1,B,numPt+NUMCHIEF));
-    HOST_CALL(bemSolver_dir(30,elem,numElem,pt,numPt,chief,NUMCHIEF,&dir,1,B,numPt+NUMCHIEF));
-    printCuFloatComplexMat(B,numPt,1,numPt+NUMCHIEF);
+    HOST_CALL(bemSolver_dir(20,elem,numElem,pt,numPt,chief,NUMCHIEF,&dir,1,B,numPt+NUMCHIEF));
+    //printCuFloatComplexMat(B,numPt,1,numPt+NUMCHIEF);
+    printf("\n");
     printf("Analytical solution: \n");
-    computeRigidSphereScattering(pt,numPt,0.1,30,1.0);
+    //computeRigidSphereScattering(pt,numPt,0.1,0.1,20,1.0);
+    
+    cartCoord expPt = {0.9,0.9,0.9};
+    sphCoord s = cart2sph(expPt);
+    gsl_complex temp = rigidSphereScattering(20,1,0.1,s.r,s.theta);
+    printf("Analytical solution: (%f,%f)\n",GSL_REAL(temp),GSL_IMAG(temp));
+    cuFloatComplex temp_cu;
+    HOST_CALL(extrapolation_dirs_single_source(20,&expPt,1,elem,numElem,pt,numPt,B,1.0,dir,&temp_cu));
+    printf("Numercial solution: (%f,%f)\n",cuCrealf(temp_cu),cuCimagf(temp_cu));
     
     free(pt);
     free(elem);

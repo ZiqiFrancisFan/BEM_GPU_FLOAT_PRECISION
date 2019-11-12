@@ -137,6 +137,8 @@ void printFltMat(const float *A, const int numRow, const int numCol, const int l
 void printCuFloatComplexMat(const cuFloatComplex *A, const int numRow, const int numCol, 
         const int lda);
 
+__host__ __device__ sphCoord cart2sph(const cartCoord s);
+
 __host__ __device__ cartCoord scalarProd(const float lambda, const cartCoord v);
 
 __host__ __device__ cartCoord crossProd(const cartCoord u, const cartCoord v);
@@ -171,7 +173,14 @@ int bemSolver_dir(const float k, const triElem *elem, const int numElem,
         const cartCoord *dir, const int numSrc, cuFloatComplex *B, const int ldb);
 
 void computeRigidSphereScattering(const cartCoord *pt, const int numPt, const double a, 
-        const double wavNum, const double strength);
+        const double r, const double wavNum, const double strength);
+
+gsl_complex rigidSphereScattering(const double wavNum, const double strength, const double a, 
+        const double r, const double theta);
+
+int extrapolation_dirs_single_source(const float wavNum, const cartCoord* expPt, const int numExpPt, 
+        const triElem* elem, const int numElem, const cartCoord* pt, const int numPt, 
+        const cuFloatComplex* p, const float strength, const cartCoord dir, cuFloatComplex *pExp);
 
 #endif /* NUMERICAL_H */
 

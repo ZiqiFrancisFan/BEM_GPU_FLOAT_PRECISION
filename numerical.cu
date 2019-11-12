@@ -1159,36 +1159,44 @@ __host__ __device__ sphCoord cart2sph(const cartCoord s)
 }
 
 void computeRigidSphereScattering(const cartCoord *pt, const int numPt, const double a, 
-        const double wavNum, const double strength)
+        const double r, const double wavNum, const double strength)
 {
     gsl_complex *p = (gsl_complex*)malloc(numPt*sizeof(gsl_complex));
     sphCoord tempCoord;
-    gsl_complex result, temp_c;
+    gsl_complex result;
     //double temp;
-    const int truncNum = 30;
+    //const int truncNum = 30;
     for(int i=0;i<numPt;i++)
     {
-        result = gsl_complex_rect(0,0);
         tempCoord = cart2sph(pt[i]);
-        for(int n = 0;n<truncNum;n++)
-        {
-            temp_c = gsl_complex_div(gsl_complex_rect(jprime(n,wavNum*a),0),hprime(n,wavNum*a));
-            temp_c = gsl_complex_mul(temp_c,gsl_sf_bessel_hl(n,wavNum*a));
-            temp_c = gsl_complex_sub(gsl_complex_rect(gsl_sf_bessel_jl(n,wavNum*a),0),temp_c);
-            temp_c = gsl_complex_mul(gsl_complex_pow_real(gsl_complex_rect(0,1),n),temp_c);
-            temp_c = gsl_complex_mul_real(temp_c,2*n+1);
-            temp_c = gsl_complex_mul_real(temp_c,gsl_sf_legendre_Pl(n,cos(tempCoord.theta)));
-            result = gsl_complex_add(result,temp_c);
-        }
-        result = gsl_complex_mul_real(result,strength);
+        result = rigidSphereScattering(wavNum,strength,a,tempCoord.r,tempCoord.theta);
         p[i] = result;
         printf("(%.8f,%.8f)\n",GSL_REAL(p[i]),GSL_IMAG(p[i]));
     }
     free(p);
 }
 
+gsl_complex rigidSphereScattering(const double wavNum, const double strength, const double a, 
+        const double r, const double theta)
+{
+    gsl_complex result = gsl_complex_rect(0,0), temp_c;
+    const int numTrunc = 40;
+    for(int n=0;n<numTrunc;n++)
+    {
+        temp_c = gsl_complex_div(gsl_complex_rect(jprime(n,wavNum*a),0),hprime(n,wavNum*a));
+        temp_c = gsl_complex_mul(temp_c,gsl_sf_bessel_hl(n,wavNum*r));
+        temp_c = gsl_complex_sub(gsl_complex_rect(gsl_sf_bessel_jl(n,wavNum*r),0),temp_c);
+        temp_c = gsl_complex_mul(gsl_complex_pow_real(gsl_complex_rect(0,1),n),temp_c);
+        temp_c = gsl_complex_mul_real(temp_c,2*n+1);
+        temp_c = gsl_complex_mul_real(temp_c,gsl_sf_legendre_Pl(n,cos(theta)));
+        result = gsl_complex_add(result,temp_c);
+    }
+    result = gsl_complex_mul_real(result,strength);
+    return result;
+}
+
 __device__ cuFloatComplex extrapolation_dir(const float wavNum, const cartCoord x, 
-        const triElem* elem, const int numElem, const cartCoord* pt, const int numPt, 
+        const triElem* elem, const int numElem, const cartCoord* pt, 
         const cuFloatComplex* p, const float strength, const cartCoord dir)
 {
     cuFloatComplex result = dirSrc(wavNum,strength,dir,x);
@@ -1209,17 +1217,57 @@ __device__ cuFloatComplex extrapolation_dir(const float wavNum, const cartCoord 
             temp = cuCmulf(temp,gCoeff[j]);
             temp = cuCsubf(hCoeff[j],temp);
             temp = cuCmulf(temp,p[elem[i].nodes[j]]);
+            result = cuCsubf(result,temp);
         }
     }
     return result;
 }
 
 __global__ void extrapolation_dirs(const float wavNum, const cartCoord* expPt, const int numExpPt,
-        const triElem* elem, const int numElem, const cartCoord* pt, const int numPt, 
-        const cuFloatComplex* p, const float strength, const cartCoord dir, cuFloatComplex *p_exp)
+        const triElem* elem, const int numElem, const cartCoord* pt, const cuFloatComplex* p, 
+        const float strength, const cartCoord dir, cuFloatComplex *p_exp)
 {
     int idx = blockIdx.x*blockDim.x+threadIdx.x;
     if(idx < numExpPt) {
-        p_exp[idx] = extrapolation_dir(wavNum,expPt[idx],elem,numElem,pt,numPt,p,strength,dir);
+        p_exp[idx] = extrapolation_dir(wavNum,expPt[idx],elem,numElem,pt,p,strength,dir);
     }
+}
+
+int extrapolation_dirs_single_source(const float wavNum, const cartCoord* expPt, const int numExpPt, 
+        const triElem* elem, const int numElem, const cartCoord* pt, const int numPt, 
+        const cuFloatComplex* p, const float strength, const cartCoord dir, cuFloatComplex *pExp)
+{
+    int width = 16, numBlock = (numExpPt+width-1)/width;
+    
+    // allocate memory on GPU and copy data to GPU memory
+    cartCoord *expPt_d, *pt_d;
+    triElem *elem_d;
+    cuFloatComplex *p_d, *pExp_d;
+    
+    CUDA_CALL(cudaMalloc(&expPt_d,numExpPt*sizeof(cartCoord)));
+    CUDA_CALL(cudaMemcpy(expPt_d,expPt,numExpPt*sizeof(cartCoord),cudaMemcpyHostToDevice));
+    
+    CUDA_CALL(cudaMalloc(&pt_d,numPt*sizeof(cartCoord)));
+    CUDA_CALL(cudaMemcpy(pt_d,pt,numPt*sizeof(cartCoord),cudaMemcpyHostToDevice));
+    
+    CUDA_CALL(cudaMalloc(&elem_d,numElem*sizeof(triElem)));
+    CUDA_CALL(cudaMemcpy(elem_d,elem,numElem*sizeof(triElem),cudaMemcpyHostToDevice));
+    
+    CUDA_CALL(cudaMalloc(&p_d,numPt*sizeof(cuFloatComplex)));
+    CUDA_CALL(cudaMemcpy(p_d,p,numPt*sizeof(cuFloatComplex),cudaMemcpyHostToDevice));
+    
+    CUDA_CALL(cudaMalloc(&pExp_d,numExpPt*sizeof(cuFloatComplex)));
+    
+    extrapolation_dirs<<<numBlock,width>>>(wavNum,expPt_d,numExpPt,elem_d,numElem,pt_d,p_d,
+            strength,dir,pExp_d);
+    
+    CUDA_CALL(cudaMemcpy(pExp,pExp_d,numExpPt*sizeof(cuFloatComplex),cudaMemcpyDeviceToHost));
+    
+    CUDA_CALL(cudaFree(expPt_d));
+    CUDA_CALL(cudaFree(pt_d));
+    CUDA_CALL(cudaFree(elem_d));
+    CUDA_CALL(cudaFree(p_d));
+    CUDA_CALL(cudaFree(pExp_d));
+    
+    return EXIT_SUCCESS;
 }
