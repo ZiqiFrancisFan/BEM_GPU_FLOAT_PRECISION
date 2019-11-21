@@ -271,7 +271,7 @@ int main(int argc, char *argv[]) {
     printf("Analytical solution: \n");
     //computeRigidSphereScattering(pt,numPt,0.1,0.1,20,1.0);
     
-    cartCoord expPt = {0.9,0.9,0.9};
+    cartCoord expPt = {1.5,1.5,1.5};
     sphCoord s = cart2sph(expPt);
     gsl_complex temp = rigidSphereScattering(20,1,0.1,s.r,s.theta);
     printf("Analytical solution: (%f,%f)\n",GSL_REAL(temp),GSL_IMAG(temp));

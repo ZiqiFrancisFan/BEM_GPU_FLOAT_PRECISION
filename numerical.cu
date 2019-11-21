@@ -1180,7 +1180,7 @@ gsl_complex rigidSphereScattering(const double wavNum, const double strength, co
         const double r, const double theta)
 {
     gsl_complex result = gsl_complex_rect(0,0), temp_c;
-    const int numTrunc = 40;
+    const int numTrunc = 70;
     for(int n=0;n<numTrunc;n++)
     {
         temp_c = gsl_complex_div(gsl_complex_rect(jprime(n,wavNum*a),0),hprime(n,wavNum*a));
