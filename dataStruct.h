@@ -30,19 +30,37 @@ extern "C" {
 
     struct cart_coord_float 
     {
+        // x, y, z in ascending order
         float coords[3];
     };
     
     struct sph_coord_float
     {
-        float r;
-        float theta;
-        float phi;
+        // r, theta and phi in ascending order
+        float coords[3];
     };
     
     typedef struct tri_elem tri_elem;
     
     typedef struct cart_coord_float cart_coord_float;
+    
+    typedef struct sph_coord_float sph_coord_float;
+    
+    struct cart_coord_double
+    {
+        // x, y, z in ascending order
+        double coords[3];
+    };
+    
+    struct sph_coord_double
+    {
+        // r, theta, phi in ascending order
+        double coords[3];
+    };
+    
+    typedef struct cart_coord_double cart_coord_double;
+    
+    typedef struct sph_coord_double sph_coord_double;
 
 
 #ifdef __cplusplus

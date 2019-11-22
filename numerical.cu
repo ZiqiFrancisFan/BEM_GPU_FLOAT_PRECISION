@@ -1152,10 +1152,41 @@ gsl_complex hprime(const int n, const double r)
 __host__ __device__ sph_coord_float cart2sph(const cart_coord_float s)
 {
     sph_coord_float temp;
-    temp.r = sqrtf(powf(s.coords[0],2)+powf(s.coords[1],2)+powf(s.coords[2],2));
-    temp.theta = acosf(s.coords[2]/(temp.r));
-    temp.phi = atan2f(s.coords[1],s.coords[0]);
+    temp.coords[0] = sqrtf(powf(s.coords[0],2)+powf(s.coords[1],2)+powf(s.coords[2],2));
+    temp.coords[1] = acosf(s.coords[2]/(temp.coords[0]));
+    temp.coords[2] = atan2f(s.coords[1],s.coords[0]);
     return temp;
+}
+
+__host__ __device__ cart_coord_float sph2cart(const sph_coord_float s)
+{
+    float r = s.coords[0], theta = s.coords[1], phi = s.coords[2];
+    float x = r*sinf(theta)*cosf(phi), y = r*sinf(theta)*sinf(phi), z = r*cosf(theta);
+    cart_coord_float result;
+    result.coords[0] = x;
+    result.coords[1] = y;
+    result.coords[2] = z;
+    return result;
+}
+
+__host__ __device__ sph_coord_double cart2sph(const cart_coord_double s)
+{
+    sph_coord_double temp;
+    temp.coords[0] = sqrt(pow(s.coords[0],2)+pow(s.coords[1],2)+pow(s.coords[2],2));
+    temp.coords[1] = acos(s.coords[2]/(temp.coords[0]));
+    temp.coords[2] = atan2(s.coords[1],s.coords[0]);
+    return temp;
+}
+
+__host__ __device__ cart_coord_double sph2cart(const sph_coord_double s)
+{
+    double r = s.coords[0], theta = s.coords[1], phi = s.coords[2];
+    double x = r*sin(theta)*cos(phi), y = r*sin(theta)*sin(phi), z = r*cos(theta);
+    cart_coord_double result;
+    result.coords[0] = x;
+    result.coords[1] = y;
+    result.coords[2] = z;
+    return result;
 }
 
 void computeRigidSphereScattering(const cart_coord_float *pt, const int numPt, const double a, 
@@ -1169,7 +1200,7 @@ void computeRigidSphereScattering(const cart_coord_float *pt, const int numPt, c
     for(int i=0;i<numPt;i++)
     {
         tempCoord = cart2sph(pt[i]);
-        result = rigidSphereScattering(wavNum,strength,a,tempCoord.r,tempCoord.theta);
+        result = rigidSphereScattering(wavNum,strength,a,tempCoord.coords[0],tempCoord.coords[1]);
         p[i] = result;
         printf("(%.8f,%.8f)\n",GSL_REAL(p[i]),GSL_IMAG(p[i]));
     }
