@@ -169,12 +169,12 @@ int main(int argc, char *argv[]) {
     int numPt, numElem;
     findNum(file_name,&numPt,&numElem);
     printf("Total number of points: %d, total number of elements: %d\n",numPt,numElem);
-    cartCoord *pt = (cartCoord*)malloc(numPt*sizeof(cartCoord));
-    triElem *elem = (triElem*)malloc(numElem*sizeof(triElem));
+    cart_coord_float *pt = (cart_coord_float*)malloc(numPt*sizeof(cart_coord_float));
+    tri_elem *elem = (tri_elem*)malloc(numElem*sizeof(tri_elem));
     readOBJ(file_name,pt,elem);
     
     // generate CHIEF points
-    cartCoord chief[NUMCHIEF];
+    cart_coord_float chief[NUMCHIEF];
     genCHIEF(pt,numPt,elem,numElem,chief,NUMCHIEF);
     printf("CHIEF points generated.\n");
     
@@ -185,7 +185,7 @@ int main(int argc, char *argv[]) {
     }
     
     // conduct computating;
-    const cartCoord origin = {0,0,0}; // set up origin
+    const cart_coord_float origin = {0,0,0}; // set up origin
     
     // plane wave
     if(strcmp(source_name,"plane")==0) {
@@ -194,7 +194,7 @@ int main(int argc, char *argv[]) {
         int numHorDirs = floor((high_phi-low_phi)/phi_interp)+1;
         int numVertDirs = floor((high_theta-low_theta)/theta_interp)+1;
         
-        cartCoord* dirs = (cartCoord*)malloc((numHorDirs+numVertDirs)*sizeof(cartCoord)); // memory for directions
+        cart_coord_float* dirs = (cart_coord_float*)malloc((numHorDirs+numVertDirs)*sizeof(cart_coord_float)); // memory for directions
         
         // set up horizontal directions
         for(int i=0;i<numHorDirs;i++) {
@@ -207,8 +207,8 @@ int main(int argc, char *argv[]) {
             float y = r*sin(theta)*sin(phi);
             float z = 0;
             //printf("(%f,%f,%f)\n",x,y,z);
-            cartCoord tempPt = {x,y,z};
-            cartCoord dir = cartCoordSub(origin,tempPt);
+            cart_coord_float tempPt = {x,y,z};
+            cart_coord_float dir = cartCoordSub(origin,tempPt);
             float dirNrm = sqrt(pow(dir.coords[0],2)+pow(dir.coords[1],2)+pow(dir.coords[2],2));
             for(int j=0;j<3;j++) {
                 dir.coords[j]/=dirNrm;
@@ -224,8 +224,8 @@ int main(int argc, char *argv[]) {
             float x = r*sin(theta);
             float y = 0;
             float z = r*cos(theta);
-            cartCoord tempPt = {x,y,z};
-            cartCoord dir = cartCoordSub(origin,tempPt);
+            cart_coord_float tempPt = {x,y,z};
+            cart_coord_float dir = cartCoordSub(origin,tempPt);
             float dirNrm = sqrt(pow(dir.coords[0],2)+pow(dir.coords[1],2)+pow(dir.coords[2],2));
             for(int j=0;j<3;j++) {
                 dir.coords[j]/=dirNrm;
@@ -272,7 +272,7 @@ int main(int argc, char *argv[]) {
         int numHorDirs = floor((high_phi-low_phi)/phi_interp)+1;
         int numVertDirs = floor((high_theta-low_theta)/theta_interp)+1;
         
-        cartCoord* srcLocs = (cartCoord*)malloc((numHorDirs+numVertDirs)*sizeof(cartCoord)); // memory for directions
+        cart_coord_float* srcLocs = (cart_coord_float*)malloc((numHorDirs+numVertDirs)*sizeof(cart_coord_float)); // memory for directions
         for(int i=0;i<numHorDirs;i++) {
             float phi = low_phi+i*phi_interp;
             phi = PI/180*phi;
@@ -283,7 +283,7 @@ int main(int argc, char *argv[]) {
             float y = r*sin(theta)*sin(phi);
             float z = 0;
             //printf("(%f,%f,%f)\n",x,y,z);
-            cartCoord srcLoc = {x,y,z};
+            cart_coord_float srcLoc = {x,y,z};
             srcLocs[i] = srcLoc;
         }
         
@@ -295,7 +295,7 @@ int main(int argc, char *argv[]) {
             float x = r*sin(theta);
             float y = 0;
             float z = r*cos(theta);
-            cartCoord srcLoc = {x,y,z};
+            cart_coord_float srcLoc = {x,y,z};
             srcLocs[numHorDirs+i] = srcLoc;
         }
         
@@ -330,8 +330,8 @@ int main(int argc, char *argv[]) {
     }
     
     
-    //cartCoord src = {10,10,10};
-    cartCoord dir = {0,0,1};
+    //cart_coord_float src = {10,10,10};
+    cart_coord_float dir = {0,0,1};
     
     //printCartCoord(chief,NUMCHIEF);
     //printf("Completed.\n");
@@ -344,8 +344,8 @@ int main(int argc, char *argv[]) {
     printf("Analytical solution: \n");
     //computeRigidSphereScattering(pt,numPt,0.1,0.1,20,1.0);
     
-    cartCoord expPt = {1.5,1.5,1.5};
-    sphCoord s = cart2sph(expPt);
+    cart_coord_float expPt = {1.5,1.5,1.5};
+    sph_coord_float s = cart2sph(expPt);
     gsl_complex temp = rigidSphereScattering(20,1,0.1,s.r,s.theta);
     printf("Analytical solution: (%f,%f)\n",GSL_REAL(temp),GSL_IMAG(temp));
     cuFloatComplex temp_cu;

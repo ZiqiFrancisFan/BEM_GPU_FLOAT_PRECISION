@@ -137,50 +137,50 @@ void printFltMat(const float *A, const int numRow, const int numCol, const int l
 void printCuFloatComplexMat(const cuFloatComplex *A, const int numRow, const int numCol, 
         const int lda);
 
-__host__ __device__ sphCoord cart2sph(const cartCoord s);
+__host__ __device__ sph_coord_float cart2sph(const cart_coord_float s);
 
-__host__ __device__ cartCoord scalarProd(const float lambda, const cartCoord v);
+__host__ __device__ cart_coord_float scalarProd(const float lambda, const cart_coord_float v);
 
-__host__ __device__ cartCoord crossProd(const cartCoord u, const cartCoord v);
+__host__ __device__ cart_coord_float crossProd(const cart_coord_float u, const cart_coord_float v);
 
-__host__ __device__ cartCoord cartCoordAdd(const cartCoord u, const cartCoord v);
+__host__ __device__ cart_coord_float cartCoordAdd(const cart_coord_float u, const cart_coord_float v);
 
-__host__ __device__ cartCoord cartCoordSub(const cartCoord u, const cartCoord v);
+__host__ __device__ cart_coord_float cartCoordSub(const cart_coord_float u, const cart_coord_float v);
 
-__host__ __device__ bool ray_intersect_triangle(const cartCoord O, const cartCoord dir, 
-        const cartCoord nod[3]);
+__host__ __device__ bool ray_intersect_triangle(const cart_coord_float O, const cart_coord_float dir, 
+        const cart_coord_float nod[3]);
 
-__global__ void rayTrisInt(const cartCoord pt_s, const cartCoord dir, const cartCoord *nod, 
-        const triElem *elem, const int numElem, bool *flag);
+__global__ void rayTrisInt(const cart_coord_float pt_s, const cart_coord_float dir, const cart_coord_float *nod, 
+        const tri_elem *elem, const int numElem, bool *flag);
 
-int genCHIEF(const cartCoord *pt, const int numPt, const triElem *elem, const int numElem, 
-        cartCoord *pCHIEF, const int numCHIEF);
+int genCHIEF(const cart_coord_float *pt, const int numPt, const tri_elem *elem, const int numElem, 
+        cart_coord_float *pCHIEF, const int numCHIEF);
 
-int atomicGenSystem(const float k, const triElem *elem, const int numElem, 
-        const cartCoord *pt, const int numNod, const cartCoord *chief, const int numCHIEF, 
-        const cartCoord *src, const int numSrcs, cuFloatComplex *A, const int lda, 
+int atomicGenSystem(const float k, const tri_elem *elem, const int numElem, 
+        const cart_coord_float *pt, const int numNod, const cart_coord_float *chief, const int numCHIEF, 
+        const cart_coord_float *src, const int numSrcs, cuFloatComplex *A, const int lda, 
         cuFloatComplex *B, const int ldb);
 
 int qrSolver(const cuFloatComplex *A, const int mA, const int nA, const int ldA, 
         cuFloatComplex *B, const int nB, const int ldB);
 
-int bemSolver_pt(const float k, const triElem *elem, const int numElem, 
-        const cartCoord *nod, const int numNod, const cartCoord *chief, const int numCHIEF, 
-        const cartCoord *src, const int numSrc, cuFloatComplex *B, const int ldb);
+int bemSolver_pt(const float k, const tri_elem *elem, const int numElem, 
+        const cart_coord_float *nod, const int numNod, const cart_coord_float *chief, const int numCHIEF, 
+        const cart_coord_float *src, const int numSrc, cuFloatComplex *B, const int ldb);
 
-int bemSolver_dir(const float k, const triElem *elem, const int numElem, 
-        const cartCoord *nod, const int numNod, const cartCoord *chief, const int numCHIEF, 
-        const cartCoord *dir, const int numSrc, cuFloatComplex *B, const int ldb);
+int bemSolver_dir(const float k, const tri_elem *elem, const int numElem, 
+        const cart_coord_float *nod, const int numNod, const cart_coord_float *chief, const int numCHIEF, 
+        const cart_coord_float *dir, const int numSrc, cuFloatComplex *B, const int ldb);
 
-void computeRigidSphereScattering(const cartCoord *pt, const int numPt, const double a, 
+void computeRigidSphereScattering(const cart_coord_float *pt, const int numPt, const double a, 
         const double r, const double wavNum, const double strength);
 
 gsl_complex rigidSphereScattering(const double wavNum, const double strength, const double a, 
         const double r, const double theta);
 
-int extrapolation_dirs_single_source(const float wavNum, const cartCoord* expPt, const int numExpPt, 
-        const triElem* elem, const int numElem, const cartCoord* pt, const int numPt, 
-        const cuFloatComplex* p, const float strength, const cartCoord dir, cuFloatComplex *pExp);
+int extrapolation_dirs_single_source(const float wavNum, const cart_coord_float* expPt, const int numExpPt, 
+        const tri_elem* elem, const int numElem, const cart_coord_float* pt, const int numPt, 
+        const cuFloatComplex* p, const float strength, const cart_coord_float dir, cuFloatComplex *pExp);
 
 #endif /* NUMERICAL_H */
 

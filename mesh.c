@@ -28,7 +28,7 @@ void findNum(const char * filename, int *pV, int *pE)
     fclose(fp);
 }
 
-void readOBJ(const char *filename, cartCoord* p, triElem *e) 
+void readOBJ(const char *filename, cart_coord_float* p, tri_elem* e) 
 {
     int temp[3];
     FILE *fp = fopen(filename, "r");
@@ -59,21 +59,21 @@ void readOBJ(const char *filename, cartCoord* p, triElem *e)
     fclose(fp);
 }
 
-void printPts(const cartCoord *p, const int num) 
+void printPts(const cart_coord_float* p, const int num) 
 {
     for(int i=0;i<num;i++) {
         printf("(%f,%f,%f)\n",p[i].coords[0], p[i].coords[1], p[i].coords[2]);
     }
 }
 
-void printElems(const triElem *elem, const int num) 
+void printElems(const tri_elem* elem, const int num) 
 {
     for(int i=0;i<num;i++) {
         printf("(%d,%d,%d)\n",elem[i].nodes[0],elem[i].nodes[1],elem[i].nodes[2]);
     }
 }
 
-void printCartCoord(const cartCoord *pt, const int numPt)
+void printCartCoord(const cart_coord_float* pt, const int numPt)
 {
     for(int i=0;i<numPt;i++) {
         printf("(%f,%f,%f), ",pt[i].coords[0],pt[i].coords[1],pt[i].coords[2]);
@@ -81,7 +81,7 @@ void printCartCoord(const cartCoord *pt, const int numPt)
     printf("\n");
 }
 
-int findBB(const cartCoord *pt, const int numPt, const float threshold, float x[2], 
+int findBB(const cart_coord_float* pt, const int numPt, const float threshold, float x[2], 
         float y[2], float z[2])
 {
     if(numPt!=0) {

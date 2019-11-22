@@ -86,66 +86,66 @@ void printCuFloatComplexMat(const cuFloatComplex *A, const int numRow, const int
     }
 }
 
-__host__ __device__ float dotProd(const cartCoord u, const cartCoord v) {
+__host__ __device__ float dotProd(const cart_coord_float u, const cart_coord_float v) {
     return u.coords[0]*v.coords[0]+u.coords[1]*v.coords[1]+u.coords[2]*v.coords[2];
 }
 
-__host__ __device__ cartCoord crossProd(const cartCoord u, const cartCoord v) {
-    cartCoord r;
+__host__ __device__ cart_coord_float crossProd(const cart_coord_float u, const cart_coord_float v) {
+    cart_coord_float r;
     r.coords[0] = (u.coords[1])*(v.coords[2])-(u.coords[2])*(v.coords[1]);
     r.coords[1] = (u.coords[2])*(v.coords[0])-(u.coords[0])*(v.coords[2]);
     r.coords[2] = (u.coords[0])*(v.coords[1])-(u.coords[1])*(v.coords[0]);
     return r;
 }
 
-__host__ __device__ cartCoord cartCoordAdd(const cartCoord u, const cartCoord v)
+__host__ __device__ cart_coord_float cartCoordAdd(const cart_coord_float u, const cart_coord_float v)
 {
-    cartCoord result;
+    cart_coord_float result;
     for(int i=0;i<3;i++) {
         result.coords[i] = u.coords[i]+v.coords[i];
     }
     return result;
 }
 
-__host__ __device__ cartCoord cartCoordSub(const cartCoord u, const cartCoord v)
+__host__ __device__ cart_coord_float cartCoordSub(const cart_coord_float u, const cart_coord_float v)
 {
-    cartCoord result;
+    cart_coord_float result;
     for(int i=0;i<3;i++) {
         result.coords[i] = u.coords[i]-v.coords[i];
     }
     return result;
 }
 
-__host__ __device__ cartCoord scalarProd(const float lambda, const cartCoord v)
+__host__ __device__ cart_coord_float scalarProd(const float lambda, const cart_coord_float v)
 {
-    cartCoord result;
+    cart_coord_float result;
     for(int i=0;i<3;i++) {
         result.coords[i] = lambda*v.coords[i];
     }
     return result;
 }
 
-__host__ __device__ bool ray_intersect_triangle(const cartCoord O, const cartCoord dir, 
-        const cartCoord nod[3])
+__host__ __device__ bool ray_intersect_triangle(const cart_coord_float O, const cart_coord_float dir, 
+        const cart_coord_float nod[3])
 {
     /*vert0 is chosen as reference point*/
-    cartCoord E1, E2;
+    cart_coord_float E1, E2;
     E1 = cartCoordSub(nod[1],nod[0]);
     E2 = cartCoordSub(nod[2],nod[0]);
     /*cross product of dir and v0 to v1*/
-    cartCoord P = crossProd(dir,E2);
+    cart_coord_float P = crossProd(dir,E2);
     float det = dotProd(P,E1);
     if(abs(det)<EPS) {
         return false;
     }
     /*Computation of parameter u*/
-    cartCoord T = cartCoordSub(O,nod[0]);
+    cart_coord_float T = cartCoordSub(O,nod[0]);
     float u = 1.0f/det*dotProd(P,T);
     if(u<0 || u>1) {
         return false;
     }
     /*Computation of parameter v*/
-    cartCoord Q = crossProd(T,E1);
+    cart_coord_float Q = crossProd(T,E1);
     float v = 1.0f/det*dotProd(Q,dir);
     if(v<0 || u+v>1) {
         return false;
@@ -158,13 +158,13 @@ __host__ __device__ bool ray_intersect_triangle(const cartCoord O, const cartCoo
     return true;
 }
 
-__global__ void rayTrisInt(const cartCoord pt_s, const cartCoord dir, const cartCoord *nod, 
-        const triElem *elem, const int numElem, bool *flag)
+__global__ void rayTrisInt(const cart_coord_float pt_s, const cart_coord_float dir, const cart_coord_float *nod, 
+        const tri_elem *elem, const int numElem, bool *flag)
 {
     // decides if a point pnt is in a closed surface elem
     int idx = blockDim.x*blockIdx.x+threadIdx.x;
     if(idx<numElem) {
-        cartCoord pt[3];
+        cart_coord_float pt[3];
         for(int i=0;i<3;i++) {
             pt[i].coords[0] = nod[elem[idx].nodes[i]].coords[0];
             pt[i].coords[1] = nod[elem[idx].nodes[i]].coords[1];
@@ -174,7 +174,7 @@ __global__ void rayTrisInt(const cartCoord pt_s, const cartCoord dir, const cart
     }
 }
 
-__global__ void distPntPnts(const cartCoord pt, const cartCoord *nod, const int numNod, float *dist) {
+__global__ void distPntPnts(const cart_coord_float pt, const cart_coord_float *nod, const int numNod, float *dist) {
     int idx = blockDim.x*blockIdx.x + threadIdx.x;
     if(idx < numNod) {
         dist[idx] = __fsqrt_rn((pt.coords[0]-nod[idx].coords[0])*(pt.coords[0]-nod[idx].coords[0])
@@ -202,25 +202,25 @@ bool inBdry(const bool *flag, const int numFlag) {
     }
 }
 
-int genCHIEF(const cartCoord *pt, const int numPt, const triElem *elem, const int numElem, 
-        cartCoord *pCHIEF, const int numCHIEF) {
+int genCHIEF(const cart_coord_float *pt, const int numPt, const tri_elem *elem, const int numElem, 
+        cart_coord_float *pCHIEF, const int numCHIEF) {
     int i, cnt;
     float threshold_inner = 0.0000001;
     float *dist_h = (float*)malloc(numPt*sizeof(float));
     float minDist; //minimum distance between the chief point to all surface nodes
     float *dist_d;
     CUDA_CALL(cudaMalloc((void**)&dist_d, numPt*sizeof(float)));
-    cartCoord dir; 
+    cart_coord_float dir; 
     
     //transfer the point cloud to GPU
-    cartCoord *pt_d;
-    CUDA_CALL(cudaMalloc((void**)&pt_d,numPt*sizeof(cartCoord))); //point cloud allocated on device
-    CUDA_CALL(cudaMemcpy(pt_d,pt,numPt*sizeof(cartCoord),cudaMemcpyHostToDevice)); //point cloud copied to device
+    cart_coord_float *pt_d;
+    CUDA_CALL(cudaMalloc((void**)&pt_d,numPt*sizeof(cart_coord_float))); //point cloud allocated on device
+    CUDA_CALL(cudaMemcpy(pt_d,pt,numPt*sizeof(cart_coord_float),cudaMemcpyHostToDevice)); //point cloud copied to device
     
     //transfer the element cloud to GPU
-    triElem *elem_d;
-    CUDA_CALL(cudaMalloc((void**)&elem_d,numElem*sizeof(triElem))); //elements allcoated on device
-    CUDA_CALL(cudaMemcpy(elem_d,elem,numElem*sizeof(triElem),cudaMemcpyHostToDevice)); //elements copied to device
+    tri_elem *elem_d;
+    CUDA_CALL(cudaMalloc((void**)&elem_d,numElem*sizeof(tri_elem))); //elements allcoated on device
+    CUDA_CALL(cudaMemcpy(elem_d,elem,numElem*sizeof(tri_elem),cudaMemcpyHostToDevice)); //elements copied to device
     
     //create a flag array on CPU and on GPU
     bool *flag_h = (bool*)malloc(numElem*sizeof(bool));
@@ -231,7 +231,7 @@ int genCHIEF(const cartCoord *pt, const int numPt, const triElem *elem, const in
     int blockWidth = 32;
     int gridWidth;
     float xrand, yrand, zrand, unifRandNum[3];
-    cartCoord chief;
+    cart_coord_float chief;
     
     //Find the bounding box
     float xb[2], yb[2], zb[2];
@@ -288,9 +288,9 @@ int genCHIEF(const cartCoord *pt, const int numPt, const triElem *elem, const in
     return EXIT_SUCCESS;
 }
 
-inline __device__ void crossNorm(const cartCoord a, const cartCoord b, cartCoord *norm, float *length) 
+inline __device__ void crossNorm(const cart_coord_float a, const cart_coord_float b, cart_coord_float *norm, float *length) 
 {
-    cartCoord c;
+    cart_coord_float c;
     c.coords[0] = a.coords[1]*b.coords[2]-a.coords[2]*b.coords[1];
     c.coords[1] = a.coords[2]*b.coords[0]-a.coords[0]*b.coords[2];
     c.coords[2] = a.coords[0]*b.coords[1]-a.coords[1]*b.coords[0];
@@ -302,7 +302,7 @@ inline __device__ void crossNorm(const cartCoord a, const cartCoord b, cartCoord
     norm->coords[2] = c.coords[2] / *length;
 }
 
-__device__ void g_h_c_nsgl(const float k, const cartCoord x, const cartCoord p[3], 
+__device__ void g_h_c_nsgl(const float k, const cart_coord_float x, const cart_coord_float p[3], 
         cuFloatComplex gCoeff[3], cuFloatComplex hCoeff[3], float *cCoeff) {
     //Initalization of g, h and c
     //printf("(%f,%f,%f)\n",p[0].coords[0],p[0].coords[1],p[0].coords[2]);
@@ -315,7 +315,7 @@ __device__ void g_h_c_nsgl(const float k, const cartCoord x, const cartCoord p[3
     //Local variables
     float eta1, eta2, wn, wm, xi1, xi2, xi3, rho, theta, vertCrossProd, temp, 
             temp_gh[3], omega = k*speed, pPsiLpn2, radius, prpn2;
-    cartCoord y, normal, rVec;
+    cart_coord_float y, normal, rVec;
     cuFloatComplex Psi, pPsipn2;
     crossNorm(
     {
@@ -383,8 +383,8 @@ __device__ void g_h_c_nsgl(const float k, const cartCoord x, const cartCoord p[3
     gCoeff[2] = make_cuFloatComplex(-prodRhoOmega*cuCimagf(gCoeff[2]),prodRhoOmega*cuCrealf(gCoeff[2]));
 }
 
-__device__ void g_h_c_sgl(const float k, const cartCoord x_sgl1, const cartCoord x_sgl2, 
-        const cartCoord x_sgl3, const cartCoord p[3], 
+__device__ void g_h_c_sgl(const float k, const cart_coord_float x_sgl1, const cart_coord_float x_sgl2, 
+        const cart_coord_float x_sgl3, const cart_coord_float p[3], 
         cuFloatComplex gCoeff_sgl1[3], cuFloatComplex hCoeff_sgl1[3], float *cCoeff_sgl1,
         cuFloatComplex gCoeff_sgl2[3], cuFloatComplex hCoeff_sgl2[3], float *cCoeff_sgl2,
         cuFloatComplex gCoeff_sgl3[3], cuFloatComplex hCoeff_sgl3[3], float *cCoeff_sgl3) 
@@ -406,7 +406,7 @@ __device__ void g_h_c_sgl(const float k, const cartCoord x_sgl1, const cartCoord
     float eta1, eta2, wn, wm, xi1_sgl1, xi2_sgl1, xi3_sgl1, xi1_sgl2, xi2_sgl2, xi3_sgl2,
             xi1_sgl3, xi2_sgl3, xi3_sgl3, rho, theta, vertCrossProd, temp, 
             temp_gh[3], omega = k*speed, pPsiLpn2, radius, prpn2;
-    cartCoord y_sgl1, y_sgl2, y_sgl3, normal, rVec;
+    cart_coord_float y_sgl1, y_sgl2, y_sgl3, normal, rVec;
     cuFloatComplex Psi, pPsipn2;
     crossNorm(
     {
@@ -557,23 +557,23 @@ __device__ void g_h_c_sgl(const float k, const cartCoord x_sgl1, const cartCoord
     gCoeff_sgl3[2] = make_cuFloatComplex(-prodRhoOmega*cuCimagf(gCoeff_sgl3[2]),prodRhoOmega*cuCrealf(gCoeff_sgl3[2]));
 }
 
-__host__ __device__ cuFloatComplex ptSrc(const float k, const float amp, const cartCoord srcLoc, const cartCoord evalLoc)
+__host__ __device__ cuFloatComplex ptSrc(const float k, const float amp, const cart_coord_float srcLoc, const cart_coord_float evalLoc)
 {
     float fourPI = 4.0f*PI;
-    cartCoord rVec = cartCoordSub(evalLoc,srcLoc);
+    cart_coord_float rVec = cartCoordSub(evalLoc,srcLoc);
     float radius = sqrtf(rVec.coords[0]*rVec.coords[0]+rVec.coords[1]*rVec.coords[1]+rVec.coords[2]*rVec.coords[2]);
     return make_cuFloatComplex(amp*cosf(-k*radius)/(fourPI*radius),amp*sinf(-k*radius)/(fourPI*radius));
 }
 
-__host__ __device__ cuFloatComplex dirSrc(const float k, const float strength, const cartCoord dir, const cartCoord evalLoc)
+__host__ __device__ cuFloatComplex dirSrc(const float k, const float strength, const cart_coord_float dir, const cart_coord_float evalLoc)
 {
     float theta = -k*dotProd(dir,evalLoc);
     return make_cuFloatComplex(strength*cosf(theta),strength*sinf(theta));
 }
 
 // compute non-singular relationship between points and elements
-__global__ void atomicPtsElems_nsgl(const float k, const cartCoord *pt, const int numNod, 
-        const int idxPntStart, const int idxPntEnd, const triElem *elem, const int numElem, 
+__global__ void atomicPtsElems_nsgl(const float k, const cart_coord_float *pt, const int numNod, 
+        const int idxPntStart, const int idxPntEnd, const tri_elem *elem, const int numElem, 
         cuFloatComplex *A, const int lda, cuFloatComplex *B, const int numSrc, const int ldb) {
     int xIdx = blockIdx.x*blockDim.x+threadIdx.x; //Index for points
     int yIdx = blockIdx.y*blockDim.y+threadIdx.y; //Index for elements
@@ -583,7 +583,7 @@ __global__ void atomicPtsElems_nsgl(const float k, const cartCoord *pt, const in
         int i, j;
         cuFloatComplex hCoeff[3], gCoeff[3], bc, pCoeffs[3], temp;
         float cCoeff;
-        cartCoord triNod[3];
+        cart_coord_float triNod[3];
         triNod[0] = pt[elem[yIdx].nodes[0]];
         triNod[1] = pt[elem[yIdx].nodes[1]];
         triNod[2] = pt[elem[yIdx].nodes[2]];
@@ -622,7 +622,7 @@ __global__ void atomicPtsElems_nsgl(const float k, const cartCoord *pt, const in
     }
 }
 
-__global__ void atomicPtsElems_sgl(const float k, const cartCoord *pt, const triElem *elem, 
+__global__ void atomicPtsElems_sgl(const float k, const cart_coord_float *pt, const tri_elem *elem, 
         const int numElem, cuFloatComplex *A, const int lda, cuFloatComplex *B, 
         const int numSrc, const int ldb) {
     int idx = blockIdx.x*blockDim.x+threadIdx.x;
@@ -633,7 +633,7 @@ __global__ void atomicPtsElems_sgl(const float k, const cartCoord *pt, const tri
                 pCoeffs_sgl2[3], pCoeffs_sgl3[3], bc, temp;
         float cCoeff_sgl1, cCoeff_sgl2, cCoeff_sgl3;
         
-        cartCoord nod[3];
+        cart_coord_float nod[3];
         for(i=0;i<3;i++) {
             nod[i] = pt[elem[idx].nodes[i]];
         }
@@ -709,9 +709,9 @@ __global__ void atomicPtsElems_sgl(const float k, const cartCoord *pt, const tri
     }
 }
 
-int atomicGenSystem(const float k, const triElem *elem, const int numElem, 
-        const cartCoord *nod, const int numNod, const cartCoord *chief, const int numCHIEF, 
-        const cartCoord *src, const int numSrc, cuFloatComplex *A, const int lda, 
+int atomicGenSystem(const float k, const tri_elem *elem, const int numElem, 
+        const cart_coord_float *nod, const int numNod, const cart_coord_float *chief, const int numCHIEF, 
+        const cart_coord_float *src, const int numSrc, cuFloatComplex *A, const int lda, 
         cuFloatComplex *B, const int ldb) {
     int i, j;
     cudaEvent_t start, stop;
@@ -719,12 +719,12 @@ int atomicGenSystem(const float k, const triElem *elem, const int numElem,
     cudaEventCreate(&stop);
     
     //Move elements to GPU
-    triElem *elem_d;
-    CUDA_CALL(cudaMalloc(&elem_d,numElem*sizeof(triElem)));
-    CUDA_CALL(cudaMemcpy(elem_d,elem,numElem*sizeof(triElem),cudaMemcpyHostToDevice));
+    tri_elem *elem_d;
+    CUDA_CALL(cudaMalloc(&elem_d,numElem*sizeof(tri_elem)));
+    CUDA_CALL(cudaMemcpy(elem_d,elem,numElem*sizeof(tri_elem),cudaMemcpyHostToDevice));
     
     //Move points to GPU
-    cartCoord *pt_h = (cartCoord*)malloc((numNod+numCHIEF)*sizeof(cartCoord));
+    cart_coord_float *pt_h = (cart_coord_float*)malloc((numNod+numCHIEF)*sizeof(cart_coord_float));
     for(i=0;i<numNod;i++) {
         pt_h[i] = nod[i];
     }
@@ -732,9 +732,9 @@ int atomicGenSystem(const float k, const triElem *elem, const int numElem,
         pt_h[numNod+i] = chief[i];
     }
     
-    cartCoord *pt_d;
-    CUDA_CALL(cudaMalloc(&pt_d,(numNod+numCHIEF)*sizeof(cartCoord)));
-    CUDA_CALL(cudaMemcpy(pt_d,pt_h,(numNod+numCHIEF)*sizeof(cartCoord),cudaMemcpyHostToDevice));
+    cart_coord_float *pt_d;
+    CUDA_CALL(cudaMalloc(&pt_d,(numNod+numCHIEF)*sizeof(cart_coord_float)));
+    CUDA_CALL(cudaMemcpy(pt_d,pt_h,(numNod+numCHIEF)*sizeof(cart_coord_float),cudaMemcpyHostToDevice));
     
     //Initialization of A
     for(i=0;i<numNod+numCHIEF;i++) {
@@ -860,9 +860,9 @@ int qrSolver(const cuFloatComplex *A, const int mA, const int nA, const int ldA,
     return EXIT_SUCCESS;
 }
 
-int bemSolver_pt(const float k, const triElem *elem, const int numElem, 
-        const cartCoord *nod, const int numNod, const cartCoord *chief, const int numCHIEF, 
-        const cartCoord *src, const int numSrc, cuFloatComplex *B, const int ldb)
+int bemSolver_pt(const float k, const tri_elem *elem, const int numElem, 
+        const cart_coord_float *nod, const int numNod, const cart_coord_float *chief, const int numCHIEF, 
+        const cart_coord_float *src, const int numSrc, cuFloatComplex *B, const int ldb)
 {
     int i, j;
     cudaEvent_t start, stop;
@@ -870,12 +870,12 @@ int bemSolver_pt(const float k, const triElem *elem, const int numElem,
     cudaEventCreate(&stop);
     
     //Move elements to GPU
-    triElem *elem_d;
-    CUDA_CALL(cudaMalloc(&elem_d,numElem*sizeof(triElem)));
-    CUDA_CALL(cudaMemcpy(elem_d,elem,numElem*sizeof(triElem),cudaMemcpyHostToDevice));
+    tri_elem *elem_d;
+    CUDA_CALL(cudaMalloc(&elem_d,numElem*sizeof(tri_elem)));
+    CUDA_CALL(cudaMemcpy(elem_d,elem,numElem*sizeof(tri_elem),cudaMemcpyHostToDevice));
     
     //Move points to GPU
-    // cartCoord *pt_h = (cartCoord*)malloc((numNod+numCHIEF)*sizeof(cartCoord));
+    // cart_coord_float *pt_h = (cart_coord_float*)malloc((numNod+numCHIEF)*sizeof(cart_coord_float));
     // for(i=0;i<numNod;i++) {
     //     pt_h[i] = nod[i];
     // }
@@ -883,10 +883,10 @@ int bemSolver_pt(const float k, const triElem *elem, const int numElem,
     //     pt_h[numNod+i] = chief[i];
     // }
     
-    cartCoord *pt_d;
-    CUDA_CALL(cudaMalloc(&pt_d, (numNod + numCHIEF) * sizeof(cartCoord)));
-    CUDA_CALL(cudaMemcpy(pt_d, nod, numNod * sizeof(cartCoord),cudaMemcpyHostToDevice));
-    CUDA_CALL(cudaMemcpy(pt_d + numNod, chief, numCHIEF * sizeof(cartCoord),cudaMemcpyHostToDevice));
+    cart_coord_float *pt_d;
+    CUDA_CALL(cudaMalloc(&pt_d, (numNod + numCHIEF) * sizeof(cart_coord_float)));
+    CUDA_CALL(cudaMemcpy(pt_d, nod, numNod * sizeof(cart_coord_float),cudaMemcpyHostToDevice));
+    CUDA_CALL(cudaMemcpy(pt_d + numNod, chief, numCHIEF * sizeof(cart_coord_float),cudaMemcpyHostToDevice));
     
     CUDA_CALL(cudaEventRecord(start));
     //Generate the system
@@ -989,9 +989,9 @@ int bemSolver_pt(const float k, const triElem *elem, const int numElem,
     return EXIT_SUCCESS;
 }
 
-int bemSolver_dir(const float k, const triElem *elem, const int numElem, 
-        const cartCoord *nod, const int numNod, const cartCoord *chief, const int numCHIEF, 
-        const cartCoord *dir, const int numSrc, cuFloatComplex *B, const int ldb)
+int bemSolver_dir(const float k, const tri_elem *elem, const int numElem, 
+        const cart_coord_float *nod, const int numNod, const cart_coord_float *chief, const int numCHIEF, 
+        const cart_coord_float *dir, const int numSrc, cuFloatComplex *B, const int ldb)
 {
     int i, j;
     cudaEvent_t start, stop;
@@ -999,12 +999,12 @@ int bemSolver_dir(const float k, const triElem *elem, const int numElem,
     cudaEventCreate(&stop);
     
     //Move elements to GPU
-    triElem *elem_d;
-    CUDA_CALL(cudaMalloc(&elem_d,numElem*sizeof(triElem)));
-    CUDA_CALL(cudaMemcpy(elem_d,elem,numElem*sizeof(triElem),cudaMemcpyHostToDevice));
+    tri_elem *elem_d;
+    CUDA_CALL(cudaMalloc(&elem_d,numElem*sizeof(tri_elem)));
+    CUDA_CALL(cudaMemcpy(elem_d,elem,numElem*sizeof(tri_elem),cudaMemcpyHostToDevice));
     
     //Move points to GPU
-    // cartCoord *pt_h = (cartCoord*)malloc((numNod+numCHIEF)*sizeof(cartCoord));
+    // cart_coord_float *pt_h = (cart_coord_float*)malloc((numNod+numCHIEF)*sizeof(cart_coord_float));
     // for(i=0;i<numNod;i++) {
     //     pt_h[i] = nod[i];
     // }
@@ -1012,10 +1012,10 @@ int bemSolver_dir(const float k, const triElem *elem, const int numElem,
     //     pt_h[numNod+i] = chief[i];
     // }
     
-    cartCoord *pt_d;
-    CUDA_CALL(cudaMalloc(&pt_d,(numNod+numCHIEF)*sizeof(cartCoord)));
-    CUDA_CALL(cudaMemcpy(pt_d,nod,numNod*sizeof(cartCoord),cudaMemcpyHostToDevice));
-    CUDA_CALL(cudaMemcpy(pt_d+numNod,chief,numCHIEF*sizeof(cartCoord),cudaMemcpyHostToDevice));
+    cart_coord_float *pt_d;
+    CUDA_CALL(cudaMalloc(&pt_d,(numNod+numCHIEF)*sizeof(cart_coord_float)));
+    CUDA_CALL(cudaMemcpy(pt_d,nod,numNod*sizeof(cart_coord_float),cudaMemcpyHostToDevice));
+    CUDA_CALL(cudaMemcpy(pt_d+numNod,chief,numCHIEF*sizeof(cart_coord_float),cudaMemcpyHostToDevice));
     
     CUDA_CALL(cudaEventRecord(start));
     //Generate the system
@@ -1149,20 +1149,20 @@ gsl_complex hprime(const int n, const double r)
     return result;
 }
 
-__host__ __device__ sphCoord cart2sph(const cartCoord s)
+__host__ __device__ sph_coord_float cart2sph(const cart_coord_float s)
 {
-    sphCoord temp;
+    sph_coord_float temp;
     temp.r = sqrtf(powf(s.coords[0],2)+powf(s.coords[1],2)+powf(s.coords[2],2));
     temp.theta = acosf(s.coords[2]/(temp.r));
     temp.phi = atan2f(s.coords[1],s.coords[0]);
     return temp;
 }
 
-void computeRigidSphereScattering(const cartCoord *pt, const int numPt, const double a, 
+void computeRigidSphereScattering(const cart_coord_float *pt, const int numPt, const double a, 
         const double r, const double wavNum, const double strength)
 {
     gsl_complex *p = (gsl_complex*)malloc(numPt*sizeof(gsl_complex));
-    sphCoord tempCoord;
+    sph_coord_float tempCoord;
     gsl_complex result;
     //double temp;
     //const int truncNum = 30;
@@ -1195,14 +1195,14 @@ gsl_complex rigidSphereScattering(const double wavNum, const double strength, co
     return result;
 }
 
-__device__ cuFloatComplex extrapolation_dir(const float wavNum, const cartCoord x, 
-        const triElem* elem, const int numElem, const cartCoord* pt, 
-        const cuFloatComplex* p, const float strength, const cartCoord dir)
+__device__ cuFloatComplex extrapolation_dir(const float wavNum, const cart_coord_float x, 
+        const tri_elem* elem, const int numElem, const cart_coord_float* pt, 
+        const cuFloatComplex* p, const float strength, const cart_coord_float dir)
 {
     cuFloatComplex result = dirSrc(wavNum,strength,dir,x);
     cuFloatComplex temp;
     for(int i=0;i<numElem;i++) {
-        cartCoord nod[3];
+        cart_coord_float nod[3];
         for(int j=0;j<3;j++) {
             nod[j] = pt[elem[i].nodes[j]];
         }
@@ -1223,9 +1223,9 @@ __device__ cuFloatComplex extrapolation_dir(const float wavNum, const cartCoord 
     return result;
 }
 
-__global__ void extrapolation_dirs(const float wavNum, const cartCoord* expPt, const int numExpPt,
-        const triElem* elem, const int numElem, const cartCoord* pt, const cuFloatComplex* p, 
-        const float strength, const cartCoord dir, cuFloatComplex *p_exp)
+__global__ void extrapolation_dirs(const float wavNum, const cart_coord_float* expPt, const int numExpPt,
+        const tri_elem* elem, const int numElem, const cart_coord_float* pt, const cuFloatComplex* p, 
+        const float strength, const cart_coord_float dir, cuFloatComplex *p_exp)
 {
     int idx = blockIdx.x*blockDim.x+threadIdx.x;
     if(idx < numExpPt) {
@@ -1233,25 +1233,25 @@ __global__ void extrapolation_dirs(const float wavNum, const cartCoord* expPt, c
     }
 }
 
-int extrapolation_dirs_single_source(const float wavNum, const cartCoord* expPt, const int numExpPt, 
-        const triElem* elem, const int numElem, const cartCoord* pt, const int numPt, 
-        const cuFloatComplex* p, const float strength, const cartCoord dir, cuFloatComplex *pExp)
+int extrapolation_dirs_single_source(const float wavNum, const cart_coord_float* expPt, const int numExpPt, 
+        const tri_elem* elem, const int numElem, const cart_coord_float* pt, const int numPt, 
+        const cuFloatComplex* p, const float strength, const cart_coord_float dir, cuFloatComplex *pExp)
 {
     int width = 16, numBlock = (numExpPt+width-1)/width;
     
     // allocate memory on GPU and copy data to GPU memory
-    cartCoord *expPt_d, *pt_d;
-    triElem *elem_d;
+    cart_coord_float *expPt_d, *pt_d;
+    tri_elem *elem_d;
     cuFloatComplex *p_d, *pExp_d;
     
-    CUDA_CALL(cudaMalloc(&expPt_d,numExpPt*sizeof(cartCoord)));
-    CUDA_CALL(cudaMemcpy(expPt_d,expPt,numExpPt*sizeof(cartCoord),cudaMemcpyHostToDevice));
+    CUDA_CALL(cudaMalloc(&expPt_d,numExpPt*sizeof(cart_coord_float)));
+    CUDA_CALL(cudaMemcpy(expPt_d,expPt,numExpPt*sizeof(cart_coord_float),cudaMemcpyHostToDevice));
     
-    CUDA_CALL(cudaMalloc(&pt_d,numPt*sizeof(cartCoord)));
-    CUDA_CALL(cudaMemcpy(pt_d,pt,numPt*sizeof(cartCoord),cudaMemcpyHostToDevice));
+    CUDA_CALL(cudaMalloc(&pt_d,numPt*sizeof(cart_coord_float)));
+    CUDA_CALL(cudaMemcpy(pt_d,pt,numPt*sizeof(cart_coord_float),cudaMemcpyHostToDevice));
     
-    CUDA_CALL(cudaMalloc(&elem_d,numElem*sizeof(triElem)));
-    CUDA_CALL(cudaMemcpy(elem_d,elem,numElem*sizeof(triElem),cudaMemcpyHostToDevice));
+    CUDA_CALL(cudaMalloc(&elem_d,numElem*sizeof(tri_elem)));
+    CUDA_CALL(cudaMemcpy(elem_d,elem,numElem*sizeof(tri_elem),cudaMemcpyHostToDevice));
     
     CUDA_CALL(cudaMalloc(&p_d,numPt*sizeof(cuFloatComplex)));
     CUDA_CALL(cudaMemcpy(p_d,p,numPt*sizeof(cuFloatComplex),cudaMemcpyHostToDevice));

@@ -22,27 +22,27 @@ extern "C" {
 
 #define IDXC0(row,column,stride) ((column)*(stride)+(row))
 
-    struct triElem 
+    struct tri_elem 
     {
         int nodes[3];
         cuFloatComplex bc[3];
     };
 
-    struct cartCoord 
+    struct cart_coord_float 
     {
         float coords[3];
     };
     
-    struct sphCoord
+    struct sph_coord_float
     {
-        double r;
-        double theta;
-        double phi;
+        float r;
+        float theta;
+        float phi;
     };
     
-    typedef struct triElem triElem;
+    typedef struct tri_elem tri_elem;
     
-    typedef struct cartCoord cartCoord;
+    typedef struct cart_coord_float cart_coord_float;
 
 
 #ifdef __cplusplus

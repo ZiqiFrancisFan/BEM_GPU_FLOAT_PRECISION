@@ -196,13 +196,13 @@ main.a : $(OBJ)
 	# nvcc -ccbin /usr/bin/gcc -arch=sm_61 -l=curand -l=cublas -lcusolver -L/usr/local/lib -lgsl -lgslcblas $(OBJ) -o main
 	$(EXEC) $(NVCC) $(ALL_LDFLAGS) $(GENCODE_FLAGS) -o $@ $+ $(LIBRARIES)
 
-main.o : main.c numerical.h mesh.h
+main.o : main.c numerical.h mesh.h dataStruct.h
 	$(EXEC) $(HOST_COMPILER) $(INCLUDES) $(CCFLAGS) $(EXTRA_CCFLAGS) -c main.c
 
-numerical.o : numerical.cu numerical.h mesh.h
+numerical.o : numerical.cu numerical.h mesh.h dataStruct.h
 	$(NVCCONLY) -dc $(INCLUDES) $(ALL_CCFLAGS) $(EXTRA_CCFLAGS) $(GENCODE_FLAGS) numerical.cu
 	
-mesh.o: mesh.c mesh.h numerical.h
+mesh.o: mesh.c mesh.h numerical.h dataStruct.h
 	$(NVCC) -dc $(INCLUDES) $(ALL_CCFLAGS) $(EXTRA_CCFLAGS) $(GENCODE_FLAGS) mesh.c
 
 
