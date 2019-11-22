@@ -17,3 +17,7 @@ source type: plane or point;
 example:
 ./main.a  --file guo_equal.obj --left 7269 --right 15533 --low_freq 25 --high_freq 12000
      --freq_interp 25 --source plane --low_phi 0 --high_phi 355 --phi_interp 5 --low_theta 0 --high_theta 135 --theta_interp 5
+
+./main.a  --file guo_equal.obj --left 7269 --right 15533 --low_freq 25 --high_freq 12000
+     --freq_interp 25 --source point --low_phi 0 --high_phi 355 --phi_interp 5 --low_theta 0 --high_theta 135 --theta_interp 5
+     --radius 1

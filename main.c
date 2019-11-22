@@ -19,7 +19,7 @@ int main(int argc, char *argv[]) {
     char file_name[50] = "", source_name[20] = "";
     int left_index = 0, right_index = 0;
     float low_freq = 0, high_freq = 0, freq_interp = 0, low_phi = 0, high_phi = 0, phi_interp = 0, 
-            low_theta = 0, high_theta = 0, theta_interp = 0;
+            low_theta = 0, high_theta = 0, theta_interp = 0, radius = 0;
     struct option long_options[] = {
         {"file", required_argument, NULL, 0},
         {"left", required_argument, NULL, 1},
@@ -34,6 +34,7 @@ int main(int argc, char *argv[]) {
         {"low_theta", required_argument, NULL, 10},
         {"high_theta", required_argument, NULL, 11},
         {"theta_interp", required_argument, NULL, 12},
+        {"radius",required_argument,NULL,13},
         {0,0,0,0}
     };
     // parse command line arguments
@@ -94,6 +95,10 @@ int main(int argc, char *argv[]) {
                 theta_interp = atof(optarg);
                 printf("the interpolation of theta: %f\n",theta_interp);
                 break;
+            case 13:
+                radius = atof(optarg);
+                printf("the radius of the sources is: %f\n",radius);
+                break;
             default:
                 printf("The current option is not recognized.\n");
         }   
@@ -105,12 +110,6 @@ int main(int argc, char *argv[]) {
     }
     if(strcmp(source_name,"") == 0) {
         strcpy(source_name,"plane");
-    }
-    
-    // check evaluation points
-    if(left_index == 0 || right_index == 0) {
-        printf("Evaluation point missing.\n");
-        return EXIT_FAILURE;
     }
     
     // check frequency
@@ -155,6 +154,11 @@ int main(int argc, char *argv[]) {
         return EXIT_FAILURE;
     }
     
+    if(strcmp(source_name,"point")==0 && (abs(radius)<EPS || abs(STRENGTH)<EPS)) {
+        printf("the radius and strength of point sources not set properly!\n");
+        return EXIT_FAILURE;
+    }
+    
     // generate Gaussian-quadrature evaluation points and weights
     float intPt[INTORDER];
     float intWgt[INTORDER];
@@ -173,6 +177,12 @@ int main(int argc, char *argv[]) {
     cartCoord chief[NUMCHIEF];
     genCHIEF(pt,numPt,elem,numElem,chief,NUMCHIEF);
     printf("CHIEF points generated.\n");
+    
+    // check evaluation points
+    if(left_index >= numPt || right_index >= numPt) {
+        printf("Evaluation point not set properly.\n");
+        return EXIT_FAILURE;
+    }
     
     // conduct computating;
     const cartCoord origin = {0,0,0}; // set up origin
@@ -247,10 +257,73 @@ int main(int argc, char *argv[]) {
             freqIdx++;
         }
         
-        char left_file_name[50] = "left_hrtfs", right_file_name[50] = "right_hrtfs";
+        char left_file_name[50] = "left_hrtfs_dir", right_file_name[50] = "right_hrtfs_dir";
         HOST_CALL(write_hrtfs_to_file(left_hrtfs,right_hrtfs,numHorDirs+numVertDirs,numFreqs,left_file_name,right_file_name));
         
         free(dirs);
+        free(B);
+        free(left_hrtfs);
+        free(right_hrtfs);
+    }
+    
+    if(strcmp(source_name,"point")==0) {
+        printf("Point sources used.\n");
+        // compute the number of directions
+        int numHorDirs = floor((high_phi-low_phi)/phi_interp)+1;
+        int numVertDirs = floor((high_theta-low_theta)/theta_interp)+1;
+        
+        cartCoord* srcLocs = (cartCoord*)malloc((numHorDirs+numVertDirs)*sizeof(cartCoord)); // memory for directions
+        for(int i=0;i<numHorDirs;i++) {
+            float phi = low_phi+i*phi_interp;
+            phi = PI/180*phi;
+            float theta = 90;
+            theta = PI/180*theta;
+            float r = radius;
+            float x = r*sin(theta)*cos(phi);
+            float y = r*sin(theta)*sin(phi);
+            float z = 0;
+            //printf("(%f,%f,%f)\n",x,y,z);
+            cartCoord srcLoc = {x,y,z};
+            srcLocs[i] = srcLoc;
+        }
+        
+        // set up vertical directions
+        for(int i=0;i<numVertDirs;i++) {
+            float theta = low_theta+i*theta_interp;
+            theta = PI/180*theta;
+            float r = radius;
+            float x = r*sin(theta);
+            float y = 0;
+            float z = r*cos(theta);
+            cartCoord srcLoc = {x,y,z};
+            srcLocs[numHorDirs+i] = srcLoc;
+        }
+        
+        printf("Locations of sources set up.\n");
+        
+        // find the number of frequencies
+        int numFreqs = floor((high_freq-low_freq)/freq_interp)+1;
+        cuFloatComplex *left_hrtfs = (cuFloatComplex*)malloc((numHorDirs+numVertDirs)*numFreqs*sizeof(cuFloatComplex));
+        cuFloatComplex *right_hrtfs = (cuFloatComplex*)malloc((numHorDirs+numVertDirs)*numFreqs*sizeof(cuFloatComplex));
+        cuFloatComplex* B = (cuFloatComplex*)malloc((numPt+NUMCHIEF)*(numHorDirs+numVertDirs)*sizeof(cuFloatComplex));
+        const float speed = 343.21;
+        float wavNum;
+        int freqIdx = 0;
+        for(float freq=low_freq;freq<=high_freq;freq+=freq_interp) {
+            printf("Current frequency: %f\n",freq);
+            wavNum = 2*PI*freq/speed; //omega/c
+            HOST_CALL(bemSolver_pt(wavNum,elem,numElem,pt,numPt,chief,NUMCHIEF,srcLocs,numHorDirs+numVertDirs,B,numPt+NUMCHIEF));
+            //HOST_CALL(bemSolver_dir(k,elem,numElem,pt,numPt,chief,NUMCHIEF,&dir,1,B,numPt+NUMCHIEF));
+            for(int i=0;i<numHorDirs+numVertDirs;i++) {
+                left_hrtfs[i*numFreqs+freqIdx] = B[IDXC0(left_index,i,numPt+NUMCHIEF)];
+                right_hrtfs[i*numFreqs+freqIdx] = B[IDXC0(right_index,i,numPt+NUMCHIEF)];
+            }
+            freqIdx++;
+        }
+        char left_file_name[50] = "left_hrtfs_pt", right_file_name[50] = "right_hrtfs_pt";
+        HOST_CALL(write_hrtfs_to_file(left_hrtfs,right_hrtfs,numHorDirs+numVertDirs,numFreqs,left_file_name,right_file_name));
+        
+        free(srcLocs);
         free(B);
         free(left_hrtfs);
         free(right_hrtfs);
