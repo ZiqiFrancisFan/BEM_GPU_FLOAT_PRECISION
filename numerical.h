@@ -25,11 +25,32 @@
 #include <cublas_v2.h>
 #include <cusolverDn.h>
 
-#include "dataStruct.h"
+#include "dataStructs.h"
 
 #include <gsl/gsl_sf.h>
 #include <gsl/gsl_complex_math.h>
 #include <gsl/gsl_blas.h>
+
+#ifndef max
+#define max(a,b) \
+({ __typeof__ (a) _a = (a); \
+__typeof__ (b) _b = (b); \
+_a > _b ? _a : _b; })
+#endif
+
+#ifndef min
+#define min(a,b) \
+({ __typeof__ (a) _a = (a); \
+__typeof__ (b) _b = (b); \
+_a < _b ? _a : _b; })
+#endif
+
+#ifndef abs
+#define abs(x) \
+({ __typeof__ (x) _x = (x); \
+__typeof__ (x) _y = 0; \
+_x < _y ? -_x : _x; })
+#endif
 
 #ifndef PI
 #define PI 3.1415926535897932f
@@ -131,6 +152,8 @@ while(0)
 int genGaussParams(const int n, float *pt, float *wgt);
 
 int gaussPtsToDevice(const float *evalPt, const float *wgt);
+
+__host__ __device__ cart_coord_double triCentroid(cart_coord_double nod[]);
 
 void printFltMat(const float *A, const int numRow, const int numCol, const int lda);
 

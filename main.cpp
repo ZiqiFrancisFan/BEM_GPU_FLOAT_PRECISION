@@ -8,8 +8,9 @@
 #include <unistd.h>
 #include <getopt.h>
 #include <math.h>
-#include "dataStruct.h"
+#include "dataStructs.h"
 #include "mesh.h"
+#include "octree.h"
 #include "numerical.h"
 
 int main(int argc, char *argv[]) {

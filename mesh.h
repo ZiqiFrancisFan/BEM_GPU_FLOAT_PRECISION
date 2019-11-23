@@ -19,7 +19,7 @@ extern "C" {
 #endif
 
 
-#include "dataStruct.h"
+#include "dataStructs.h"
 #include <stdio.h>
 #include <stdlib.h>
 void findNum(const char * filename,int *pV, int *pE);

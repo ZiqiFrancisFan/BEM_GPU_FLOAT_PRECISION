@@ -125,6 +125,40 @@ __host__ __device__ cart_coord_float scalarProd(const float lambda, const cart_c
     return result;
 }
 
+__host__ __device__ cart_coord_double cartCoordAdd(const cart_coord_double u, const cart_coord_double v)
+{
+    cart_coord_double result;
+    for(int i=0;i<3;i++) {
+        result.coords[i] = u.coords[i]+v.coords[i];
+    }
+    return result;
+}
+
+__host__ __device__ cart_coord_double cartCoordSub(const cart_coord_double u, const cart_coord_double v)
+{
+    cart_coord_double result;
+    for(int i=0;i<3;i++) {
+        result.coords[i] = u.coords[i]-v.coords[i];
+    }
+    return result;
+}
+
+__host__ __device__ cart_coord_double scalarProd(const double lambda, const cart_coord_double v)
+{
+    cart_coord_double result;
+    for(int i=0;i<3;i++) {
+        result.coords[i] = lambda*v.coords[i];
+    }
+    return result;
+}
+
+__host__ __device__ cart_coord_double triCentroid(cart_coord_double nod[3])
+{
+    cart_coord_double ctr_23 = scalarProd(0.5,cartCoordAdd(nod[1],nod[2]));
+    cart_coord_double centroid = cartCoordAdd(nod[0],scalarProd(2.0/3.0,cartCoordSub(ctr_23,nod[0])));
+    return centroid;
+}
+
 __host__ __device__ bool ray_intersect_triangle(const cart_coord_float O, const cart_coord_float dir, 
         const cart_coord_float nod[3])
 {
