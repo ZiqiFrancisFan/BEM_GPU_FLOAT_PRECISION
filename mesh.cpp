@@ -81,6 +81,14 @@ void printCartCoord(const cart_coord_float* pt, const int numPt)
     printf("\n");
 }
 
+void printCartCoord(const cart_coord_double* pt, const int numPt)
+{
+    for(int i=0;i<numPt;i++) {
+        printf("(%f,%f,%f), ",pt[i].coords[0],pt[i].coords[1],pt[i].coords[2]);
+    }
+    printf("\n");
+}
+
 int findBB(const cart_coord_float* pt, const int numPt, const float threshold, float x[2], 
         float y[2], float z[2])
 {

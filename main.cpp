@@ -15,4 +15,7 @@
 
 int main(int argc, char *argv[]) {
     // test octree
+    int t = parent(10);
+    printf("The parent box of 3 is %d.\n",t);
+    cart_coord_double temp = {1.0,2.0,3.0};
 }

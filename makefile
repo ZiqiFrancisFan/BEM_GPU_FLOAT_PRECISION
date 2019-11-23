@@ -204,7 +204,7 @@ numerical.o : numerical.cu numerical.h mesh.h dataStructs.h
 	#$(NVCCONLY) -dc $(INCLUDES) $(ALL_CCFLAGS) $(EXTRA_CCFLAGS) $(GENCODE_FLAGS) numerical.cu
 	
 mesh.o: mesh.cpp mesh.h numerical.h dataStructs.h
-	$(NVCC) -dc $(INCLUDES) $(ALL_CCFLAGS) $(EXTRA_CCFLAGS) $(GENCODE_FLAGS) mesh.cpp
+	$(NVCCONLY) -dc $(INCLUDES) $(ALL_CCFLAGS) $(EXTRA_CCFLAGS) $(GENCODE_FLAGS) mesh.cpp
 	
 octree.o: octree.cpp octree.h numerical.h dataStructs.h mesh.h
 	$(NVCC) $(INCLUDES) $(ALL_CCFLAGS) $(EXTRA_CCFLAGS) $(GENCODE_FLAGS) -c octree.cpp

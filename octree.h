@@ -104,18 +104,6 @@ extern "C" {
     void srcBoxes(const cart_coord_double *pnts, const tri_elem *elems, const int numElems, 
             const int s, int *srcBoxSet, int *lmax, double *D, cart_coord_double *pnt_min);
 
-    int truncNum(const double k, const double eps, const double sigma, const double a);
-
-    int truncNum_2(const double wavNum, const double eps, const double sigma, const double a);
-
-    void prntLevelSet(const int *X, const int l, int *X_n);
-
-    void FMMLvlSet_s(const int *X, const int lmax, int ***pSet);
-
-    void FMMLvlSet_e(const int *Y, const int lmax, int ***pSet);
-    
-    void FMMLevelSet(const int *btmLvl, const int lmax, int **pSet);
-
     int findSetInd(const int *X, const int num);
 
     void sortSet(int *set);

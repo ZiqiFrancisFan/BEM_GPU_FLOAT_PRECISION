@@ -170,6 +170,10 @@ __host__ __device__ cart_coord_float cartCoordAdd(const cart_coord_float u, cons
 
 __host__ __device__ cart_coord_float cartCoordSub(const cart_coord_float u, const cart_coord_float v);
 
+__host__ __device__ cart_coord_double cartCoordAdd(const cart_coord_double u, const cart_coord_double v);
+
+__host__ __device__ cart_coord_double cartCoordSub(const cart_coord_double u, const cart_coord_double v);
+
 __host__ __device__ bool ray_intersect_triangle(const cart_coord_float O, const cart_coord_float dir, 
         const cart_coord_float nod[3]);
 

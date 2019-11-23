@@ -16,8 +16,11 @@
 /*We follow the rule that the small index of an array corresponds to the more 
  significant bit*/
 
-bool arrEqual(const int *a, const int *b, const int num) 
+bool arrEqual(const int *a, const int *b, const int num)
 {
+    /*compares if two arrays are equal
+     * return: true represents equality and false represents inequality
+     */
     int i;
     bool result = true;
     for(i=0;i<num;i++) {
@@ -42,18 +45,21 @@ void printSet(const int *set)
     printf("\n");
 }
 
-int parent(int num) 
+int parent(int num)
 {
+    /*returns the number of the parent box of a box with the number num*/
     return num/8;
 }
 
 int child(int num, int cld) 
 {
+    /*returns the number of the child box*/
     return 8*num+cld;
 }
 
 void children(const int num, int *cldrn) 
 {
+    /*returns numbers of all child boxes*/
     int i;
     for(i=0;i<8;i++) {
         cldrn[i] = child(num,i);
@@ -62,6 +68,8 @@ void children(const int num, int *cldrn)
 
 cart_coord_double scale(const cart_coord_double x, const cart_coord_double x_min, const double d)
 {
+    /*scales a given coordinate x using the lowest corner x_min and the 
+    side-length of the bounding box d*/
     cart_coord_double x_scaled;
     x_scaled.coords[0] = (x.coords[0]-x_min.coords[0])/d;
     x_scaled.coords[1] = (x.coords[1]-x_min.coords[1])/d;
@@ -71,6 +79,8 @@ cart_coord_double scale(const cart_coord_double x, const cart_coord_double x_min
 
 cart_coord_double descale(const cart_coord_double x_s, const cart_coord_double x_min, const double d)
 {
+    /*descales a normalized points x_s based on the lowest corner x_min and 
+     the side length d*/
     cart_coord_double x_ds;
     x_ds.coords[0] = d*x_s.coords[0]+x_min.coords[0];
     x_ds.coords[1] = d*x_s.coords[1]+x_min.coords[1];
@@ -81,6 +91,8 @@ cart_coord_double descale(const cart_coord_double x_s, const cart_coord_double x
 void scalePnts(const cart_coord_double *pnt, const int numPt, const cart_coord_double pnt_min, 
         const double d, cart_coord_double* pnt_scaled)
 {
+    /*scales all points within a bounding box based on the lowest corner and the 
+     side length*/
     for(int i=0;i<numPt;i++) {
         pnt_scaled[i] = scale(pnt[i],pnt_min,d);
     }
@@ -90,8 +102,10 @@ void dec2bin_frac(double s, int l, int *h)
 {
     //the decimal number s is normalized to (0,1);
     //left is least significant while right is most significant
+    /* converts a fractional number s to its binary format with l digits*/
     if(s>=1 || s<=0) {
-        //printf("The number is out of range in dec2bin_frac.\n");
+        printf("The number is out of range in dec2bin_frac.\n");
+        return;
     }
     int i;
     double t;
@@ -158,6 +172,7 @@ void bitDeintleave(const int *result, const int l, int *x, int *y, int *z)
 
 int pnt2boxnum(const cart_coord_double pnt, const int l)
 {
+    // determines the box the point pnt belongs to at level l 
     int *ind_x, *ind_y, *ind_z, *ind;
     int result;
     
@@ -579,6 +594,13 @@ void printPnts_d(const cart_coord_double *p, const int numPnts)
 
 int deterLmax(const cart_coord_double *pnts, const int numPnts, const int s)
 {
+    /* determines the least level at which each box contains no more than s points 
+     in he array pnts 
+     * pnts: array containing normalized points
+     * numPnts: number of points in pnts
+     * s: upper limit of the number of points in each box
+     * return: the lowest level at which the condition holds
+      */
     int i, j, l, t, l_max = 0;
     int a, b;
     const int l_avl = 10;
@@ -728,63 +750,8 @@ void genOctPt(const int level, cart_coord_double *pt)
     }
 }
 
-int truncNum(const double k, const double eps, const double sigma, const double a)
-{
-    double p_lo, p_hi, p, temp_d[2];
-    temp_d[0] = eps*pow(1-1.0/sigma,1.5);
-    temp_d[1] = log(temp_d[0])/log(sigma);
-    p_lo = 1-temp_d[1];
-    
-    temp_d[0] = k*a;
-    temp_d[1] = pow(3*log(1.0/eps),1.5)/2;
-    p_hi = temp_d[0]+temp_d[1]*pow(temp_d[0],1.0/3);
-    
-    temp_d[0] = pow(p_lo,4)+pow(p_hi,4);
-    p = ceil(pow(temp_d[0],0.25));
-    
-    
-    if(p>20) {
-        p = 20;
-    }
-    if(p<5) {
-        p = 5;
-    }
-    return (int)p;
-}
-
-int truncNum_2(const double wavNum, const double eps, const double sigma, 
-        const double a)
-{
-    double p;
-    double ka_s = 3.0/(pow(2,1.5)*pow(sigma-1,1.5))*log(1.0/(eps*sigma));
-    double p_s = 3.0*sigma/(pow(2,1.5)*pow(sigma-1,1.5))*log(1.0/(eps*sigma));
-    if(wavNum*a<=ka_s) {
-        p = p_s;
-    } else {
-        p = wavNum*a+0.5*pow(3*log(1.0/(eps*sigma)),2.0/3)*pow(wavNum*a,1.0/3);
-    }
-    return (int)ceil(p);
-}
-
 double descale_1d(const double a, const double D, const double v_min) {
     return D*a+v_min;
-}
-
-void prntLevelSet(const int *X, const int l, int *X_n)
-{
-    if(l==0) {
-        return;
-    }
-    int i, num = 0, X_t[MAX];
-    for(i=0;i<X[0];i++) {
-        if(X[i+1]>=pow(8,l)) {
-            printf("Error in box number: %d.\n",X[i+1]);
-            return;
-        }
-        X_t[i] = parent(X[i+1]);
-        num++;
-    }
-    createSet(X_t,num,X_n);
 }
 
 int findSetInd(const int *X, const int num)
