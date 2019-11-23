@@ -100,9 +100,9 @@ void scalePnts(const cart_coord_double *pnt, const int numPt, const cart_coord_d
 
 void dec2bin_frac(double s, int l, int *h)
 {
-    //the decimal number s is normalized to (0,1);
-    //left is least significant while right is most significant
-    /* converts a fractional number s to its binary format with l digits*/
+    /* converts a fractional number s to its binary format with l digits
+      a lower index of h corresponds to binary digits of a higher weight
+     h should have been set to zero*/
     if(s>=1 || s<=0) {
         printf("The number is out of range in dec2bin_frac.\n");
         return;
@@ -139,7 +139,7 @@ void dec2bin_int(unsigned num, int *rep, int *numBits)
     }
 }
 
-void bitIntleave(const int *x, const int *y, const int *z, const int l, int *result)
+void bitIntleave(const int* x, const int* y, const int* z, const int l, int* result)
 {
     //output is an oct array
     int i;
@@ -150,6 +150,11 @@ void bitIntleave(const int *x, const int *y, const int *z, const int l, int *res
 
 int indArr2num(const int *ind, const int l, const int d)
 {
+    /*convert an index array to a decimal number
+     ind: index array
+     l: number of digits
+     d: dimension of data
+     returns the decimal number*/
     int i;
     int result = 0;
     for(i=0;i<l;i++) 
@@ -172,7 +177,9 @@ void bitDeintleave(const int *result, const int l, int *x, int *y, int *z)
 
 int pnt2boxnum(const cart_coord_double pnt, const int l)
 {
-    // determines the box the point pnt belongs to at level l 
+    /*determines the box number at level l containing the nomalized point pnt
+     pnt: a normalized point
+     l: level*/ 
     int *ind_x, *ind_y, *ind_z, *ind;
     int result;
     
@@ -198,7 +205,10 @@ int pnt2boxnum(const cart_coord_double pnt, const int l)
     return result;
 }
 
-cart_coord_double boxCenter(const int num, const int l) {
+cart_coord_double boxCenter(const int num, const int l)
+{
+    /*returns the center of a box with index num and level l*/
+    
     //Tell if the center of the box is legal
     if(num < 0 || num > pow(pow(2,3),l)-1) {
         printf("Illegal input.\n");

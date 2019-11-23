@@ -13,9 +13,12 @@
 #include "octree.h"
 #include "numerical.h"
 
-int main(int argc, char *argv[]) {
+int main(int argc, char *argv[])
+{
     // test octree
-    int t = parent(10);
-    printf("The parent box of 3 is %d.\n",t);
-    cart_coord_double temp = {1.0,2.0,3.0};
+    int index = 2;
+    int level = 1;
+    cart_coord_double t = boxCenter(index,level);
+    printf("The center of the box with index %d and level %d is (%f,%f,%f).\n",
+            index,level,t.coords[0],t.coords[1],t.coords[2]);
 }

@@ -51,7 +51,7 @@ end
 fclose(fileID);
 
 %% convert hrtfs to hrirs
-% adding an element for the 0Hz
+% adding an element for the 0 Hz
 temp = left_hrtfs;
 left_hrtfs = ones(size(left_hrtfs,1),size(left_hrtfs,2)+1);
 left_hrtfs(:,2:end) = temp;
