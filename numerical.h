@@ -205,7 +205,11 @@ void computeRigidSphereScattering(const cart_coord_float *pt, const int numPt, c
 gsl_complex rigidSphereScattering(const double wavNum, const double strength, const double a, 
         const double r, const double theta);
 
-int extrapolation_dirs_single_source(const float wavNum, const cart_coord_float* expPt, const int numExpPt, 
+int field_extrapolation_single_dir(const float wavNum, const cart_coord_float* expPt, const int numExpPt, 
+        const tri_elem* elem, const int numElem, const cart_coord_float* pt, const int numPt, 
+        const cuFloatComplex* p, const float strength, const cart_coord_float dir, cuFloatComplex *pExp);
+
+int field_extrapolation_single_pt(const float wavNum, const cart_coord_float* expPt, const int numExpPt, 
         const tri_elem* elem, const int numElem, const cart_coord_float* pt, const int numPt, 
         const cuFloatComplex* p, const float strength, const cart_coord_float dir, cuFloatComplex *pExp);
 
