@@ -16,9 +16,12 @@
 int main(int argc, char *argv[])
 {
     // test octree
-    int index = 2;
-    int level = 1;
-    cart_coord_double t = boxCenter(index,level);
-    printf("The center of the box with index %d and level %d is (%f,%f,%f).\n",
-            index,level,t.coords[0],t.coords[1],t.coords[2]);
+    int numPts, numElems;
+    findNum("sphere_500mm.obj",&numPts,&numElems);
+    cart_coord_double *pts = (cart_coord_double*)malloc(numPts*sizeof(cart_coord_double));
+    tri_elem *elems = (tri_elem*)malloc(numElems*sizeof(tri_elem));
+    readOBJ("sphere_500mm.obj",pts,elems);
+    
+    free(pts);
+    free(elems);
 }

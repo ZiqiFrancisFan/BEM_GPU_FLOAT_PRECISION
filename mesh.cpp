@@ -59,6 +59,37 @@ void readOBJ(const char *filename, cart_coord_float* p, tri_elem* e)
     fclose(fp);
 }
 
+void readOBJ(const char *filename, cart_coord_double* p, tri_elem* e)
+{
+    int temp[3];
+    FILE *fp = fopen(filename, "r");
+    if (fp == NULL) {
+        printf("Failed to open file.\n");
+        exit(EXIT_FAILURE);
+    }
+    int i = 0, j = 0;
+    char line[50];
+    char type[5];
+    while(fgets(line,49,fp)!=NULL) {
+        if(line[0] == 'v') {
+            sscanf(line,"%s %lf %lf %lf",type,&(p[i].coords[0]),&(p[i].coords[1]),&(p[i].coords[2]));
+            i++;
+        }
+
+        if(line[0]=='f') {
+            sscanf(line, "%s %d %d %d", type, &temp[0], &temp[1], &temp[2]);
+            e[j].nodes[0] = temp[0]-1;
+            e[j].nodes[1] = temp[1]-1;
+            e[j].nodes[2] = temp[2]-1;
+            e[j].bc[0] = make_cuFloatComplex(0,0); // ca=0
+            e[j].bc[1] = make_cuFloatComplex(1,0); // cb=1
+            e[j].bc[2] = make_cuFloatComplex(0,0); // cc=0
+            j++;
+        }
+    }
+    fclose(fp);
+}
+
 void printPts(const cart_coord_float* p, const int num) 
 {
     for(int i=0;i<num;i++) {

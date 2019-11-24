@@ -4,6 +4,7 @@
  * and open the template in the editor.
  */
 #include "numerical.h"
+#include "octree.h"
 #include "mesh.h"
 
 //air density and speed of sound
@@ -1333,6 +1334,40 @@ int extrapolation_dirs_single_source(const float wavNum, const cart_coord_float*
     CUDA_CALL(cudaFree(elem_d));
     CUDA_CALL(cudaFree(p_d));
     CUDA_CALL(cudaFree(pExp_d));
+    
+    return EXIT_SUCCESS;
+}
+
+cart_coord_float cartCoordDouble2cartCoordFloat(const cart_coord_double t)
+{
+    cart_coord_float result;
+    for(int i=0;i<3;i++) {
+        result.coords[i] = t.coords[i];
+    }
+    return result;
+}
+
+void cartCoordDoubleArr2cartCoordFloatArr(const cart_coord_double* dArr, 
+        const int num, cart_coord_float* fArr)
+{
+    for(int i=0;i<num;i++) {
+        fArr[i] = cartCoordDouble2cartCoordFloat(dArr[i]);
+    }
+}
+
+int generateAcousticField(const cart_coord_double* pts, const int numPts, 
+        const tri_elem* elems, const int numElems, const float wavNum, 
+        const cart_coord_double* cnr, const double d, const int level, 
+        cuFloatComplex* p)
+{
+    /*generate an acoustic field with a given boundary
+     level: octree level
+     p: pressure array equal to the number of boxes at level l*/
+    
+    
+    
+    
+    
     
     return EXIT_SUCCESS;
 }

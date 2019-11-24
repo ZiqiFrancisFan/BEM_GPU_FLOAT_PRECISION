@@ -199,7 +199,7 @@ main.a : $(OBJ)
 main.o : main.cpp numerical.h mesh.h dataStructs.h
 	$(EXEC) $(HOST_COMPILER) $(INCLUDES) $(CCFLAGS) $(EXTRA_CCFLAGS) -c main.cpp
 
-numerical.o : numerical.cu numerical.h mesh.h dataStructs.h
+numerical.o : numerical.cu numerical.h mesh.h dataStructs.h octree.h
 	$(NVCCONLY) -dc $(INCLUDES) $(ALL_CCFLAGS) $(EXTRA_CCFLAGS) $(GENCODE_FLAGS) numerical.cu
 	#$(NVCCONLY) -dc $(INCLUDES) $(ALL_CCFLAGS) $(EXTRA_CCFLAGS) $(GENCODE_FLAGS) numerical.cu
 	
