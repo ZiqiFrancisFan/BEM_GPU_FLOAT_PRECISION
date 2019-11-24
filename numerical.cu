@@ -1452,9 +1452,10 @@ void reorgField(cuFloatComplex* field, const int l)
     free(temp);
 }
 
-int generateAcousticField(const float strength, const float wavNum, const cart_coord_float* srcs, const int numSrcs, 
-        const cart_coord_double* pts, const int numPts, const tri_elem* elems, const int numElems, 
-        const cart_coord_double cnr, const double d, const int level, cuFloatComplex* fields)
+int getFieldsMultipleSrcsSingleObject(const float strength, const float wavNum, 
+        const cart_coord_float* srcs, const int numSrcs, const cart_coord_double* pts, const int numPts, 
+        const tri_elem* elems, const int numElems, const cart_coord_double cnr, const double d, 
+        const int level, cuFloatComplex* fields)
 {
     /*generate an acoustic field with a given boundary
      level: octree level
@@ -1494,8 +1495,6 @@ int generateAcousticField(const float strength, const float wavNum, const cart_c
         reorgField(field,level);
         memcpy(&fields[i*numExpPts],field,numExpPts*sizeof(cuFloatComplex));
     }
-    
-    
     
     return EXIT_SUCCESS;
 }

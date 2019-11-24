@@ -18,7 +18,7 @@ numVerticalSrcs = floor((up_theta-low_theta)/theta_interp)+1;
 
 %% read files
 folder = '/media/ziqi/HardDisk/Lab/BEM_GPU_FLOAT_PRECISION/MATLAB/';
-filename = 'left_hrtfs';
+filename = 'left_hrtfs_pt';
 format = '(%f,%f) ';
 path = [folder,filename];
 fileID = fopen(path,'r');
@@ -34,7 +34,7 @@ for i = 1 : numHorizontalSrcs+numVerticalSrcs
 end
 fclose(fileID);
 
-filename = 'right_hrtfs';
+filename = 'right_hrtfs_pt';
 format = '(%f,%f) ';
 path = [folder,filename];
 fileID = fopen(path,'r');
@@ -66,8 +66,8 @@ left_hrtfs_full_freq = [left_hrtfs,temp(:,2:end)];
 temp = conj(flip(right_hrtfs,2));
 right_hrtfs_full_freq  = [right_hrtfs,temp(:,2:end)];
 
-left_hrirs = ifft(left_hrtfs_full_freq,2);
-right_hrirs = ifft(right_hrtfs_full_freq,2);
+left_hrirs = ifft(left_hrtfs_full_freq,[],2);
+right_hrirs = ifft(right_hrtfs_full_freq,[],2);
 
 
 
