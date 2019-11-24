@@ -66,8 +66,8 @@ left_hrtfs_full_freq = [left_hrtfs,temp(:,2:end)];
 temp = conj(flip(right_hrtfs,2));
 right_hrtfs_full_freq  = [right_hrtfs,temp(:,2:end)];
 
-left_hrirs = ifft(left_hrtfs_full_freq,2);
-right_hrirs = ifft(right_hrtfs_full_freq,2);
+left_hrirs = ifft(left_hrtfs_full_freq,[],2);
+right_hrirs = ifft(right_hrtfs_full_freq,[],2);
 
 
 
