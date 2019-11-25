@@ -107,6 +107,7 @@ int main(int argc, char *argv[]) {
     
     // provide default arguments to the file name and the source name
     if(strcmp(file_name,"") == 0) {
+        printf("Name of mesh file unspecified.\n");
         strcpy(file_name,"sphere_100mm.obj");
     }
     if(strcmp(source_name,"") == 0) {
@@ -173,6 +174,8 @@ int main(int argc, char *argv[]) {
     cart_coord_float *pt = (cart_coord_float*)malloc(numPt*sizeof(cart_coord_float));
     tri_elem *elem = (tri_elem*)malloc(numElem*sizeof(tri_elem));
     readOBJ(file_name,pt,elem);
+    printf("points of the object: \n");
+    printCartCoord(pt,10);
     
     // generate CHIEF points
     cart_coord_float chief[NUMCHIEF];
@@ -252,8 +255,8 @@ int main(int argc, char *argv[]) {
             HOST_CALL(bemSolver_dir(wavNum,elem,numElem,pt,numPt,chief,NUMCHIEF,dirs,numHorDirs+numVertDirs,B,numPt+NUMCHIEF));
             //HOST_CALL(bemSolver_dir(k,elem,numElem,pt,numPt,chief,NUMCHIEF,&dir,1,B,numPt+NUMCHIEF));
             for(int i=0;i<numHorDirs+numVertDirs;i++) {
-                left_hrtfs[i*numFreqs+freqIdx] = B[IDXC0(left_index,i,numPt+NUMCHIEF)];
-                right_hrtfs[i*numFreqs+freqIdx] = B[IDXC0(right_index,i,numPt+NUMCHIEF)];
+                left_hrtfs[IDXC0(i,freqIdx,numHorDirs+numVertDirs)] = B[IDXC0(left_index,i,numPt+NUMCHIEF)];
+                right_hrtfs[IDXC0(i,freqIdx,numHorDirs+numVertDirs)] = B[IDXC0(right_index,i,numPt+NUMCHIEF)];
             }
             freqIdx++;
         }
@@ -273,7 +276,8 @@ int main(int argc, char *argv[]) {
         int numHorDirs = floor((high_phi-low_phi)/phi_interp)+1;
         int numVertDirs = floor((high_theta-low_theta)/theta_interp)+1;
         
-        cart_coord_float* srcLocs = (cart_coord_float*)malloc((numHorDirs+numVertDirs)*sizeof(cart_coord_float)); // memory for directions
+        cart_coord_float* srcLocs = (cart_coord_float*)malloc((numHorDirs+numVertDirs)
+                *sizeof(cart_coord_float)); // memory for directions
         for(int i=0;i<numHorDirs;i++) {
             float phi = low_phi+i*phi_interp;
             phi = PI/180*phi;
@@ -314,10 +318,12 @@ int main(int argc, char *argv[]) {
             printf("Current frequency: %f\n",freq);
             wavNum = 2*PI*freq/speed; //omega/c
             HOST_CALL(bemSolver_pt(wavNum,elem,numElem,pt,numPt,chief,NUMCHIEF,srcLocs,numHorDirs+numVertDirs,B,numPt+NUMCHIEF));
+            printf("solution of the first source: (%f,%f)\n",
+                    cuCrealf(B[IDXC0(left_index,0,numPt+NUMCHIEF)]),cuCimagf(B[IDXC0(left_index,0,numPt+NUMCHIEF)]));
             //HOST_CALL(bemSolver_dir(k,elem,numElem,pt,numPt,chief,NUMCHIEF,&dir,1,B,numPt+NUMCHIEF));
             for(int i=0;i<numHorDirs+numVertDirs;i++) {
-                left_hrtfs[i*numFreqs+freqIdx] = B[IDXC0(left_index,i,numPt+NUMCHIEF)];
-                right_hrtfs[i*numFreqs+freqIdx] = B[IDXC0(right_index,i,numPt+NUMCHIEF)];
+                left_hrtfs[IDXC0(i,freqIdx,numHorDirs+numVertDirs)] = B[IDXC0(left_index,i,numPt+NUMCHIEF)];
+                right_hrtfs[IDXC0(i,freqIdx,numHorDirs+numVertDirs)] = B[IDXC0(right_index,i,numPt+NUMCHIEF)];
             }
             freqIdx++;
         }
@@ -340,18 +346,20 @@ int main(int argc, char *argv[]) {
     cuFloatComplex *B = (cuFloatComplex*)malloc((numPt+NUMCHIEF)*sizeof(cuFloatComplex));
     //HOST_CALL(bemSolver(k,elem,numElem,pt,numPt,chief,NUMCHIEF,&src,1,B,numPt+NUMCHIEF));
     HOST_CALL(bemSolver_dir(20,elem,numElem,pt,numPt,chief,NUMCHIEF,&dir,1,B,numPt+NUMCHIEF));
+    printf("Points of the last\n");
+    printCartCoord(pt,10);
     //printCuFloatComplexMat(B,numPt,1,numPt+NUMCHIEF);
     printf("\n");
     printf("Analytical solution: \n");
     //computeRigidSphereScattering(pt,numPt,0.1,0.1,20,1.0);
     
-    cart_coord_float expPt = {1.5,1.5,1.5};
+    cart_coord_float expPt = {0.12,0.2,-0.1};
     sph_coord_float s = cart2sph(expPt);
     gsl_complex temp = rigidSphereScattering(20,1,0.1,s.coords[0],s.coords[1]);
     printf("Analytical solution: (%f,%f)\n",GSL_REAL(temp),GSL_IMAG(temp));
     cuFloatComplex temp_cu;
     HOST_CALL(extrapolation_dirs_single_source(20,&expPt,1,elem,numElem,pt,numPt,B,1.0,dir,&temp_cu));
-    printf("Numercial solution: (%f,%f)\n",cuCrealf(temp_cu),cuCimagf(temp_cu));
+    printf("Numerical solution: (%f,%f)\n",cuCrealf(temp_cu),cuCimagf(temp_cu));
     
     free(pt);
     free(elem);

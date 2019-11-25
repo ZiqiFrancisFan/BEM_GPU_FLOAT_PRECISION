@@ -14,9 +14,6 @@
 #ifndef MESH_H
 #define MESH_H
 
-#ifdef __cplusplus
-extern "C" {
-#endif
 
 
 #include "dataStructs.h"
@@ -31,14 +28,6 @@ int findBB(const cart_coord_float* pt, const int numPt, const float threshold, f
     float y[2], float z[2]);
 int write_hrtfs_to_file(const cuFloatComplex* HRTFs_le, const cuFloatComplex* HRTFs_re, 
         const int numSrcs, const int numFreqs, const char* file_le, const char* file_re);
-    
-
-
-
-
-#ifdef __cplusplus
-}
-#endif
 
 #endif /* MESH_H */
 

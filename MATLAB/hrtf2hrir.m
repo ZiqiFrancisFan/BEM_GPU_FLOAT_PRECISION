@@ -15,10 +15,17 @@ theta_interp = 5;
 numFreqs = floor((up_freq-low_freq)/freq_interp)+1;
 numHorizontalSrcs = floor((up_phi-low_phi)/phi_interp)+1;
 numVerticalSrcs = floor((up_theta-low_theta)/theta_interp)+1;
+c = 343.21;
+
+coeffs = zeros(1,numFreqs);
+for i = 1 : numFreqs
+    wavNum = 2*pi*freq_interp*i/c;
+    coeffs(i) = ptSrc(1.0,wavNum,[1,0,0],[0,0,0]);
+end
 
 %% read files
 folder = '/media/ziqi/HardDisk/Lab/BEM_GPU_FLOAT_PRECISION/MATLAB/';
-filename = 'left_hrtfs';
+filename = 'left_hrtfs_pt';
 format = '(%f,%f) ';
 path = [folder,filename];
 fileID = fopen(path,'r');
@@ -32,9 +39,10 @@ for i = 1 : numHorizontalSrcs+numVerticalSrcs
         left_hrtfs(i,j) = complex(x,y);
     end
 end
+left_hrtfs = left_hrtfs./coeffs;
 fclose(fileID);
 
-filename = 'right_hrtfs';
+filename = 'right_hrtfs_pt';
 format = '(%f,%f) ';
 path = [folder,filename];
 fileID = fopen(path,'r');
@@ -48,6 +56,7 @@ for i = 1 : numHorizontalSrcs+numVerticalSrcs
         right_hrtfs(i,j) = complex(x,y);
     end
 end
+right_hrtfs = right_hrtfs./coeffs;
 fclose(fileID);
 
 %% convert hrtfs to hrirs
@@ -62,12 +71,9 @@ right_hrtfs(:,2:end) = temp;
 
 % adding another half of the frquency content
 temp = conj(flip(left_hrtfs,2));
-left_hrtfs_full_freq = [left_hrtfs,temp(:,2:end)];
+left_hrtfs_full_freq = [left_hrtfs,temp(:,1:end-1)];
 temp = conj(flip(right_hrtfs,2));
-right_hrtfs_full_freq  = [right_hrtfs,temp(:,2:end)];
+right_hrtfs_full_freq  = [right_hrtfs,temp(:,1:end-1)];
 
-left_hrirs = ifft(left_hrtfs_full_freq,[],2);
-right_hrirs = ifft(right_hrtfs_full_freq,[],2);
-
-
-
+left_hrirs = real(ifft(left_hrtfs_full_freq,[],2));
+right_hrirs = real(ifft(right_hrtfs_full_freq,[],2));

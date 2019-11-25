@@ -927,6 +927,7 @@ int bemSolver_pt(const float k, const tri_elem *elem, const int numElem,
     cuFloatComplex *A = (cuFloatComplex*)malloc((numNod+numCHIEF)*numNod*sizeof(cuFloatComplex));
     
     memset(A,0,(numNod+numCHIEF)*numNod*sizeof(cuFloatComplex));
+    memset(B,0,(numNod+numCHIEF)*numSrc*sizeof(cuFloatComplex));
 
     for(i=0;i<numNod;i++) 
     {
