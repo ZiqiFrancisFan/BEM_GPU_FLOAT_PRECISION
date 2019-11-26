@@ -57,7 +57,7 @@ _x < _y ? -_x : _x; })
 #endif
 
 #ifndef STRENGTH
-#define STRENGTH 1.0f
+#define STRENGTH 0.1f
 #endif
 
 #ifndef INTORDER
@@ -66,6 +66,14 @@ _x < _y ? -_x : _x; })
 
 #ifndef NUMCHIEF
 #define NUMCHIEF 5
+#endif
+
+#ifndef RHO_AIR
+#define RHO_AIR 1.2041f
+#endif
+
+#ifndef SPEED_SOUND
+#define SPEED_SOUND 343.21f
 #endif
 
 extern __constant__ float density;
@@ -199,6 +207,10 @@ int bemSolver_dir(const float k, const tri_elem *elem, const int numElem,
         const cart_coord_float *nod, const int numNod, const cart_coord_float *chief, const int numCHIEF, 
         const cart_coord_float *dir, const int numSrc, cuFloatComplex *B, const int ldb);
 
+int bemSolver_mp(const float k, const tri_elem *elem, const int numElem, 
+        const cart_coord_float *nod, const int numNod, const cart_coord_float *chief, const int numCHIEF, 
+        const cart_coord_float *src, const int numSrc, cuFloatComplex *B, const int ldb);
+
 void rigidSpherePlaneMultipleEval(const cart_coord_float *pt, const int numPt, const double a, 
         const double r, const double wavNum, const double strength);
 
@@ -208,11 +220,18 @@ gsl_complex rigid_sphere_plane(const double wavNum, const double strength, const
 gsl_complex rigid_sphere_point(const double wavNum, const double strength, const double rs, 
         const double a, const cart_coord_double y);
 
+gsl_complex rigid_sphere_monopole(const double wavNum, const double strength, const double rs, 
+        const double a, const cart_coord_double y);
+
 int extrapolation_dirs_single_source(const float wavNum, const cart_coord_float* expPt, const int numExpPt, 
         const tri_elem* elem, const int numElem, const cart_coord_float* pt, const int numPt, 
         const cuFloatComplex* p, const float strength, const cart_coord_float dir, cuFloatComplex *pExp);
 
 int field_extrapolation_single_pt(const float wavNum, const cart_coord_float* expPt, const int numExpPt, 
+        const tri_elem* elem, const int numElem, const cart_coord_float* pt, const int numPt, 
+        const cuFloatComplex* p, const float strength, const cart_coord_float src, cuFloatComplex *pExp);
+
+int field_extrapolation_single_mp(const float wavNum, const cart_coord_float* expPt, const int numExpPt, 
         const tri_elem* elem, const int numElem, const cart_coord_float* pt, const int numPt, 
         const cuFloatComplex* p, const float strength, const cart_coord_float src, cuFloatComplex *pExp);
 
