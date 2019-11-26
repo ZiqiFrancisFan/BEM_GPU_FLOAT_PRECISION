@@ -336,27 +336,91 @@ int main(int argc, char *argv[]) {
         free(right_hrtfs);
     }
     
+    if(strcmp(source_name,"monopole")==0) {
+        printf("Monopole sources used.\n");
+        // compute the number of directions
+        int numHorDirs = floor((high_phi-low_phi)/phi_interp)+1;
+        int numVertDirs = floor((high_theta-low_theta)/theta_interp)+1;
+        
+        cart_coord_float* srcLocs = (cart_coord_float*)malloc((numHorDirs+numVertDirs)
+                *sizeof(cart_coord_float)); // memory for directions
+        for(int i=0;i<numHorDirs;i++) {
+            float phi = low_phi+i*phi_interp;
+            phi = PI/180*phi;
+            float theta = 90;
+            theta = PI/180*theta;
+            float r = radius;
+            float x = r*sin(theta)*cos(phi);
+            float y = r*sin(theta)*sin(phi);
+            float z = 0;
+            //printf("(%f,%f,%f)\n",x,y,z);
+            cart_coord_float srcLoc = {x,y,z};
+            srcLocs[i] = srcLoc;
+        }
+        
+        // set up vertical directions
+        for(int i=0;i<numVertDirs;i++) {
+            float theta = low_theta+i*theta_interp;
+            theta = PI/180*theta;
+            float r = radius;
+            float x = r*sin(theta);
+            float y = 0;
+            float z = r*cos(theta);
+            cart_coord_float srcLoc = {x,y,z};
+            srcLocs[numHorDirs+i] = srcLoc;
+        }
+        
+        printf("Locations of sources set up.\n");
+        
+        // find the number of frequencies
+        int numFreqs = floor((high_freq-low_freq)/freq_interp)+1;
+        cuFloatComplex *left_hrtfs = (cuFloatComplex*)malloc((numHorDirs+numVertDirs)*numFreqs*sizeof(cuFloatComplex));
+        cuFloatComplex *right_hrtfs = (cuFloatComplex*)malloc((numHorDirs+numVertDirs)*numFreqs*sizeof(cuFloatComplex));
+        cuFloatComplex* B = (cuFloatComplex*)malloc((numPt+NUMCHIEF)*(numHorDirs+numVertDirs)*sizeof(cuFloatComplex));
+        float wavNum;
+        int freqIdx = 0;
+        for(float freq=low_freq;freq<=high_freq;freq+=freq_interp) {
+            printf("Current frequency: %f\n",freq);
+            wavNum = 2*PI*freq/SPEED_SOUND; //omega/c
+            HOST_CALL(bemSolver_mp(wavNum,elem,numElem,pt,numPt,chief,NUMCHIEF,srcLocs,numHorDirs+numVertDirs,B,numPt+NUMCHIEF));
+            //HOST_CALL(bemSolver_dir(k,elem,numElem,pt,numPt,chief,NUMCHIEF,&dir,1,B,numPt+NUMCHIEF));
+            for(int i=0;i<numHorDirs+numVertDirs;i++) {
+                left_hrtfs[IDXC0(i,freqIdx,numHorDirs+numVertDirs)] = B[IDXC0(left_index,i,numPt+NUMCHIEF)];
+                right_hrtfs[IDXC0(i,freqIdx,numHorDirs+numVertDirs)] = B[IDXC0(right_index,i,numPt+NUMCHIEF)];
+            }
+            freqIdx++;
+        }
+        char left_file_name[50] = "left_hrtfs_pt", right_file_name[50] = "right_hrtfs_pt";
+        HOST_CALL(write_hrtfs_to_file(left_hrtfs,right_hrtfs,numHorDirs+numVertDirs,numFreqs,left_file_name,right_file_name));
+        
+        free(srcLocs);
+        free(B);
+        free(left_hrtfs);
+        free(right_hrtfs);
+    }
+    
     
     //cart_coord_float src = {10,10,10};
-    cart_coord_float src = {0,0,0.2};
+    //cart_coord_float src = {0,0,0.5};
     
     //printCartCoord(chief,NUMCHIEF);
     //printf("Completed.\n");
     
-    cuFloatComplex *B = (cuFloatComplex*)malloc((numPt+NUMCHIEF)*sizeof(cuFloatComplex));
+    //cuFloatComplex *B = (cuFloatComplex*)malloc((numPt+NUMCHIEF)*sizeof(cuFloatComplex));
     //HOST_CALL(bemSolver(k,elem,numElem,pt,numPt,chief,NUMCHIEF,&src,1,B,numPt+NUMCHIEF));
-    HOST_CALL(bemSolver_mp(25,elem,numElem,pt,numPt,chief,NUMCHIEF,&src,1,B,numPt+NUMCHIEF));
+    //HOST_CALL(bemSolver_mp(25,elem,numElem,pt,numPt,chief,NUMCHIEF,&src,1,B,numPt+NUMCHIEF));
     //printCuFloatComplexMat(B,numPt,1,numPt+NUMCHIEF);
     //computeRigidSphereScattering(pt,numPt,0.1,0.1,20,1.0);
     
-    cart_coord_float expPt = {0.3,0.3,-0.5};
-    gsl_complex temp = rigid_sphere_monopole(25,STRENGTH,src.coords[2],0.1,cartCoordFloat2cartCoordDouble(expPt));
-    printf("Analytical solution: (%f,%f)\n",GSL_REAL(temp),GSL_IMAG(temp));
-    cuFloatComplex temp_cu;
-    HOST_CALL(field_extrapolation_single_mp(25,&expPt,1,elem,numElem,pt,numPt,B,STRENGTH,src,&temp_cu));
-    printf("Numerical solution: (%f,%f)\n",cuCrealf(temp_cu),cuCimagf(temp_cu));
+    //cart_coord_float expPt = {0.3,0.3,-0.5};
+    //gsl_complex temp = rigid_sphere_monopole(25,STRENGTH,src.coords[2],0.1,cartCoordFloat2cartCoordDouble(expPt));
+    //printf("Analytical solution: (%f,%f)\n",GSL_REAL(temp),GSL_IMAG(temp));
+    //cuFloatComplex temp_cu;
+    //HOST_CALL(field_extrapolation_single_mp(25,&expPt,1,elem,numElem,pt,numPt,B,STRENGTH,src,&temp_cu));
+    //printf("Numerical solution: (%f,%f)\n",cuCrealf(temp_cu),cuCimagf(temp_cu));
+    //free(B);
     
     free(pt);
     free(elem);
-    free(B);
+    
 }
