@@ -195,11 +195,14 @@ int bemSolver_dir(const float k, const tri_elem *elem, const int numElem,
         const cart_coord_float *nod, const int numNod, const cart_coord_float *chief, const int numCHIEF, 
         const cart_coord_float *dir, const int numSrc, cuFloatComplex *B, const int ldb);
 
-void computeRigidSphereScattering(const cart_coord_float *pt, const int numPt, const double a, 
+void rigidSpherePlaneMultipleEval(const cart_coord_float *pt, const int numPt, const double a, 
         const double r, const double wavNum, const double strength);
 
-gsl_complex rigidSphereScattering(const double wavNum, const double strength, const double a, 
+gsl_complex rigid_sphere_plane(const double wavNum, const double strength, const double a, 
         const double r, const double theta);
+
+gsl_complex rigid_sphere_point(const double wavNum, const double strength, const double rs, 
+        const double a, const cart_coord_double y);
 
 int extrapolation_dirs_single_source(const float wavNum, const cart_coord_float* expPt, const int numExpPt, 
         const tri_elem* elem, const int numElem, const cart_coord_float* pt, const int numPt, 

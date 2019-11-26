@@ -338,24 +338,21 @@ int main(int argc, char *argv[]) {
     
     
     //cart_coord_float src = {10,10,10};
-    cart_coord_float dir = {0,0,1};
+    cart_coord_float src = {0,0,1};
     
     //printCartCoord(chief,NUMCHIEF);
     //printf("Completed.\n");
     
     cuFloatComplex *B = (cuFloatComplex*)malloc((numPt+NUMCHIEF)*sizeof(cuFloatComplex));
     //HOST_CALL(bemSolver(k,elem,numElem,pt,numPt,chief,NUMCHIEF,&src,1,B,numPt+NUMCHIEF));
-    HOST_CALL(bemSolver_dir(20,elem,numElem,pt,numPt,chief,NUMCHIEF,&dir,1,B,numPt+NUMCHIEF));
-    printf("Points of the last\n");
-    printCartCoord(pt,10);
+    HOST_CALL(bemSolver_pt(20,elem,numElem,pt,numPt,chief,NUMCHIEF,&dir,1,B,numPt+NUMCHIEF));
     //printCuFloatComplexMat(B,numPt,1,numPt+NUMCHIEF);
     printf("\n");
     printf("Analytical solution: \n");
     //computeRigidSphereScattering(pt,numPt,0.1,0.1,20,1.0);
     
-    cart_coord_float expPt = {0.12,0.2,-0.1};
-    sph_coord_float s = cart2sph(expPt);
-    gsl_complex temp = rigidSphereScattering(20,1,0.1,s.coords[0],s.coords[1]);
+    cart_coord_float expPt = {0.15,0.15,-0.1};
+    gsl_complex temp = rigid_sphere_point(20,STRENGTH,src.coords[2],0.1)
     printf("Analytical solution: (%f,%f)\n",GSL_REAL(temp),GSL_IMAG(temp));
     cuFloatComplex temp_cu;
     HOST_CALL(extrapolation_dirs_single_source(20,&expPt,1,elem,numElem,pt,numPt,B,1.0,dir,&temp_cu));

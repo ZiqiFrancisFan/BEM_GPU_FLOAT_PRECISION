@@ -1224,8 +1224,8 @@ __host__ __device__ cart_coord_double sph2cart(const sph_coord_double s)
     return result;
 }
 
-void computeRigidSphereScattering(const cart_coord_float *pt, const int numPt, const double a, 
-        const double r, const double wavNum, const double strength)
+void rigidSpherePlaneMultipleEval(const cart_coord_float *pt, const int numPt, 
+        const double a, const double wavNum, const double strength)
 {
     gsl_complex *p = (gsl_complex*)malloc(numPt*sizeof(gsl_complex));
     sph_coord_float tempCoord;
@@ -1235,14 +1235,14 @@ void computeRigidSphereScattering(const cart_coord_float *pt, const int numPt, c
     for(int i=0;i<numPt;i++)
     {
         tempCoord = cart2sph(pt[i]);
-        result = rigidSphereScattering(wavNum,strength,a,tempCoord.coords[0],tempCoord.coords[1]);
+        result = rigid_sphere_plane(wavNum,strength,a,tempCoord.coords[0],tempCoord.coords[1]);
         p[i] = result;
         printf("(%.8f,%.8f)\n",GSL_REAL(p[i]),GSL_IMAG(p[i]));
     }
     free(p);
 }
 
-gsl_complex rigidSphereScattering(const double wavNum, const double strength, const double a, 
+gsl_complex rigid_sphere_plane(const double wavNum, const double strength, const double a, 
         const double r, const double theta)
 {
     gsl_complex result = gsl_complex_rect(0,0), temp_c;
@@ -1258,6 +1258,30 @@ gsl_complex rigidSphereScattering(const double wavNum, const double strength, co
         result = gsl_complex_add(result,temp_c);
     }
     result = gsl_complex_mul_real(result,strength);
+    return result;
+}
+
+gsl_complex rigid_sphere_point(const double wavNum, const double strength, const double rs, 
+        const double a, const cart_coord_double y)
+{
+    const int truncNum = 100;
+    const cart_coord_double src = {0,0,rs};
+    cart_coord_double temp_cart_coord = cartCoordSub(y,src);
+    sph_coord_double temp_sph_coord = cart2sph(temp_cart_coord);
+    double R = temp_sph_coord.coords[0];
+    temp_sph_coord = cart2sph(y);
+    double r = temp_sph_coord.coords[0];
+    double theta = temp_sph_coord.coords[1];
+    gsl_complex result = gsl_complex_rect(strength*cos(wavNum*R)/(4*PI*R),strength*sin(wavNum*R)/(4*PI*R));
+    for(int n=0;n<truncNum;n++) {
+        gsl_complex temp[2];
+        double t = (n+0.5)*jprime(n,wavNum*a)*wavNum*strength/(2*PI)*gsl_sf_legendre_Pl(n,cos(theta));
+        temp[0] = gsl_complex_rect(0,t);
+        temp[1] = gsl_complex_mul(gsl_sf_bessel_hl(n,wavNum*rs),gsl_sf_bessel_hl(n,wavNum*r));
+        temp[0] = gsl_complex_mul(temp[0],temp[1]);
+        temp[0] = gsl_complex_div(temp[0],hprime(n,wavNum*a));
+        result = gsl_complex_sub(result,temp[0]);
+    }
     return result;
 }
 
