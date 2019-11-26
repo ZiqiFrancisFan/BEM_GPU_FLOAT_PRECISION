@@ -153,6 +153,10 @@ int genGaussParams(const int n, float *pt, float *wgt);
 
 int gaussPtsToDevice(const float *evalPt, const float *wgt);
 
+cart_coord_float cartCoordDouble2cartCoordFloat(const cart_coord_double t);
+
+cart_coord_double cartCoordFloat2cartCoordDouble(const cart_coord_float t);
+
 __host__ __device__ cart_coord_double triCentroid(cart_coord_double nod[]);
 
 void printFltMat(const float *A, const int numRow, const int numCol, const int lda);

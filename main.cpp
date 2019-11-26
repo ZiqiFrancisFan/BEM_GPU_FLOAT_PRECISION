@@ -352,7 +352,7 @@ int main(int argc, char *argv[]) {
     //computeRigidSphereScattering(pt,numPt,0.1,0.1,20,1.0);
     
     cart_coord_float expPt = {0.15,0.15,-0.1};
-    gsl_complex temp = rigid_sphere_point(20,STRENGTH,src.coords[2],0.1)
+    gsl_complex temp = rigid_sphere_point(20,STRENGTH,1.0,0.1,cartCoordFloat2cartCoordDouble(expPt));
     printf("Analytical solution: (%f,%f)\n",GSL_REAL(temp),GSL_IMAG(temp));
     cuFloatComplex temp_cu;
     HOST_CALL(extrapolation_dirs_single_source(20,&expPt,1,elem,numElem,pt,numPt,B,1.0,dir,&temp_cu));

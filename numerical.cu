@@ -86,6 +86,24 @@ void printCuFloatComplexMat(const cuFloatComplex *A, const int numRow, const int
     }
 }
 
+cart_coord_float cartCoordDouble2cartCoordFloat(const cart_coord_double t)
+{
+    cart_coord_float result;
+    for(int i=0;i<3;i++) {
+        result.coords[i] = t.coords[i];
+    }
+    return result;
+}
+
+cart_coord_double cartCoordFloat2cartCoordDouble(const cart_coord_float t)
+{
+    cart_coord_double result;
+    for(int i=0;i<3;i++) {
+        result.coords[i] = t.coords[i];
+    }
+    return result;
+}
+
 __host__ __device__ float dotProd(const cart_coord_float u, const cart_coord_float v) {
     return u.coords[0]*v.coords[0]+u.coords[1]*v.coords[1]+u.coords[2]*v.coords[2];
 }
