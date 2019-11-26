@@ -212,5 +212,9 @@ int extrapolation_dirs_single_source(const float wavNum, const cart_coord_float*
         const tri_elem* elem, const int numElem, const cart_coord_float* pt, const int numPt, 
         const cuFloatComplex* p, const float strength, const cart_coord_float dir, cuFloatComplex *pExp);
 
+int field_extrapolation_single_pt(const float wavNum, const cart_coord_float* expPt, const int numExpPt, 
+        const tri_elem* elem, const int numElem, const cart_coord_float* pt, const int numPt, 
+        const cuFloatComplex* p, const float strength, const cart_coord_float src, cuFloatComplex *pExp);
+
 #endif /* NUMERICAL_H */
 
