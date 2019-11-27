@@ -390,7 +390,7 @@ int main(int argc, char *argv[]) {
             }
             freqIdx++;
         }
-        char left_file_name[50] = "left_hrtfs_pt", right_file_name[50] = "right_hrtfs_pt";
+        char left_file_name[50] = "left_hrtfs_mp", right_file_name[50] = "right_hrtfs_mp";
         HOST_CALL(write_hrtfs_to_file(left_hrtfs,right_hrtfs,numHorDirs+numVertDirs,numFreqs,left_file_name,right_file_name));
         
         free(srcLocs);

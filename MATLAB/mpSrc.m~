@@ -1,8 +1,0 @@
-function y = mpSrc(strength,wavNum,x,y)
-%UNTITLED3 Summary of this function goes here
-%   Detailed explanation goes here
-rho_0 = 1.20;
-c_0 = 343;
-y = complex(strength*)
-end
-

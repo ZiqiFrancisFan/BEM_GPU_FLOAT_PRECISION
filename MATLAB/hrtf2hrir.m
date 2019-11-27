@@ -2,9 +2,9 @@
 clear; close all; clc;
 
 %% setting up parameters
-low_freq = 25;
-up_freq = 12000;
-freq_interp = 25;
+low_freq = 100;
+up_freq = 22000;
+freq_interp = 100;
 low_phi = 0;
 up_phi = 355;
 phi_interp = 5;
@@ -18,14 +18,33 @@ numVerticalSrcs = floor((up_theta-low_theta)/theta_interp)+1;
 c = 343.21;
 
 coeffs = zeros(1,numFreqs);
-for i = 1 : numFreqs
-    wavNum = 2*pi*freq_interp*i/c;
-    coeffs(i) = ptSrc(1.0,wavNum,[1,0,0],[0,0,0]);
+
+%% setting up locations
+radius = 1;
+locs = zeros(numHorizontalSrcs+numVerticalSrcs,3);
+for i = 1 : numHorizontalSrcs
+    theta = pi/2;
+    phi = phi_interp*(i-1)*(pi/180);
+    x = radius*sin(theta)*cos(phi);
+    y = radius*sin(theta)*sin(phi);
+    z = 0;
+    locs(i,:) = [x,y,z];
 end
+
+for i = 1 : numVerticalSrcs
+    phi = 0;
+    theta = theta_interp*(i-1)*(pi/180);
+    x = radius*sin(theta)*cos(phi);
+    y = radius*sin(theta)*sin(phi);
+    z = radius*cos(theta);
+    locs(i+numHorizontalSrcs,:) = [x,y,z];
+end
+
+qs = 0.1;
 
 %% read files
 folder = '/media/ziqi/HardDisk/Lab/BEM_GPU_FLOAT_PRECISION/MATLAB/';
-filename = 'left_hrtfs_pt';
+filename = 'left_hrtfs_mp_fabian';
 format = '(%f,%f) ';
 path = [folder,filename];
 fileID = fopen(path,'r');
@@ -39,10 +58,18 @@ for i = 1 : numHorizontalSrcs+numVerticalSrcs
         left_hrtfs(i,j) = complex(x,y);
     end
 end
-left_hrtfs = left_hrtfs./coeffs;
 fclose(fileID);
 
-filename = 'right_hrtfs_pt';
+for i = 1 : numHorizontalSrcs+numVerticalSrcs
+    for j = 1 : numFreqs
+        freq = (j-1)*freq_interp+low_freq;
+        wavNum = 2*pi*freq/c;
+        coeff = mpSrc(qs,wavNum,locs(i,:),[0,0,0]);
+        left_hrtfs(i,j) = left_hrtfs(i,j)/coeff;
+    end
+end
+
+filename = 'right_hrtfs_mp_fabian';
 format = '(%f,%f) ';
 path = [folder,filename];
 fileID = fopen(path,'r');
@@ -56,8 +83,17 @@ for i = 1 : numHorizontalSrcs+numVerticalSrcs
         right_hrtfs(i,j) = complex(x,y);
     end
 end
-right_hrtfs = right_hrtfs./coeffs;
+
 fclose(fileID);
+
+for i = 1 : numHorizontalSrcs+numVerticalSrcs
+    for j = 1 : numFreqs
+        freq = (j-1)*freq_interp+low_freq;
+        wavNum = 2*pi*freq/c;
+        coeff = mpSrc(qs,wavNum,locs(i,:),[0,0,0]);
+        right_hrtfs(i,j) = right_hrtfs(i,j)/coeff;
+    end
+end
 
 %% convert hrtfs to hrirs
 % adding an element for the 0Hz
@@ -75,5 +111,5 @@ left_hrtfs_full_freq = [left_hrtfs,temp(:,1:end-1)];
 temp = conj(flip(right_hrtfs,2));
 right_hrtfs_full_freq  = [right_hrtfs,temp(:,1:end-1)];
 
-left_hrirs = real(ifft(left_hrtfs_full_freq,[],2));
-right_hrirs = real(ifft(right_hrtfs_full_freq,[],2));
+left_hrirs = ifft(left_hrtfs_full_freq,[],2);
+right_hrirs = ifft(right_hrtfs_full_freq,[],2);
