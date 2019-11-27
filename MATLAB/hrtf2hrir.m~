@@ -118,22 +118,21 @@ left_hrirs_max = max(max(abs(left_hrirs)));
 right_hrirs_max = max(max(abs(left_hrirs)));
 cmax = max(left_hrirs_max,right_hrirs_max);
 
-left_hrirs = left_hrirs/cmax;
-right_hrirs = right_hrirs/cmax;
+left_hrirs = left_hrirs/cmax
 
 save('left_hrirs.mat','left_hrirs');
 save('right_hrirs.mat','right_hrirs');
 
 %% play the horizontal sound
 %make input noise
-noise = makePinkNoise(1,44100);
-for i= 1 : numHorizontalSrcs
-    left_channel = conv(noise,left_hrirs(i,:));
-    right_channel = conv(noise, right_hrirs(i,:));
-    binaural = [left_channel',right_channel'];
-    sound(binaural,44100);
-    pause(2.0);
-end
+% noise = makePinkNoise(1,44100);
+% for i= 1 : numHorizontalSrcs
+%     left_channel = conv(noise,left_hrirs(i,:));
+%     right_channel = conv(noise, right_hrirs(i,:));
+%     binaural = [left_channel',right_channel'];
+%     soundsc(binaural,44100);
+%     pause(2.0);
+% end
 
 %% plot hrirs
 hfig = figure;
