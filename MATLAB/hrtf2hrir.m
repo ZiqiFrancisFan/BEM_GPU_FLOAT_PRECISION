@@ -60,14 +60,14 @@ for i = 1 : numHorizontalSrcs+numVerticalSrcs
 end
 fclose(fileID);
 
-for i = 1 : numHorizontalSrcs+numVerticalSrcs
-    for j = 1 : numFreqs
-        freq = (j-1)*freq_interp+low_freq;
-        wavNum = 2*pi*freq/c;
-        coeff = mpSrc(qs,wavNum,locs(i,:),[0,0,0]);
-        left_hrtfs(i,j) = left_hrtfs(i,j)/coeff;
-    end
-end
+% for i = 1 : numHorizontalSrcs+numVerticalSrcs
+%     for j = 1 : numFreqs
+%         freq = (j-1)*freq_interp+low_freq;
+%         wavNum = 2*pi*freq/c;
+%         coeff = mpSrc(qs,wavNum,locs(i,:),[0,0,0]);
+%         left_hrtfs(i,j) = left_hrtfs(i,j)/coeff;
+%     end
+% end
 
 filename = 'right_hrtfs_mp_fabian';
 format = '(%f,%f) ';
@@ -86,14 +86,14 @@ end
 
 fclose(fileID);
 
-for i = 1 : numHorizontalSrcs+numVerticalSrcs
-    for j = 1 : numFreqs
-        freq = (j-1)*freq_interp+low_freq;
-        wavNum = 2*pi*freq/c;
-        coeff = mpSrc(qs,wavNum,locs(i,:),[0,0,0]);
-        right_hrtfs(i,j) = right_hrtfs(i,j)/coeff;
-    end
-end
+% for i = 1 : numHorizontalSrcs+numVerticalSrcs
+%     for j = 1 : numFreqs
+%         freq = (j-1)*freq_interp+low_freq;
+%         wavNum = 2*pi*freq/c;
+%         coeff = mpSrc(qs,wavNum,locs(i,:),[0,0,0]);
+%         right_hrtfs(i,j) = right_hrtfs(i,j)/coeff;
+%     end
+% end
 
 %% convert hrtfs to hrirs
 % adding an element for the 0Hz
@@ -113,3 +113,5 @@ right_hrtfs_full_freq  = [right_hrtfs,temp(:,1:end-1)];
 
 left_hrirs = ifft(left_hrtfs_full_freq,[],2);
 right_hrirs = ifft(right_hrtfs_full_freq,[],2);
+
+%% plot figures
