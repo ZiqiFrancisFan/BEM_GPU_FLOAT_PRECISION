@@ -68,6 +68,14 @@ _x < _y ? -_x : _x; })
 #define NUMCHIEF 5
 #endif
 
+#ifndef RHO_AIR
+#define RHO_AIR 1.2041f
+#endif
+
+#ifndef SPEED_SOUND
+#define SPEED_SOUND 343.21f
+#endif
+
 extern __constant__ float density;
 
 extern __constant__ float speed;

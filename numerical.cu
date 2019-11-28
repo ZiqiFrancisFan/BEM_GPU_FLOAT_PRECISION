@@ -17,7 +17,7 @@ __constant__ float INTPT[INTORDER];
 
 __constant__ float INTWGT[INTORDER];
 
-int genGaussParams(const int n, float *pt, float *wgt) 
+int genGaussParams(const int n, float* pt, float* wgt) 
 {
     int i, j;
     double t;
@@ -600,6 +600,15 @@ __host__ __device__ cuFloatComplex ptSrc(const float k, const float amp, const c
     return make_cuFloatComplex(amp*cosf(-k*radius)/(fourPI*radius),amp*sinf(-k*radius)/(fourPI*radius));
 }
 
+__host__ __device__ cuFloatComplex mpSrc(const float k, const float qs, const cart_coord_float src, const cart_coord_float eval)
+{
+    cart_coord_float vec = cartCoordSub(eval,src);
+    float radius = sqrtf(vec.coords[0]*vec.coords[0]+vec.coords[1]*vec.coords[1]+vec.coords[2]*vec.coords[2]);
+    cuFloatComplex result = make_cuFloatComplex(0,RHO_AIR*SPEED_SOUND*k*qs/(4*PI));
+    result = cuCmulf(result,make_cuFloatComplex(cos(-k*radius)/radius,sin(-k*radius)/radius));
+    return result;
+}
+
 __host__ __device__ cuFloatComplex dirSrc(const float k, const float strength, const cart_coord_float dir, const cart_coord_float evalLoc)
 {
     float theta = -k*dotProd(dir,evalLoc);
@@ -1024,6 +1033,136 @@ int bemSolver_pt(const float k, const tri_elem *elem, const int numElem,
     return EXIT_SUCCESS;
 }
 
+int bemSolver_mp(const float k, const tri_elem *elem, const int numElem, 
+        const cart_coord_float *nod, const int numNod, const cart_coord_float *chief, const int numCHIEF, 
+        const cart_coord_float *src, const int numSrc, cuFloatComplex *B, const int ldb)
+{
+    int i, j;
+    cudaEvent_t start, stop;
+    cudaEventCreate(&start);
+    cudaEventCreate(&stop);
+    
+    //Move elements to GPU
+    tri_elem *elem_d;
+    CUDA_CALL(cudaMalloc(&elem_d,numElem*sizeof(tri_elem)));
+    CUDA_CALL(cudaMemcpy(elem_d,elem,numElem*sizeof(tri_elem),cudaMemcpyHostToDevice));
+    
+    //Move points to GPU
+    // cart_coord_float *pt_h = (cart_coord_float*)malloc((numNod+numCHIEF)*sizeof(cart_coord_float));
+    // for(i=0;i<numNod;i++) {
+    //     pt_h[i] = nod[i];
+    // }
+    // for(i=0;i<numCHIEF;i++) {
+    //     pt_h[numNod+i] = chief[i];
+    // }
+    
+    cart_coord_float *pt_d;
+    CUDA_CALL(cudaMalloc(&pt_d, (numNod + numCHIEF) * sizeof(cart_coord_float)));
+    CUDA_CALL(cudaMemcpy(pt_d, nod, numNod * sizeof(cart_coord_float),cudaMemcpyHostToDevice));
+    CUDA_CALL(cudaMemcpy(pt_d + numNod, chief, numCHIEF * sizeof(cart_coord_float),cudaMemcpyHostToDevice));
+    
+    CUDA_CALL(cudaEventRecord(start));
+    //Generate the system
+    cuFloatComplex *A = (cuFloatComplex*)malloc((numNod+numCHIEF)*numNod*sizeof(cuFloatComplex));
+    
+    memset(A,0,(numNod+numCHIEF)*numNod*sizeof(cuFloatComplex));
+    memset(B,0,(numNod+numCHIEF)*numSrc*sizeof(cuFloatComplex));
+
+    for(i=0;i<numNod;i++) 
+    {
+        A[IDXC0(i,i,numNod+numCHIEF)] = make_cuFloatComplex(1,0);
+    }
+    
+    //Initialization of B
+    for(i=0;i<numNod+numCHIEF;i++) 
+    {
+        for(j=0;j<numSrc;j++) 
+        {
+            if(i < numNod)
+                B[IDXC0(i,j,ldb)] = mpSrc(k,STRENGTH,src[j],nod[i]);
+            else
+                B[IDXC0(i,j,ldb)] = mpSrc(k,STRENGTH,src[j],chief[i-numNod]);
+        }
+    }
+    
+    cuFloatComplex *A_d, *B_d;
+    CUDA_CALL(cudaMalloc(&A_d,(numNod+numCHIEF)*numNod*sizeof(cuFloatComplex)));
+    CUDA_CALL(cudaMemcpy(A_d,A,(numNod+numCHIEF)*numNod*sizeof(cuFloatComplex),cudaMemcpyHostToDevice));
+    
+    CUDA_CALL(cudaMalloc(&B_d,(numNod+numCHIEF)*numSrc*sizeof(cuFloatComplex)));
+    CUDA_CALL(cudaMemcpy(B_d,B,(numNod+numCHIEF)*numSrc*sizeof(cuFloatComplex),cudaMemcpyHostToDevice));
+    
+    int xNumBlocks, xWidth = 16, yNumBlocks, yWidth = 16;
+    xNumBlocks = (numNod+numCHIEF+xWidth-1)/xWidth;
+    yNumBlocks = (numElem+yWidth-1)/yWidth;
+    dim3 gridLayout, blockLayout;
+    gridLayout.x = xNumBlocks;
+    gridLayout.y = yNumBlocks;
+    
+    blockLayout.x = xWidth;
+    blockLayout.y = yWidth;
+    
+    atomicPtsElems_nsgl<<<gridLayout,blockLayout>>>(k,pt_d,numNod,0,numNod+numCHIEF-1,
+            elem_d,numElem,A_d,numNod+numCHIEF,B_d,numSrc,ldb);
+    atomicPtsElems_sgl<<<yNumBlocks,yWidth>>>(k,pt_d,elem_d,numElem,A_d,numNod+numCHIEF,
+            B_d,numSrc,ldb);
+    
+    //Solving the system
+    cusolverDnHandle_t cusolverH = NULL;
+    CUSOLVER_CALL(cusolverDnCreate(&cusolverH));
+    
+    //A = QR
+    int lwork;
+    CUSOLVER_CALL(cusolverDnCgeqrf_bufferSize(cusolverH,numNod+numCHIEF,numNod,A_d
+            ,numNod+numCHIEF,&lwork));
+    
+    cuFloatComplex *workspace_d;
+    CUDA_CALL(cudaMalloc(&workspace_d,lwork*sizeof(cuFloatComplex)));
+    cuFloatComplex *tau_d;
+    CUDA_CALL(cudaMalloc(&tau_d,(numNod+numCHIEF)*sizeof(cuFloatComplex)));
+    int *deviceInfo_d, deviceInfo;
+    CUDA_CALL(cudaMalloc(&deviceInfo_d,sizeof(int)));
+    
+    
+    CUSOLVER_CALL(cusolverDnCgeqrf(cusolverH,numNod+numCHIEF,numNod,A_d,numNod+numCHIEF,
+            tau_d,workspace_d,lwork,deviceInfo_d));
+    CUDA_CALL(cudaMemcpy(&deviceInfo,deviceInfo_d,sizeof(int),cudaMemcpyDeviceToHost));
+    
+    //B = (Q^H)*B
+    CUSOLVER_CALL(cusolverDnCunmqr(cusolverH,CUBLAS_SIDE_LEFT,CUBLAS_OP_C,numNod+numCHIEF,numSrc,
+            numNod,A_d,numNod+numCHIEF,tau_d,B_d,ldb,workspace_d,lwork,deviceInfo_d));
+    CUDA_CALL(cudaMemcpy(&deviceInfo,deviceInfo_d,sizeof(int),cudaMemcpyDeviceToHost));
+    
+    //Solve Rx = B
+    cuFloatComplex alpha = make_cuFloatComplex(1,0);
+    cublasHandle_t cublasH;
+    CUBLAS_CALL(cublasCreate_v2(&cublasH));
+    CUBLAS_CALL(cublasCtrsm_v2(cublasH,CUBLAS_SIDE_LEFT,CUBLAS_FILL_MODE_UPPER,
+            CUBLAS_OP_N,CUBLAS_DIAG_NON_UNIT,numNod,numSrc,&alpha,A_d,numNod+numCHIEF,B_d,ldb));
+    CUDA_CALL(cudaEventRecord(stop));
+    CUDA_CALL(cudaEventSynchronize(stop));
+    CUDA_CALL(cudaMemcpy(B,B_d,ldb*numSrc*sizeof(cuFloatComplex),cudaMemcpyDeviceToHost));
+    
+    float milliseconds = 0;
+    CUDA_CALL(cudaEventElapsedTime(&milliseconds,start,stop));
+    printf("Elapsed system solving time: %f milliseconds.\n",milliseconds);
+    
+    //release memory
+    CUDA_CALL(cudaEventDestroy(start));
+    CUDA_CALL(cudaEventDestroy(stop));
+    CUDA_CALL(cudaFree(A_d));
+    CUDA_CALL(cudaFree(B_d));
+    CUDA_CALL(cudaFree(tau_d));
+    CUDA_CALL(cudaFree(workspace_d));
+    CUDA_CALL(cudaFree(deviceInfo_d));
+    CUBLAS_CALL(cublasDestroy_v2(cublasH));
+    CUSOLVER_CALL(cusolverDnDestroy(cusolverH));
+    CUDA_CALL(cudaFree(elem_d));
+    CUDA_CALL(cudaFree(pt_d));
+    free(A);
+    return EXIT_SUCCESS;
+}
+
 int bemSolver_dir(const float k, const tri_elem *elem, const int numElem, 
         const cart_coord_float *nod, const int numNod, const cart_coord_float *chief, const int numCHIEF, 
         const cart_coord_float *dir, const int numSrc, cuFloatComplex *B, const int ldb)
@@ -1265,6 +1404,12 @@ __device__ cuFloatComplex extrapolation_dir(const float wavNum, const cart_coord
         const tri_elem* elem, const int numElem, const cart_coord_float* pt, 
         const cuFloatComplex* p, const float strength, const cart_coord_float dir)
 {
+    /*field extrapolation from the surface to a single point in free space
+     wavNum: wave number
+     elem: pointer for all elements
+     pt: pointer for all points
+     x: the point in free space
+     dir: the direction of the plane wave*/
     cuFloatComplex result = dirSrc(wavNum,strength,dir,x);
     cuFloatComplex temp;
     for(int i=0;i<numElem;i++) {
@@ -1293,6 +1438,13 @@ __device__ cuFloatComplex extrapolation_pt(const float wavNum, const cart_coord_
         const tri_elem* elem, const int numElem, const cart_coord_float* pt, 
         const cuFloatComplex* p, const float strength, const cart_coord_float src)
 {
+    /*field extrapolation from the surface to a single point in free space
+     x: the single point in free space
+     elem: pointer to mesh elements
+     pt: pointer to mesh nodes and chief points
+     p: surface pressure
+     strength: intensity of the source
+     src: source location*/
     cuFloatComplex result = ptSrc(wavNum,strength,src,x);
     cuFloatComplex temp;
     for(int i=0;i<numElem;i++) {
@@ -1317,23 +1469,83 @@ __device__ cuFloatComplex extrapolation_pt(const float wavNum, const cart_coord_
     return result;
 }
 
-__global__ void extrapolation_dirs(const float wavNum, const cart_coord_float* expPt, const int numExpPt,
+__device__ cuFloatComplex extrapolation_mp(const float wavNum, const cart_coord_float x, 
+        const tri_elem* elem, const int numElem, const cart_coord_float* pt, 
+        const cuFloatComplex* p, const float strength, const cart_coord_float src)
+{
+    /*field extrapolation from the surface to a single monopole in free space
+     x: the single point in free space
+     elem: pointer to mesh elements
+     pt: pointer to mesh nodes and chief points
+     p: surface pressure
+     strength: intensity of the source
+     src: source location
+     return: sound pressure at the extrapolation point*/
+    cuFloatComplex result = mpSrc(wavNum,strength,src,x);
+    cuFloatComplex temp;
+    for(int i=0;i<numElem;i++) {
+        cart_coord_float nod[3];
+        for(int j=0;j<3;j++) {
+            nod[j] = pt[elem[i].nodes[j]];
+        }
+        cuFloatComplex gCoeff[3], hCoeff[3]; 
+        float cCoeff[3];
+        g_h_c_nsgl(wavNum,x,nod,gCoeff,hCoeff,cCoeff);
+        for(int j=0;j<3;j++) {
+            temp = cuCdivf(elem[i].bc[2],elem[i].bc[1]);
+            temp = cuCmulf(temp,gCoeff[j]);
+            result = cuCsubf(result,temp);
+            temp = cuCdivf(elem[i].bc[0],elem[i].bc[1]);
+            temp = cuCmulf(temp,gCoeff[j]);
+            temp = cuCsubf(hCoeff[j],temp);
+            temp = cuCmulf(temp,p[elem[i].nodes[j]]);
+            result = cuCsubf(result,temp);
+        }
+    }
+    return result;
+}
+
+__global__ void extrapolations_dir(const float wavNum, const cart_coord_float* expPt, const int numExpPt,
         const tri_elem* elem, const int numElem, const cart_coord_float* pt, const cuFloatComplex* p, 
         const float strength, const cart_coord_float dir, cuFloatComplex *p_exp)
 {
+    /*
+     extrapolation from surface pressure to multiple points in free space
+     wavNum: wave number
+     expPt: extrapolation points in free space
+     p: surface pressure
+     dir: direction of the plane wave
+     p_exp: pressure at the extrapolation points
+     */
     int idx = blockIdx.x*blockDim.x+threadIdx.x;
     if(idx < numExpPt) {
         p_exp[idx] = extrapolation_dir(wavNum,expPt[idx],elem,numElem,pt,p,strength,dir);
     }
 }
 
-__global__ void extrapolation_pts(const float wavNum, const cart_coord_float* expPt, const int numExpPt,
+__global__ void extrapolations_pt(const float wavNum, const cart_coord_float* expPt, const int numExpPt,
+        const tri_elem* elem, const int numElem, const cart_coord_float* pt, const cuFloatComplex* p, 
+        const float strength, const cart_coord_float src, cuFloatComplex *p_exp)
+{
+    /*extrapolation from surface pressure to multiple points in free space
+     wavNum: wave number
+     expPt:  extrapolation  points in free space
+     p: surface pressure
+     src: location of the source
+     p_exp: pressure at the extrapolation points*/
+    int idx = blockIdx.x*blockDim.x+threadIdx.x;
+    if(idx < numExpPt) {
+        p_exp[idx] = extrapolation_pt(wavNum,expPt[idx],elem,numElem,pt,p,strength,src);
+    }
+}
+
+__global__ void extrapolations_mp(const float wavNum, const cart_coord_float* expPt, const int numExpPt,
         const tri_elem* elem, const int numElem, const cart_coord_float* pt, const cuFloatComplex* p, 
         const float strength, const cart_coord_float src, cuFloatComplex *p_exp)
 {
     int idx = blockIdx.x*blockDim.x+threadIdx.x;
     if(idx < numExpPt) {
-        p_exp[idx] = extrapolation_pt(wavNum,expPt[idx],elem,numElem,pt,p,strength,src);
+        p_exp[idx] = extrapolation_mp(wavNum,expPt[idx],elem,numElem,pt,p,strength,src);
     }
 }
 
@@ -1341,6 +1553,15 @@ int field_extrapolation_single_dir(const float wavNum, const cart_coord_float* e
         const tri_elem* elem, const int numElem, const cart_coord_float* pt, const int numPt, 
         const cuFloatComplex* p, const float strength, const cart_coord_float dir, cuFloatComplex *pExp)
 {
+    /*extrapolation of acoustic field from surface pressure
+     wavNum: wave number
+     expPt: extrapolation points in free space
+     elem: pointer to mesh elements
+     pt: pointer to mesh nodes and chief points
+     p: surface pressure
+     strength: intensity of the sound source
+     dir: direction of the plane wave
+     pExp: pressure at extrapolation points*/
     int width = 16, numBlock = (numExpPt+width-1)/width;
     
     // allocate memory on GPU and copy data to GPU memory
@@ -1362,7 +1583,7 @@ int field_extrapolation_single_dir(const float wavNum, const cart_coord_float* e
     
     CUDA_CALL(cudaMalloc(&pExp_d,numExpPt*sizeof(cuFloatComplex)));
     
-    extrapolation_dirs<<<numBlock,width>>>(wavNum,expPt_d,numExpPt,elem_d,numElem,pt_d,p_d,
+    extrapolations_dir<<<numBlock,width>>>(wavNum,expPt_d,numExpPt,elem_d,numElem,pt_d,p_d,
             strength,dir,pExp_d);
     
     CUDA_CALL(cudaMemcpy(pExp,pExp_d,numExpPt*sizeof(cuFloatComplex),cudaMemcpyDeviceToHost));
@@ -1377,6 +1598,54 @@ int field_extrapolation_single_dir(const float wavNum, const cart_coord_float* e
 }
 
 int field_extrapolation_single_pt(const float wavNum, const cart_coord_float* expPt, const int numExpPt, 
+        const tri_elem* elem, const int numElem, const cart_coord_float* pt, const int numPt, 
+        const cuFloatComplex* p, const float strength, const cart_coord_float src, cuFloatComplex *pExp)
+{
+    /*Extrapolation of an acoustic field from surface pressure and a single point source
+     wavNum: wave number
+     expPt: pointer for extrapolation points
+     elem: mesh elements
+     pt: nodes and chief points
+     p: surface pressure
+     strength: intensity of a source
+     src: location of the point source
+     pExp: pressure at extrapolation points*/
+    int width = 16, numBlock = (numExpPt+width-1)/width;
+    
+    // allocate memory on GPU and copy data to GPU memory
+    cart_coord_float *expPt_d, *pt_d;
+    tri_elem *elem_d;
+    cuFloatComplex *p_d, *pExp_d;
+    
+    CUDA_CALL(cudaMalloc(&expPt_d,numExpPt*sizeof(cart_coord_float)));
+    CUDA_CALL(cudaMemcpy(expPt_d,expPt,numExpPt*sizeof(cart_coord_float),cudaMemcpyHostToDevice));
+    
+    CUDA_CALL(cudaMalloc(&pt_d,numPt*sizeof(cart_coord_float)));
+    CUDA_CALL(cudaMemcpy(pt_d,pt,numPt*sizeof(cart_coord_float),cudaMemcpyHostToDevice));
+    
+    CUDA_CALL(cudaMalloc(&elem_d,numElem*sizeof(tri_elem)));
+    CUDA_CALL(cudaMemcpy(elem_d,elem,numElem*sizeof(tri_elem),cudaMemcpyHostToDevice));
+    
+    CUDA_CALL(cudaMalloc(&p_d,numPt*sizeof(cuFloatComplex)));
+    CUDA_CALL(cudaMemcpy(p_d,p,numPt*sizeof(cuFloatComplex),cudaMemcpyHostToDevice));
+    
+    CUDA_CALL(cudaMalloc(&pExp_d,numExpPt*sizeof(cuFloatComplex)));
+    
+    extrapolations_pt<<<numBlock,width>>>(wavNum,expPt_d,numExpPt,elem_d,numElem,pt_d,p_d,
+            strength,src,pExp_d);
+    
+    CUDA_CALL(cudaMemcpy(pExp,pExp_d,numExpPt*sizeof(cuFloatComplex),cudaMemcpyDeviceToHost));
+    
+    CUDA_CALL(cudaFree(expPt_d));
+    CUDA_CALL(cudaFree(pt_d));
+    CUDA_CALL(cudaFree(elem_d));
+    CUDA_CALL(cudaFree(p_d));
+    CUDA_CALL(cudaFree(pExp_d));
+    
+    return EXIT_SUCCESS;
+}
+
+int field_extrapolation_single_mp(const float wavNum, const cart_coord_float* expPt, const int numExpPt, 
         const tri_elem* elem, const int numElem, const cart_coord_float* pt, const int numPt, 
         const cuFloatComplex* p, const float strength, const cart_coord_float src, cuFloatComplex *pExp)
 {
@@ -1401,7 +1670,7 @@ int field_extrapolation_single_pt(const float wavNum, const cart_coord_float* ex
     
     CUDA_CALL(cudaMalloc(&pExp_d,numExpPt*sizeof(cuFloatComplex)));
     
-    extrapolation_pts<<<numBlock,width>>>(wavNum,expPt_d,numExpPt,elem_d,numElem,pt_d,p_d,
+    extrapolations_mp<<<numBlock,width>>>(wavNum,expPt_d,numExpPt,elem_d,numElem,pt_d,p_d,
             strength,src,pExp_d);
     
     CUDA_CALL(cudaMemcpy(pExp,pExp_d,numExpPt*sizeof(cuFloatComplex),cudaMemcpyDeviceToHost));
