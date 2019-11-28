@@ -1,3 +1,9 @@
 /nbproject
 
+/figure
+
+*.pdf
+
+*.png
+
 *.[oa]
