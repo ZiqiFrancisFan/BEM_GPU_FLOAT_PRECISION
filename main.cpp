@@ -8,6 +8,7 @@
 #include <unistd.h>
 #include <getopt.h>
 #include <math.h>
+#include <string.h>
 #include "dataStructs.h"
 #include "mesh.h"
 #include "octree.h"
