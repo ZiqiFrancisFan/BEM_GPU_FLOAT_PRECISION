@@ -163,9 +163,9 @@ int gaussPtsToDevice(const float *evalPt, const float *wgt);
 
 __host__ __device__ cart_coord_double triCentroid(cart_coord_double nod[]);
 
-void printFltMat(const float *A, const int numRow, const int numCol, const int lda);
+void print_float_mat(const float *A, const int numRow, const int numCol, const int lda);
 
-void printCuFloatComplexMat(const cuFloatComplex *A, const int numRow, const int numCol, 
+void print_cuFloatComplex_mat(const cuFloatComplex *A, const int numRow, const int numCol, 
         const int lda);
 
 __host__ __device__ sph_coord_float cart2sph(const cart_coord_float s);
@@ -206,6 +206,10 @@ int bemSolver_pt(const float k, const tri_elem *elem, const int numElem,
 int bemSolver_dir(const float k, const tri_elem *elem, const int numElem, 
         const cart_coord_float *nod, const int numNod, const cart_coord_float *chief, const int numCHIEF, 
         const cart_coord_float *dir, const int numSrc, cuFloatComplex *B, const int ldb);
+
+int bemSolver_mp(const float k, const tri_elem *elem, const int numElem, 
+        const cart_coord_float *nod, const int numNod, const cart_coord_float *chief, const int numCHIEF, 
+        const cart_coord_float *src, const int numSrc, cuFloatComplex *B, const int ldb);
 
 void computeRigidSphereScattering(const cart_coord_float *pt, const int numPt, const double a, 
         const double r, const double wavNum, const double strength);

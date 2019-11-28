@@ -66,7 +66,7 @@ int gaussPtsToDevice(const float *evalPt, const float *wgt)
     return EXIT_SUCCESS;
 }
 
-void printFltMat(const float *A, const int numRow, const int numCol, const int lda) 
+void print_float_mat(const float *A, const int numRow, const int numCol, const int lda) 
 {
     for(int i=0;i<numRow;i++) {
         for(int j=0;j<numCol;j++) {
@@ -76,7 +76,7 @@ void printFltMat(const float *A, const int numRow, const int numCol, const int l
     }
 }
 
-void printCuFloatComplexMat(const cuFloatComplex *A, const int numRow, const int numCol, 
+void print_cuFloatComplex_mat(const cuFloatComplex *A, const int numRow, const int numCol, 
         const int lda)
 {
     for(int i=0;i<numRow;i++) {
