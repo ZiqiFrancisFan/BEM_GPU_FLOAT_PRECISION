@@ -17,7 +17,7 @@ __constant__ float speed = 343.21;
 __constant__ float INTPT[INTORDER]; 
 
 __constant__ float INTWGT[INTORDER];
-
+/*
 int genGaussParams(const int n, float* pt, float* wgt) 
 {
     int i, j;
@@ -59,6 +59,7 @@ int genGaussParams(const int n, float* pt, float* wgt)
     gsl_matrix_free(B);
     return EXIT_SUCCESS;
 }
+*/
 
 int cuGenGaussParams(const int n, float* pt, float* wgt)
 {
@@ -76,7 +77,7 @@ int cuGenGaussParams(const int n, float* pt, float* wgt)
         float t = v[i];
         v[i] = (i+1)/t;
     }
-    printf("The vector v is set properly.\n");
+    //printf("The vector v is set properly.\n");
     
     float *A = (float*)malloc(n*n*sizeof(float));
     memset(A,0,n*n*sizeof(float));
@@ -88,28 +89,28 @@ int cuGenGaussParams(const int n, float* pt, float* wgt)
         A[IDXC0(i,i+1,n)] = t;
     }
     
-    printf("The matrix A is set properly.\n");
+    //printf("The matrix A is set properly.\n");
     
     float *A_d, *Lambda_d;
     CUDA_CALL(cudaMalloc(&A_d,n*n*sizeof(float)));
-    printf("A_d allocated.\n");
+    //printf("A_d allocated.\n");
     CUDA_CALL(cudaMemcpy(A_d,A,n*n*sizeof(float),cudaMemcpyHostToDevice));
-    printf("A copied to A_d.\n");
+    //printf("A copied to A_d.\n");
     CUDA_CALL(cudaMalloc(&Lambda_d,n*sizeof(float)));
-    printf("Lambda_d allocated successfully.\n");
+    //printf("Lambda_d allocated successfully.\n");
     
     int lwork;
     cusolverEigMode_t jobz = CUSOLVER_EIG_MODE_VECTOR; // compute eigenvalues and eigenvectors.
     cublasFillMode_t uplo = CUBLAS_FILL_MODE_LOWER;
     CUSOLVER_CALL(cusolverDnSsyevd_bufferSize(handle,jobz,
             uplo,n,A_d,n,Lambda_d,&lwork));
-    printf("Buffer is set up.\n");
+    //printf("Buffer is set up.\n");
     float *work_d;
     CUDA_CALL(cudaMalloc(&work_d,lwork*sizeof(float)));
     int *devInfo;
     CUDA_CALL(cudaMalloc(&devInfo,sizeof(int)));
     CUSOLVER_CALL(cusolverDnSsyevd(handle,jobz,uplo,n,A_d,n,Lambda_d,work_d,lwork,devInfo));
-    printf("Eigenvalues and eigenvectors found.\n");
+    //printf("Eigenvalues and eigenvectors found.\n");
     float *Lambda = (float*)malloc(n*sizeof(float));
     CUDA_CALL(cudaMemcpy(A,A_d,n*n*sizeof(float),cudaMemcpyDeviceToHost));
     CUDA_CALL(cudaMemcpy(Lambda,Lambda_d,n*sizeof(float),cudaMemcpyDeviceToHost));
@@ -1378,6 +1379,7 @@ int bemSolver_dir(const float k, const tri_elem *elem, const int numElem,
     return EXIT_SUCCESS;
 }
 
+/*
 __host__ gsl_complex gsl_sf_bessel_hl(const int l, const double s)
 {
     double x = gsl_sf_bessel_jl(l,s);
@@ -1407,6 +1409,7 @@ gsl_complex hprime(const int n, const double r)
     }
     return result;
 }
+*/
 
 __host__ __device__ sph_coord_float cart2sph(const cart_coord_float s)
 {
@@ -1448,6 +1451,7 @@ __host__ __device__ cart_coord_double sph2cart(const sph_coord_double s)
     return result;
 }
 
+/*
 void computeRigidSphereScattering(const cart_coord_float *pt, const int numPt, const double a, 
         const double r, const double wavNum, const double strength)
 {
@@ -1484,6 +1488,7 @@ gsl_complex rigidSphereScattering(const double wavNum, const double strength, co
     result = gsl_complex_mul_real(result,strength);
     return result;
 }
+*/
 
 __device__ cuFloatComplex extrapolation_dir(const float wavNum, const cart_coord_float x, 
         const tri_elem* elem, const int numElem, const cart_coord_float* pt, 

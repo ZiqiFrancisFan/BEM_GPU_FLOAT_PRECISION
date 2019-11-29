@@ -14,9 +14,9 @@
 #ifndef NUMERICAL_H
 #define NUMERICAL_H
 
-#include <gsl/gsl_sf.h>
-#include <gsl/gsl_complex_math.h>
-#include <gsl/gsl_blas.h>
+//#include <gsl/gsl_sf.h>
+//#include <gsl/gsl_complex_math.h>
+//#include <gsl/gsl_blas.h>
 
 #include <cuda.h>
 #include <cuda_runtime.h>
@@ -27,9 +27,9 @@
 
 #include "dataStructs.h"
 
-#include <gsl/gsl_sf.h>
-#include <gsl/gsl_complex_math.h>
-#include <gsl/gsl_blas.h>
+//#include <gsl/gsl_sf.h>
+//#include <gsl/gsl_complex_math.h>
+//#include <gsl/gsl_blas.h>
 
 #ifndef max
 #define max(a,b) \
@@ -61,7 +61,7 @@ _x < _y ? -_x : _x; })
 #endif
 
 #ifndef INTORDER
-#define INTORDER 4
+#define INTORDER 3
 #endif
 
 #ifndef NUMCHIEF
@@ -157,7 +157,7 @@ while(0)
 #define EPS 0.0000001
 #endif
 
-int genGaussParams(const int n, float *pt, float *wgt);
+//int genGaussParams(const int n, float *pt, float *wgt);
 
 int cuGenGaussParams(const int n, float* pt, float* wgt);
 
@@ -213,11 +213,13 @@ int bemSolver_mp(const float k, const tri_elem *elem, const int numElem,
         const cart_coord_float *nod, const int numNod, const cart_coord_float *chief, const int numCHIEF, 
         const cart_coord_float *src, const int numSrc, cuFloatComplex *B, const int ldb);
 
+/*
 void computeRigidSphereScattering(const cart_coord_float *pt, const int numPt, const double a, 
         const double r, const double wavNum, const double strength);
 
 gsl_complex rigidSphereScattering(const double wavNum, const double strength, const double a, 
         const double r, const double theta);
+*/
 
 int field_extrapolation_single_dir(const float wavNum, const cart_coord_float* expPt, const int numExpPt, 
         const tri_elem* elem, const int numElem, const cart_coord_float* pt, const int numPt, 

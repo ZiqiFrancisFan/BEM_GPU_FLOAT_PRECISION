@@ -30,6 +30,5 @@ int main(int argc, char *argv[])
         printf("(%f,%f)\n",tempIntPts[i],tempIntWgts[i]);
     }
     
-    CUDA_CALL(cudaDeviceReset());
     return EXIT_SUCCESS;
 }

@@ -171,7 +171,7 @@ endif
 
 LIBRARIES += -lcudart -lcublas -lcurand -lstdc++ -lpthread -lm
 LIBRARIES += -lcudart -lcublas -lcurand -lcusolver -lcufft -lcusparse 
-LIBRARIES += -lstdc++ -lm -lgsl -lgslcblas
+#LIBRARIES += -lstdc++ -lm -lgsl -lgslcblas
 
 
 ################################################################################
@@ -193,7 +193,6 @@ OBJ = main.o numerical.o mesh.o octree.o
 #     Bias.o  
 
 main : $(OBJ)
-	# nvcc -ccbin /usr/bin/gcc -arch=sm_61 -l=curand -l=cublas -lcusolver -L/usr/local/lib -lgsl -lgslcblas $(OBJ) -o main
 	$(EXEC) $(NVCC) $(ALL_LDFLAGS) $(GENCODE_FLAGS) -o $@ $+ $(LIBRARIES)
 
 main.o : main.cpp numerical.h mesh.h dataStructs.h
@@ -201,7 +200,6 @@ main.o : main.cpp numerical.h mesh.h dataStructs.h
 
 numerical.o : numerical.cu numerical.h mesh.h dataStructs.h octree.h
 	$(NVCCONLY) -dc $(INCLUDES) $(ALL_CCFLAGS) $(EXTRA_CCFLAGS) $(GENCODE_FLAGS) numerical.cu
-	#$(NVCCONLY) -dc $(INCLUDES) $(ALL_CCFLAGS) $(EXTRA_CCFLAGS) $(GENCODE_FLAGS) numerical.cu
 	
 mesh.o: mesh.cpp mesh.h numerical.h dataStructs.h
 	$(NVCCONLY) -dc $(INCLUDES) $(ALL_CCFLAGS) $(EXTRA_CCFLAGS) $(GENCODE_FLAGS) mesh.cpp
