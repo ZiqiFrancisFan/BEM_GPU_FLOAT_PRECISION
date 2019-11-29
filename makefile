@@ -147,7 +147,7 @@ LIBRARIES :=
 ################################################################################
 #30 35 50 
 # Gencode arguments
-SMS ?= 60
+SMS ?= 61
 
 ifeq ($(SMS),)
 $(info >>> WARNING - no SM architectures have been specified - waiving sample <<<)
@@ -179,7 +179,7 @@ LIBRARIES += -lstdc++ -lm -lgsl -lgslcblas
 # Target rules
 all: build
 
-build: main.a
+build: main
 
 check.deps:
 ifeq ($(SAMPLE_ENABLED),0)
@@ -192,7 +192,7 @@ endif
 OBJ = main.o numerical.o mesh.o octree.o
 #     Bias.o  
 
-main.a : $(OBJ)
+main : $(OBJ)
 	# nvcc -ccbin /usr/bin/gcc -arch=sm_61 -l=curand -l=cublas -lcusolver -L/usr/local/lib -lgsl -lgslcblas $(OBJ) -o main
 	$(EXEC) $(NVCC) $(ALL_LDFLAGS) $(GENCODE_FLAGS) -o $@ $+ $(LIBRARIES)
 
@@ -221,10 +221,10 @@ octree.o: octree.cpp octree.h numerical.h dataStructs.h mesh.h
 
 run: build
 	touch log.txt
-	$(EXEC) ./main.a | tee log.txt 
+	$(EXEC) ./main | tee log.txt 
 
 clean:
 	rm $(OBJ)
-	rm main.a
+	rm main
 
 clobber: clean

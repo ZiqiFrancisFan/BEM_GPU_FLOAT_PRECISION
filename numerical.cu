@@ -64,6 +64,7 @@ int cuGenGaussParams(const int n, float* pt, float* wgt)
 {
     cusolverDnHandle_t handle;
     CUSOLVER_CALL(cusolverDnCreate(&handle));
+    
     // allocate memory for vector v of length n
     float *v = (float*)malloc(n*sizeof(float));
     
@@ -75,32 +76,40 @@ int cuGenGaussParams(const int n, float* pt, float* wgt)
         float t = v[i];
         v[i] = (i+1)/t;
     }
+    printf("The vector v is set properly.\n");
     
     float *A = (float*)malloc(n*n*sizeof(float));
     memset(A,0,n*n*sizeof(float));
     
     // set up matrix A
-    for(int i=0;i<n;i++) {
+    for(int i=0;i<n-1;i++) {
         float t = v[i];
         A[IDXC0(i+1,i,n)] = t;
         A[IDXC0(i,i+1,n)] = t;
     }
     
+    printf("The matrix A is set properly.\n");
+    
     float *A_d, *Lambda_d;
     CUDA_CALL(cudaMalloc(&A_d,n*n*sizeof(float)));
+    printf("A_d allocated.\n");
     CUDA_CALL(cudaMemcpy(A_d,A,n*n*sizeof(float),cudaMemcpyHostToDevice));
+    printf("A copied to A_d.\n");
     CUDA_CALL(cudaMalloc(&Lambda_d,n*sizeof(float)));
+    printf("Lambda_d allocated successfully.\n");
     
     int lwork;
-    CUSOLVER_CALL(cusolverDnSsyevd_bufferSize(handle,CUSOLVER_EIG_MODE_VECTOR,
-            CUBLAS_FILL_MODE_LOWER,n,A_d,n,Lambda_d,&lwork));
+    cusolverEigMode_t jobz = CUSOLVER_EIG_MODE_VECTOR; // compute eigenvalues and eigenvectors.
+    cublasFillMode_t uplo = CUBLAS_FILL_MODE_LOWER;
+    CUSOLVER_CALL(cusolverDnSsyevd_bufferSize(handle,jobz,
+            uplo,n,A_d,n,Lambda_d,&lwork));
+    printf("Buffer is set up.\n");
     float *work_d;
     CUDA_CALL(cudaMalloc(&work_d,lwork*sizeof(float)));
     int *devInfo;
     CUDA_CALL(cudaMalloc(&devInfo,sizeof(int)));
-    CUSOLVER_CALL(cusolverDnSsyevd(handle,CUSOLVER_EIG_MODE_VECTOR,CUBLAS_FILL_MODE_LOWER,
-            n,A_d,n,Lambda_d,work_d,lwork,devInfo));
-    
+    CUSOLVER_CALL(cusolverDnSsyevd(handle,jobz,uplo,n,A_d,n,Lambda_d,work_d,lwork,devInfo));
+    printf("Eigenvalues and eigenvectors found.\n");
     float *Lambda = (float*)malloc(n*sizeof(float));
     CUDA_CALL(cudaMemcpy(A,A_d,n*n*sizeof(float),cudaMemcpyDeviceToHost));
     CUDA_CALL(cudaMemcpy(Lambda,Lambda_d,n*sizeof(float),cudaMemcpyDeviceToHost));
@@ -110,12 +119,22 @@ int cuGenGaussParams(const int n, float* pt, float* wgt)
         float t = A[IDXC0(0,i,n)];
         wgt[i] = 2*pow(t,2);
     }
-    CUSOLVER_CALL(cusolverDnDestroy(handle));
     
-    CUDA_CALL(cudaFree(A_d));
-    CUDA_CALL(cudaFree(Lambda_d));
-    CUDA_CALL(cudaFree(work_d));
-    CUDA_CALL(cudaFree(devInfo));
+    if(A_d) {
+        CUDA_CALL(cudaFree(A_d));
+    }
+    if(Lambda_d) {
+        CUDA_CALL(cudaFree(Lambda_d));
+    }
+    if(work_d) {
+        CUDA_CALL(cudaFree(work_d));
+    }
+    if(devInfo) {
+        CUDA_CALL(cudaFree(devInfo));
+    }
+    if(handle) {
+        CUSOLVER_CALL(cusolverDnDestroy(handle));
+    }
     
     free(v);
     free(Lambda);

@@ -19,16 +19,17 @@ int main(int argc, char *argv[])
     
     float tempIntPts[INTORDER], tempIntWgts[INTORDER];
     cuGenGaussParams(INTORDER,tempIntPts,tempIntWgts);
+    printf("Parameters generated.\n");
     gaussPtsToDevice(tempIntPts,tempIntWgts);
-    for(int i=0;i<INTORDER;i++) {
-        tempIntPts[i] = 0;
-        tempIntWgts[i] = 0;
-    }
+    printf("Parameters copied to device.\n");
     
-    CUDA_CALL(cudaMemcpyFromSymbol(tempIntPts,INTPT,INTORDER*sizeof(float),0,cudaMemcpyDeviceToHost));
-    CUDA_CALL(cudaMemcpyFromSymbol(tempIntWgts,INTWGT,INTORDER*sizeof(float),0,cudaMemcpyDeviceToHost));
+    //CUDA_CALL(cudaMemcpyFromSymbol(tempIntPts,INTPT,INTORDER*sizeof(float),0,cudaMemcpyDeviceToHost));
+    //CUDA_CALL(cudaMemcpyFromSymbol(tempIntWgts,INTWGT,INTORDER*sizeof(float),0,cudaMemcpyDeviceToHost));
     
     for(int i=0;i<INTORDER;i++) {
         printf("(%f,%f)\n",tempIntPts[i],tempIntWgts[i]);
     }
+    
+    CUDA_CALL(cudaDeviceReset());
+    return EXIT_SUCCESS;
 }
