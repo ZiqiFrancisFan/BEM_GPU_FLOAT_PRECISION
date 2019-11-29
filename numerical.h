@@ -61,7 +61,7 @@ _x < _y ? -_x : _x; })
 #endif
 
 #ifndef INTORDER
-#define INTORDER 3
+#define INTORDER 4
 #endif
 
 #ifndef NUMCHIEF
@@ -158,6 +158,8 @@ while(0)
 #endif
 
 int genGaussParams(const int n, float *pt, float *wgt);
+
+int cuGenGaussParams(const int n, float* pt, float* wgt);
 
 int gaussPtsToDevice(const float *evalPt, const float *wgt);
 

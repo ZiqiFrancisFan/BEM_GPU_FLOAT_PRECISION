@@ -6,6 +6,7 @@
 #include "numerical.h"
 #include "octree.h"
 #include "mesh.h"
+#include <cusolverDn.h>
 
 //air density and speed of sound
 __constant__ float density = 1.2041;
@@ -56,6 +57,71 @@ int genGaussParams(const int n, float* pt, float* wgt)
     gsl_vector_free(v);
     gsl_matrix_free(A);
     gsl_matrix_free(B);
+    return EXIT_SUCCESS;
+}
+
+int cuGenGaussParams(const int n, float* pt, float* wgt)
+{
+    cusolverDnHandle_t handle;
+    CUSOLVER_CALL(cusolverDnCreate(&handle));
+    // allocate memory for vector v of length n
+    float *v = (float*)malloc(n*sizeof(float));
+    
+    // set the vector v
+    for(int i=0;i<n-1;i++) {
+        v[i] = sqrt(pow(2*(i+1),2)-1);
+    }
+    for(int i=0;i<n-1;i++) {
+        float t = v[i];
+        v[i] = (i+1)/t;
+    }
+    
+    float *A = (float*)malloc(n*n*sizeof(float));
+    memset(A,0,n*n*sizeof(float));
+    
+    // set up matrix A
+    for(int i=0;i<n;i++) {
+        float t = v[i];
+        A[IDXC0(i+1,i,n)] = t;
+        A[IDXC0(i,i+1,n)] = t;
+    }
+    
+    float *A_d, *Lambda_d;
+    CUDA_CALL(cudaMalloc(&A_d,n*n*sizeof(float)));
+    CUDA_CALL(cudaMemcpy(A_d,A,n*n*sizeof(float),cudaMemcpyHostToDevice));
+    CUDA_CALL(cudaMalloc(&Lambda_d,n*sizeof(float)));
+    
+    int lwork;
+    CUSOLVER_CALL(cusolverDnSsyevd_bufferSize(handle,CUSOLVER_EIG_MODE_VECTOR,
+            CUBLAS_FILL_MODE_LOWER,n,A_d,n,Lambda_d,&lwork));
+    float *work_d;
+    CUDA_CALL(cudaMalloc(&work_d,lwork*sizeof(float)));
+    int *devInfo;
+    CUDA_CALL(cudaMalloc(&devInfo,sizeof(int)));
+    CUSOLVER_CALL(cusolverDnSsyevd(handle,CUSOLVER_EIG_MODE_VECTOR,CUBLAS_FILL_MODE_LOWER,
+            n,A_d,n,Lambda_d,work_d,lwork,devInfo));
+    
+    float *Lambda = (float*)malloc(n*sizeof(float));
+    CUDA_CALL(cudaMemcpy(A,A_d,n*n*sizeof(float),cudaMemcpyDeviceToHost));
+    CUDA_CALL(cudaMemcpy(Lambda,Lambda_d,n*sizeof(float),cudaMemcpyDeviceToHost));
+    
+    memcpy(pt,Lambda,n*sizeof(float));
+    for(int i=0;i<n;i++) {
+        float t = A[IDXC0(0,i,n)];
+        wgt[i] = 2*pow(t,2);
+    }
+    CUSOLVER_CALL(cusolverDnDestroy(handle));
+    
+    CUDA_CALL(cudaFree(A_d));
+    CUDA_CALL(cudaFree(Lambda_d));
+    CUDA_CALL(cudaFree(work_d));
+    CUDA_CALL(cudaFree(devInfo));
+    
+    free(v);
+    free(Lambda);
+    free(A);
+    
+    
     return EXIT_SUCCESS;
 }
 

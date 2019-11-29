@@ -16,27 +16,19 @@
 
 int main(int argc, char *argv[])
 {
-    // test octree
-    int numPts, numElems;
-    findNum("sphere_500mm.obj",&numPts,&numElems);
-    cart_coord_double *pts = (cart_coord_double*)malloc(numPts*sizeof(cart_coord_double));
-    tri_elem *elems = (tri_elem*)malloc(numElems*sizeof(tri_elem));
-    readOBJ("sphere_500mm.obj",pts,elems);
     
-    float tempIntPts[3], tempIntWgts[3];
-    genGaussParams(3,tempIntPts,tempIntWgts);
+    float tempIntPts[INTORDER], tempIntWgts[INTORDER];
+    cuGenGaussParams(INTORDER,tempIntPts,tempIntWgts);
     gaussPtsToDevice(tempIntPts,tempIntWgts);
-    for(int i=0;i<3;i++) {
+    for(int i=0;i<INTORDER;i++) {
         tempIntPts[i] = 0;
         tempIntWgts[i] = 0;
     }
     
-    CUDA_CALL(cudaMemcpyFromSymbol(tempIntPts,INTPT,3*sizeof(float),0,cudaMemcpyDeviceToHost));
-    CUDA_CALL(cudaMemcpyFromSymbol(tempIntWgts,INTWGT,3*sizeof(float),0,cudaMemcpyDeviceToHost));
+    CUDA_CALL(cudaMemcpyFromSymbol(tempIntPts,INTPT,INTORDER*sizeof(float),0,cudaMemcpyDeviceToHost));
+    CUDA_CALL(cudaMemcpyFromSymbol(tempIntWgts,INTWGT,INTORDER*sizeof(float),0,cudaMemcpyDeviceToHost));
     
-    for(int i=0;i<3;i++) {
+    for(int i=0;i<INTORDER;i++) {
         printf("(%f,%f)\n",tempIntPts[i],tempIntWgts[i]);
     }
-    free(pts);
-    free(elems);
 }
