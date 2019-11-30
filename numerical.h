@@ -163,75 +163,75 @@ int cuGenGaussParams(const int n, float* pt, float* wgt);
 
 int gaussPtsToDevice(const float *evalPt, const float *wgt);
 
-__host__ __device__ cart_coord_double triCentroid(cart_coord_double nod[]);
+__host__ __device__ cart_coord_dbl triCentroid(cart_coord_dbl nod[]);
 
 void print_float_mat(const float *A, const int numRow, const int numCol, const int lda);
 
 void print_cuFloatComplex_mat(const cuFloatComplex *A, const int numRow, const int numCol, 
         const int lda);
 
-__host__ __device__ sph_coord_float cart2sph(const cart_coord_float s);
+__host__ __device__ sph_coord_float cart2sph(const cart_coord_flt s);
 
-__host__ __device__ cart_coord_float scalarProd(const float lambda, const cart_coord_float v);
+__host__ __device__ cart_coord_flt scalarProd(const float lambda, const cart_coord_flt v);
 
-__host__ __device__ cart_coord_float crossProd(const cart_coord_float u, const cart_coord_float v);
+__host__ __device__ cart_coord_flt crossProd(const cart_coord_flt u, const cart_coord_flt v);
 
-__host__ __device__ cart_coord_float cartCoordAdd(const cart_coord_float u, const cart_coord_float v);
+__host__ __device__ cart_coord_flt cartCoordAdd(const cart_coord_flt u, const cart_coord_flt v);
 
-__host__ __device__ cart_coord_float cartCoordSub(const cart_coord_float u, const cart_coord_float v);
+__host__ __device__ cart_coord_flt cartCoordSub(const cart_coord_flt u, const cart_coord_flt v);
 
-__host__ __device__ cart_coord_double cartCoordAdd(const cart_coord_double u, const cart_coord_double v);
+__host__ __device__ cart_coord_dbl cartCoordAdd(const cart_coord_dbl u, const cart_coord_dbl v);
 
-__host__ __device__ cart_coord_double cartCoordSub(const cart_coord_double u, const cart_coord_double v);
+__host__ __device__ cart_coord_dbl cartCoordSub(const cart_coord_dbl u, const cart_coord_dbl v);
 
-__host__ __device__ bool ray_intersect_triangle(const cart_coord_float O, const cart_coord_float dir, 
-        const cart_coord_float nod[3]);
+__host__ __device__ bool ray_intersect_triangle(const cart_coord_flt O, const cart_coord_flt dir, 
+        const cart_coord_flt nod[3]);
 
-__global__ void rayTrisInt(const cart_coord_float pt_s, const cart_coord_float dir, const cart_coord_float *nod, 
+__global__ void rayTrisInt(const cart_coord_flt pt_s, const cart_coord_flt dir, const cart_coord_flt *nod, 
         const tri_elem *elem, const int numElem, bool *flag);
 
-int genCHIEF(const cart_coord_float *pt, const int numPt, const tri_elem *elem, const int numElem, 
-        cart_coord_float *pCHIEF, const int numCHIEF);
+int genCHIEF(const cart_coord_flt *pt, const int numPt, const tri_elem *elem, const int numElem, 
+        cart_coord_flt *pCHIEF, const int numCHIEF);
 
 int atomicGenSystem(const float k, const tri_elem *elem, const int numElem, 
-        const cart_coord_float *pt, const int numNod, const cart_coord_float *chief, const int numCHIEF, 
-        const cart_coord_float *src, const int numSrcs, cuFloatComplex *A, const int lda, 
+        const cart_coord_flt *pt, const int numNod, const cart_coord_flt *chief, const int numCHIEF, 
+        const cart_coord_flt *src, const int numSrcs, cuFloatComplex *A, const int lda, 
         cuFloatComplex *B, const int ldb);
 
 int qrSolver(const cuFloatComplex *A, const int mA, const int nA, const int ldA, 
         cuFloatComplex *B, const int nB, const int ldB);
 
 int bemSolver_pt(const float k, const tri_elem *elem, const int numElem, 
-        const cart_coord_float *nod, const int numNod, const cart_coord_float *chief, const int numCHIEF, 
-        const cart_coord_float *src, const int numSrc, cuFloatComplex *B, const int ldb);
+        const cart_coord_flt *nod, const int numNod, const cart_coord_flt *chief, const int numCHIEF, 
+        const cart_coord_flt *src, const int numSrc, cuFloatComplex *B, const int ldb);
 
 int bemSolver_dir(const float k, const tri_elem *elem, const int numElem, 
-        const cart_coord_float *nod, const int numNod, const cart_coord_float *chief, const int numCHIEF, 
-        const cart_coord_float *dir, const int numSrc, cuFloatComplex *B, const int ldb);
+        const cart_coord_flt *nod, const int numNod, const cart_coord_flt *chief, const int numCHIEF, 
+        const cart_coord_flt *dir, const int numSrc, cuFloatComplex *B, const int ldb);
 
 int bemSolver_mp(const float k, const tri_elem *elem, const int numElem, 
-        const cart_coord_float *nod, const int numNod, const cart_coord_float *chief, const int numCHIEF, 
-        const cart_coord_float *src, const int numSrc, cuFloatComplex *B, const int ldb);
+        const cart_coord_flt *nod, const int numNod, const cart_coord_flt *chief, const int numCHIEF, 
+        const cart_coord_flt *src, const int numSrc, cuFloatComplex *B, const int ldb);
 
 /*
-void computeRigidSphereScattering(const cart_coord_float *pt, const int numPt, const double a, 
+void computeRigidSphereScattering(const cart_coord_flt *pt, const int numPt, const double a, 
         const double r, const double wavNum, const double strength);
 
 gsl_complex rigidSphereScattering(const double wavNum, const double strength, const double a, 
         const double r, const double theta);
 */
 
-int field_extrapolation_single_dir(const float wavNum, const cart_coord_float* expPt, const int numExpPt, 
-        const tri_elem* elem, const int numElem, const cart_coord_float* pt, const int numPt, 
-        const cuFloatComplex* p, const float strength, const cart_coord_float dir, cuFloatComplex *pExp);
+int field_extrapolation_single_dir(const float wavNum, const cart_coord_flt* expPt, const int numExpPt, 
+        const tri_elem* elem, const int numElem, const cart_coord_flt* pt, const int numPt, 
+        const cuFloatComplex* p, const float strength, const cart_coord_flt dir, cuFloatComplex *pExp);
 
-int field_extrapolation_single_pt(const float wavNum, const cart_coord_float* expPt, const int numExpPt, 
-        const tri_elem* elem, const int numElem, const cart_coord_float* pt, const int numPt, 
-        const cuFloatComplex* p, const float strength, const cart_coord_float dir, cuFloatComplex *pExp);
+int field_extrapolation_single_pt(const float wavNum, const cart_coord_flt* expPt, const int numExpPt, 
+        const tri_elem* elem, const int numElem, const cart_coord_flt* pt, const int numPt, 
+        const cuFloatComplex* p, const float strength, const cart_coord_flt dir, cuFloatComplex *pExp);
 
 int genFields_MultiPtSrcSglObj(const float strength, const float wavNum, 
-        const cart_coord_float* srcs, const int numSrcs, const cart_coord_double* pts, const int numPts, 
-        const tri_elem* elems, const int numElems, const cart_coord_double cnr, const double d, 
+        const cart_coord_flt* srcs, const int numSrcs, const cart_coord_dbl* pts, const int numPts, 
+        const tri_elem* elems, const int numElems, const cart_coord_dbl cnr, const double d, 
         const int level, cuFloatComplex* fields);
 
 #endif /* NUMERICAL_H */

@@ -66,30 +66,30 @@ void children(const int num, int *cldrn)
     }
 }
 
-cart_coord_double scale(const cart_coord_double x, const cart_coord_double x_min, const double d)
+cart_coord_dbl scale(const cart_coord_dbl x, const cart_coord_dbl x_min, const double d)
 {
     /*scales a given coordinate x using the lowest corner x_min and the 
     side-length of the bounding box d*/
-    cart_coord_double x_scaled;
+    cart_coord_dbl x_scaled;
     x_scaled.coords[0] = (x.coords[0]-x_min.coords[0])/d;
     x_scaled.coords[1] = (x.coords[1]-x_min.coords[1])/d;
     x_scaled.coords[2] = (x.coords[2]-x_min.coords[2])/d;
     return x_scaled;
 }
 
-cart_coord_double descale(const cart_coord_double x_s, const cart_coord_double x_min, const double d)
+cart_coord_dbl descale(const cart_coord_dbl x_s, const cart_coord_dbl x_min, const double d)
 {
     /*descales a normalized points x_s based on the lowest corner x_min and 
      the side length d*/
-    cart_coord_double x_ds;
+    cart_coord_dbl x_ds;
     x_ds.coords[0] = d*x_s.coords[0]+x_min.coords[0];
     x_ds.coords[1] = d*x_s.coords[1]+x_min.coords[1];
     x_ds.coords[2] = d*x_s.coords[2]+x_min.coords[2];
     return x_ds;
 }
 
-void scalePnts(const cart_coord_double *pnt, const int numPt, const cart_coord_double pnt_min, 
-        const double d, cart_coord_double* pnt_scaled)
+void scalePnts(const cart_coord_dbl *pnt, const int numPt, const cart_coord_dbl pnt_min, 
+        const double d, cart_coord_dbl* pnt_scaled)
 {
     /*scales all points within a bounding box based on the lowest corner and the 
      side length*/
@@ -175,7 +175,7 @@ void bitDeintleave(const int *result, const int l, int *x, int *y, int *z)
     }
 }
 
-int pnt2boxnum(const cart_coord_double pnt, const int l)
+int pnt2boxnum(const cart_coord_dbl pnt, const int l)
 {
     /*determines the box number at level l containing the nomalized point pnt
      pnt: a normalized point
@@ -206,7 +206,7 @@ int pnt2boxnum(const cart_coord_double pnt, const int l)
     return result;
 }
 
-cart_coord_double boxCenter(const int num, const int l)
+cart_coord_dbl boxCenter(const int num, const int l)
 {
     /*returns the center of a box with index num and level l*/
     
@@ -214,11 +214,11 @@ cart_coord_double boxCenter(const int num, const int l)
     if(num < 0 || num > pow(pow(2,3),l)-1) {
         printf("Illegal input.\n");
         printf("Error at %s:%d\n",__FILE__,__LINE__);
-        cart_coord_double temp = {nan("1"),nan("2"),nan("3")};
+        cart_coord_dbl temp = {nan("1"),nan("2"),nan("3")};
         return temp;
     }
     
-    cart_coord_double pnt;
+    cart_coord_dbl pnt;
     int i;
     int *ind = (int*)malloc(3*l*sizeof(int));
     
@@ -495,7 +495,7 @@ void difference(const int *set1, const int *set2, int *set3)
     }
 }
 
-void pnts2numSet(const cart_coord_double *pnts, const int numPnts, const int l, int *set)
+void pnts2numSet(const cart_coord_dbl *pnts, const int numPnts, const int l, int *set)
 {
     int i;
     int num[MAX];
@@ -587,7 +587,7 @@ void orderArray(const int *a, const int num, int *ind) {
     }
 }
 
-void printPnts(const cart_coord_double *pt, const int numPt)
+void printPnts(const cart_coord_dbl *pt, const int numPt)
 {
     int i;
     for(i=0;i<numPt;i++) {
@@ -595,7 +595,7 @@ void printPnts(const cart_coord_double *pt, const int numPt)
     }
 }
 
-void printPnts_d(const cart_coord_double *p, const int numPnts)
+void printPnts_d(const cart_coord_dbl *p, const int numPnts)
 {
     int i;
     for(i=0;i<numPnts;i++) {
@@ -603,7 +603,7 @@ void printPnts_d(const cart_coord_double *p, const int numPnts)
     }
 }
 
-int deterLmax(const cart_coord_double *pnts, const int numPnts, const int s)
+int deterLmax(const cart_coord_dbl *pnts, const int numPnts, const int s)
 {
     /* determines the least level at which each box contains no more than s points 
      in he array pnts 
@@ -641,7 +641,7 @@ int deterLmax(const cart_coord_double *pnts, const int numPnts, const int s)
             printf("Integer type cannot accomodate the current accuracy.\n");
             return 11;
         }
-        //at which level the two cart_coord_doubles are in the same box
+        //at which level the two cart_coord_dbls are in the same box
         while(a!=b) {
             l--;
             a = parent(a);
@@ -656,8 +656,8 @@ int deterLmax(const cart_coord_double *pnts, const int numPnts, const int s)
     return l_max;
 }
 
-void findBoundingCube(const cart_coord_double *pnts, const int numPnts, const double eps, 
-        cart_coord_double *pnts_b, double *d)
+void findBoundingCube(const cart_coord_dbl *pnts, const int numPnts, const double eps, 
+        cart_coord_dbl *pnts_b, double *d)
 {
     int i;
     double x_min, x_max, y_min, y_max, z_min, z_max;
@@ -711,35 +711,35 @@ void findBoundingCube(const cart_coord_double *pnts, const int numPnts, const do
     z_min -= (d_max-d_z)/2;
     
     //The bounding box
-    //pnts_b[0] = (cart_coord_double){.coords[0]=x_min,.coords[1]=y_min,.coords[2]=z_min};
-    //pnts_b[1] = (cart_coord_double){.coords[0]=x_min,.coords[1]=y_min,.coords[2]=z_max};
-    //pnts_b[2] = (cart_coord_double){.coords[0]=x_min,.coords[1]=y_max,.coords[2]=z_min};
-    //pnts_b[3] = (cart_coord_double){.coords[0]=x_min,.coords[1]=y_max,.coords[2]=z_max};
-    //pnts_b[4] = (cart_coord_double){.coords[0]=x_max,.coords[1]=y_min,.coords[2]=z_min};
-    //pnts_b[5] = (cart_coord_double){.coords[0]=x_max,.coords[1]=y_min,.coords[2]=z_max};
-    //pnts_b[6] = (cart_coord_double){.coords[0]=x_max,.coords[1]=y_max,.coords[2]=z_min};
-    //pnts_b[7] = (cart_coord_double){.coords[0]=x_max,.coords[1]=y_max,.coords[2]=z_max};
+    //pnts_b[0] = (cart_coord_dbl){.coords[0]=x_min,.coords[1]=y_min,.coords[2]=z_min};
+    //pnts_b[1] = (cart_coord_dbl){.coords[0]=x_min,.coords[1]=y_min,.coords[2]=z_max};
+    //pnts_b[2] = (cart_coord_dbl){.coords[0]=x_min,.coords[1]=y_max,.coords[2]=z_min};
+    //pnts_b[3] = (cart_coord_dbl){.coords[0]=x_min,.coords[1]=y_max,.coords[2]=z_max};
+    //pnts_b[4] = (cart_coord_dbl){.coords[0]=x_max,.coords[1]=y_min,.coords[2]=z_min};
+    //pnts_b[5] = (cart_coord_dbl){.coords[0]=x_max,.coords[1]=y_min,.coords[2]=z_max};
+    //pnts_b[6] = (cart_coord_dbl){.coords[0]=x_max,.coords[1]=y_max,.coords[2]=z_min};
+    //pnts_b[7] = (cart_coord_dbl){.coords[0]=x_max,.coords[1]=y_max,.coords[2]=z_max};
     
-    pnts_b[0] = (cart_coord_double){x_min,y_min,z_min};
-    pnts_b[1] = (cart_coord_double){x_min,y_min,z_max};
-    pnts_b[2] = (cart_coord_double){x_min,y_max,z_min};
-    pnts_b[3] = (cart_coord_double){x_min,y_max,z_max};
-    pnts_b[4] = (cart_coord_double){x_max,y_min,z_min};
-    pnts_b[5] = (cart_coord_double){x_max,y_min,z_max};
-    pnts_b[6] = (cart_coord_double){x_max,y_max,z_min};
-    pnts_b[7] = (cart_coord_double){x_max,y_max,z_max};
+    pnts_b[0] = (cart_coord_dbl){x_min,y_min,z_min};
+    pnts_b[1] = (cart_coord_dbl){x_min,y_min,z_max};
+    pnts_b[2] = (cart_coord_dbl){x_min,y_max,z_min};
+    pnts_b[3] = (cart_coord_dbl){x_min,y_max,z_max};
+    pnts_b[4] = (cart_coord_dbl){x_max,y_min,z_min};
+    pnts_b[5] = (cart_coord_dbl){x_max,y_min,z_max};
+    pnts_b[6] = (cart_coord_dbl){x_max,y_max,z_min};
+    pnts_b[7] = (cart_coord_dbl){x_max,y_max,z_max};
     
     //The side length of the box
     *d = d_max;
 }
 
-void srcBoxes(const cart_coord_double *pnts, const tri_elem *elems, const int numElems, 
-        const int s, int *srcBoxSet, int *lmax, double *D, cart_coord_double *pnt_min)
+void srcBoxes(const cart_coord_dbl *pnts, const tri_elem *elems, const int numElems, 
+        const int s, int *srcBoxSet, int *lmax, double *D, cart_coord_dbl *pnt_min)
 {
-    cart_coord_double *pnts_ctr = (cart_coord_double*)malloc(numElems*sizeof(cart_coord_double));
-    cart_coord_double *pnts_bnd = (cart_coord_double*)malloc(8*sizeof(cart_coord_double));
-    cart_coord_double *pnts_scaled = (cart_coord_double*)malloc(numElems*sizeof(cart_coord_double));
-    cart_coord_double nod[3];
+    cart_coord_dbl *pnts_ctr = (cart_coord_dbl*)malloc(numElems*sizeof(cart_coord_dbl));
+    cart_coord_dbl *pnts_bnd = (cart_coord_dbl*)malloc(8*sizeof(cart_coord_dbl));
+    cart_coord_dbl *pnts_scaled = (cart_coord_dbl*)malloc(numElems*sizeof(cart_coord_dbl));
+    cart_coord_dbl nod[3];
     
     for(int i=0;i<numElems;i++) {
         nod[0] = pnts[elems[i].nodes[0]];
@@ -754,7 +754,7 @@ void srcBoxes(const cart_coord_double *pnts, const tri_elem *elems, const int nu
     pnts2numSet(pnts_scaled,numElems,*lmax,srcBoxSet);
 }
 
-void genOctPt(const int level, cart_coord_double *pt)
+void genOctPt(const int level, cart_coord_dbl *pt)
 {
     for(int i=0;i<pow(pow(2,3),level);i++) {
         pt[i] = boxCenter(i,level);
@@ -822,8 +822,8 @@ void reorgOccupancyGrid(int* grid, const int level)
     free(grid_old);
 }
 
-void createMeshOccupancyGrid(const cart_coord_double* nod, const int numNod, 
-        const tri_elem* elem, const int numElem, const cart_coord_double cnr, 
+void createMeshOccupancyGrid(const cart_coord_dbl* nod, const int numNod, 
+        const tri_elem* elem, const int numElem, const cart_coord_dbl cnr, 
         const double sideLen, const int level, int* grid)
 {
     /*creates the occupancy grid for a mesh in the order of (x,y,z)
@@ -835,9 +835,9 @@ void createMeshOccupancyGrid(const cart_coord_double* nod, const int numNod,
     memset(grid,0,numBox*sizeof(int));
     
     //allocate memory for center points of elements
-    cart_coord_double *elemCtr = (cart_coord_double*)malloc(numElem*sizeof(cart_coord_double));
+    cart_coord_dbl *elemCtr = (cart_coord_dbl*)malloc(numElem*sizeof(cart_coord_dbl));
     for(int i=0;i<numElem;i++) {
-        cart_coord_double triNod[3];
+        cart_coord_dbl triNod[3];
         for(int j=0;j<3;j++) {
             triNod[j] = nod[elem[i].nodes[j]];
         }
@@ -845,7 +845,7 @@ void createMeshOccupancyGrid(const cart_coord_double* nod, const int numNod,
     }
     
     // allocate memory for scaled points
-    cart_coord_double *nod_sc = (cart_coord_double*)malloc(numElem*sizeof(cart_coord_double));
+    cart_coord_dbl *nod_sc = (cart_coord_dbl*)malloc(numElem*sizeof(cart_coord_dbl));
     scalePnts(elemCtr,numElem,cnr,sideLen,nod_sc);
     for(int i=0;i<numElem;i++) {
         int idx = pnt2boxnum(nod_sc[i],level);
