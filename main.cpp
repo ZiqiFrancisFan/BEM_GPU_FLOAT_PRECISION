@@ -26,11 +26,10 @@ int main(int argc, char *argv[])
     tri_elem *elem = (tri_elem*)malloc(numElem*sizeof(tri_elem));
     readOBJ("./mesh/sphere_100mm_320.obj",nod_dp,elem);
     readOBJ("./mesh/sphere_100mm_320.obj",nod_fp,elem);
-    cart_coord_double cnr = {-0.5,-0.5,-0.5};
-    double sideLength = 1.0;
+    cart_coord_double cnr = {-0.2,-0.2,-0.2};
+    double sideLength = 0.4;
     scalePnts(nod_dp,numNod,cnr,sideLength,nod_sc);
     int l = deterLmax(nod_sc,numNod,1);
-    l++;
     printf("The level to be used: %d\n",l);
     cart_coord_float src = {-1.0,0,0};
     int numSrc = 1, numBox = pow(8,l);

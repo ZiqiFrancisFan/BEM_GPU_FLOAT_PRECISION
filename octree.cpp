@@ -833,7 +833,8 @@ void createMeshOccupancyGrid(const cart_coord_double* nod, const int numNod,
      grid: the occupancy grid*/
     int numBox = pow(8,level);
     memset(grid,0,numBox*sizeof(int));
-    //printf("set all elements to 0\n");
+    
+    //allocate memory for center points of elements
     cart_coord_double *elemCtr = (cart_coord_double*)malloc(numElem*sizeof(cart_coord_double));
     for(int i=0;i<numElem;i++) {
         cart_coord_double triNod[3];
@@ -842,7 +843,8 @@ void createMeshOccupancyGrid(const cart_coord_double* nod, const int numNod,
         }
         elemCtr[i] = triCentroid(triNod);
     }
-    //printf("Centers of elements computed.\n");
+    
+    // allocate memory for scaled points
     cart_coord_double *nod_sc = (cart_coord_double*)malloc(numElem*sizeof(cart_coord_double));
     scalePnts(elemCtr,numElem,cnr,sideLen,nod_sc);
     for(int i=0;i<numElem;i++) {
