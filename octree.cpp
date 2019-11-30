@@ -803,33 +803,6 @@ void sortSet(int *set) {
     }
 }
 
-void createMeshOccupancyGrid(const cart_coord_double* nod, const int numNod, 
-        const tri_elem* elem, const int numElem, const cart_coord_double cnr, 
-        const double sideLen, const int level, int* grid)
-{
-    /*creates the occupancy grid for a mesh
-     nod: nodes on the mesh
-     elem: elements on the mesh
-     level: the level of the octree
-     grid: the occupancy grid*/
-    int numBox = pow(8,level);
-    memset(grid,0,numBox*sizeof(int));
-    cart_coord_double *elemCtr = (cart_coord_double*)malloc(numElem*sizeof(cart_coord_double));
-    for(int i=0;i<numElem;i++) {
-        cart_coord_double triNod[3];
-        for(int j=0;j<3;j++) {
-            triNod[i] = nod[elem[i].nodes[j]];
-        }
-        elemCtr[i] = triCentroid(triNod);
-    }
-    cart_coord_double *nod_sc = (cart_coord_double*)malloc(numNod*sizeof(cart_coord_double));
-    scalePnts(elemCtr,numElem,cnr,sideLen,nod_sc);
-    for(int i=0;i<numElem;i++) {
-        int idx = pnt2boxnum(nod_sc[i],level);
-        grid[i] = 1;
-    }
-}
-
 void reorgOccupancyGrid(int* grid, const int level)
 {
     /*reorganize the occupancy grid from the order of z, y, x to x, y, z*/
@@ -848,6 +821,42 @@ void reorgOccupancyGrid(int* grid, const int level)
     }
     free(grid_old);
 }
+
+void createMeshOccupancyGrid(const cart_coord_double* nod, const int numNod, 
+        const tri_elem* elem, const int numElem, const cart_coord_double cnr, 
+        const double sideLen, const int level, int* grid)
+{
+    /*creates the occupancy grid for a mesh in the order of (x,y,z)
+     nod: nodes on the mesh
+     elem: elements on the mesh
+     level: the level of the octree
+     grid: the occupancy grid*/
+    int numBox = pow(8,level);
+    memset(grid,0,numBox*sizeof(int));
+    //printf("set all elements to 0\n");
+    cart_coord_double *elemCtr = (cart_coord_double*)malloc(numElem*sizeof(cart_coord_double));
+    for(int i=0;i<numElem;i++) {
+        cart_coord_double triNod[3];
+        for(int j=0;j<3;j++) {
+            triNod[j] = nod[elem[i].nodes[j]];
+        }
+        elemCtr[i] = triCentroid(triNod);
+    }
+    //printf("Centers of elements computed.\n");
+    cart_coord_double *nod_sc = (cart_coord_double*)malloc(numElem*sizeof(cart_coord_double));
+    scalePnts(elemCtr,numElem,cnr,sideLen,nod_sc);
+    for(int i=0;i<numElem;i++) {
+        int idx = pnt2boxnum(nod_sc[i],level);
+        //printf("index of box: %d\n",idx);
+        grid[idx] = 1;
+    }
+    //printf("Occupancy grid initiated.\n");
+    reorgOccupancyGrid(grid,level);
+    free(elemCtr);
+    free(nod_sc);
+}
+
+
 
 
 

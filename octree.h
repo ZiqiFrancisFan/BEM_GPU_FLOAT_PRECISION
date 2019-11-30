@@ -106,5 +106,9 @@ int findSetInd(const int *X, const int num);
 
 void sortSet(int *set);
 
+void createMeshOccupancyGrid(const cart_coord_double* nod, const int numNod, 
+        const tri_elem* elem, const int numElem, const cart_coord_double cnr, 
+        const double sideLen, const int level, int* grid);
+
 
 #endif /* OCTREE_H */
