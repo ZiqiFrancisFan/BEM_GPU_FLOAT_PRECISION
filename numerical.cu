@@ -1851,7 +1851,7 @@ int genFields_MultiPtSrcSglObj(const float strength, const float wavNum,
     for(int i=0;i<numSrcs;i++) {
         HOST_CALL(field_extrapolation_single_pt(wavNum,expPts_f,numExpPts,elems,numElems,
                 pts_f,numPts,&B[i*(numPts+NUMCHIEF)],strength,srcs[i],field));
-        //reorgField(field,level);
+        reorgField(field,level);
         memcpy(&fields[i*numExpPts],field,numExpPts*sizeof(cuFloatComplex));
     }
     

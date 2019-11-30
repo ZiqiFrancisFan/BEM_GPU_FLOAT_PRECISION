@@ -17,7 +17,7 @@
 
 int main(int argc, char *argv[])
 {
-    
+    time_t start, end;
     int numNod, numElem;
     findNum("./mesh/sphere_100mm_5120.obj",&numNod,&numElem);
     cart_coord_double *nod_dp = (cart_coord_double*)malloc(numNod*sizeof(cart_coord_double));
@@ -35,7 +35,11 @@ int main(int argc, char *argv[])
     int numSrc = 1, numBox = pow(8,l);
     float freq = 500, wavNum = 2*PI*freq/SPEED_SOUND;
     cuFloatComplex *fields = (cuFloatComplex*)malloc(numSrc*numBox*sizeof(cuFloatComplex));
+    time(&start);
     HOST_CALL(genFields_MultiPtSrcSglObj(STRENGTH,wavNum,&src,numSrc,nod_dp,numNod,elem,numElem,cnr,sideLength,l,fields));
+    time(&end);
+    double duration = double(end-start);
+    printf("Duration for field extrapolation: %lf seconds\n",duration);
     print_cuFloatComplex_mat(fields,1,10,1);
     
     free(nod_dp);
