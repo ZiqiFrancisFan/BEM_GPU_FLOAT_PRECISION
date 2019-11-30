@@ -17,6 +17,9 @@
 
 #include "dataStructs.h"
 #include <stdbool.h>
+#include <stdio.h>
+#include <stdlib.h>
+
 #ifndef NUM_BITs_BIN
 #define NUM_BITs_BIN (sizeof(unsigned))
 #endif
@@ -110,5 +113,6 @@ void createMeshOccupancyGrid(const cart_coord_double* nod, const int numNod,
         const tri_elem* elem, const int numElem, const cart_coord_double cnr, 
         const double sideLen, const int level, int* grid);
 
+int write_occupancy_grid(const int* grid, const int level, const char* filename);
 
 #endif /* OCTREE_H */

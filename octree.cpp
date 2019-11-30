@@ -852,8 +852,35 @@ void createMeshOccupancyGrid(const cart_coord_double* nod, const int numNod,
     }
     //printf("Occupancy grid initiated.\n");
     reorgOccupancyGrid(grid,level);
+    int s = 0;
+    for(int i=0;i<numBox;i++) {
+        if(grid[i]==1) {
+            s++;
+        }
+    }
+    printf("The number of 1s: %d\n",s);
     free(elemCtr);
     free(nod_sc);
+}
+
+int write_occupancy_grid(const int* grid, const int level, const char* filename)
+{
+    /*write the occupancy grid to file*/
+    FILE *file = fopen(filename,"w");
+    if(!file) {
+        printf("Failed to open file!\n");
+        return EXIT_FAILURE;
+    }
+    int numBox = pow(8,level);
+    for(int i=0;i<numBox;i++) {
+        int status = fprintf(file,"%d ",grid[i]);
+        if(status<0) {
+            printf("Writing to file failed.\n");
+            return EXIT_FAILURE;
+        }
+    }
+    fclose(file);
+    return EXIT_SUCCESS;
 }
 
 
