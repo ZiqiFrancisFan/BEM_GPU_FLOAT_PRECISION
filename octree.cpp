@@ -179,7 +179,8 @@ int pnt2boxnum(const cart_coord_double pnt, const int l)
 {
     /*determines the box number at level l containing the nomalized point pnt
      pnt: a normalized point
-     l: level*/ 
+     l: level
+     return: box number at level l that contains the piont pnt*/ 
     int *ind_x, *ind_y, *ind_z, *ind;
     int result;
     

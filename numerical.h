@@ -229,7 +229,7 @@ int field_extrapolation_single_pt(const float wavNum, const cart_coord_float* ex
         const tri_elem* elem, const int numElem, const cart_coord_float* pt, const int numPt, 
         const cuFloatComplex* p, const float strength, const cart_coord_float dir, cuFloatComplex *pExp);
 
-int getFieldsMultipleSrcsSingleObject(const float strength, const float wavNum, 
+int genFields_MultiPtSrcSglObj(const float strength, const float wavNum, 
         const cart_coord_float* srcs, const int numSrcs, const cart_coord_double* pts, const int numPts, 
         const tri_elem* elems, const int numElems, const cart_coord_double cnr, const double d, 
         const int level, cuFloatComplex* fields);
