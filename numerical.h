@@ -170,6 +170,10 @@ void print_float_mat(const float *A, const int numRow, const int numCol, const i
 void print_cuFloatComplex_mat(const cuFloatComplex *A, const int numRow, const int numCol, 
         const int lda);
 
+__host__ __device__ void printRectCoord(const rect_coord_flt* pt, const int numPt);
+
+__host__ __device__ void printRectCoord(const rect_coord_dbl* pt, const int numPt);
+
 __host__ __device__ sph_coord_float rect2sph(const rect_coord_flt s);
 
 __host__ __device__ float dotProd(const rect_coord_flt u, const rect_coord_flt v);
@@ -243,6 +247,8 @@ int genFields_MultiPtSrcSglObj(const float strength, const float wavNum,
 __host__ __device__ int deterPtPlaneRel(const rect_coord_dbl pt, const plane_dbl plane);
 
 __host__ __device__ int deterPtCubeRel(const rect_coord_dbl pt, const cube_dbl cube);
+
+__host__ __device__ int deterPtCubeEdgeVolRel(const rect_coord_dbl pt, const cube_dbl cb);
 
 #endif /* NUMERICAL_H */
 

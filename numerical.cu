@@ -173,6 +173,22 @@ void print_cuFloatComplex_mat(const cuFloatComplex *A, const int numRow, const i
     }
 }
 
+__host__ __device__ void printRectCoord(const rect_coord_flt* pt, const int numPt)
+{
+    for(int i=0;i<numPt;i++) {
+        printf("(%f,%f,%f), ",pt[i].coords[0],pt[i].coords[1],pt[i].coords[2]);
+    }
+    printf("\n");
+}
+
+__host__ __device__ void printRectCoord(const rect_coord_dbl* pt, const int numPt)
+{
+    for(int i=0;i<numPt;i++) {
+        printf("(%f,%f,%f), ",pt[i].coords[0],pt[i].coords[1],pt[i].coords[2]);
+    }
+    printf("\n");
+}
+
 __host__ __device__ float dotProd(const rect_coord_flt u, const rect_coord_flt v)
 {
     return u.coords[0]*v.coords[0]+u.coords[1]*v.coords[1]+u.coords[2]*v.coords[2];
@@ -1882,56 +1898,69 @@ __host__ __device__ int deterPtPlaneRel(const rect_coord_dbl pt, const plane_dbl
     rect_coord_dbl vec = rectCoordSub(pt,plane.pt);
     double result = dotProd(plane.n,vec);
     if(result>=0) {
+        // on the positive side of the plane normal
         return 1;
     } else {
         return 0;
     }
 }
 
-__host__ __device__ int deterPtEdgeVolRel(const rect_coord_dbl pt, const cube_dbl cb)
+__host__ __device__ int deterPtCubeEdgeVolRel(const rect_coord_dbl pt, const cube_dbl cb)
 {
+    /*determine the relationship between a point and the volume bounded by edge faces
+     of a cube*/
+    
     //declare two rect_coord_dbl arrays for nodes at the bottom and the top face 
-    rect_coord_dbl btm[4], top[4], left[4], right[4], front[4], back[4];
-    rect_coord_dbl dir_x = {1,0,0}, dir_y = {0,1,0}, dir_z = {0,0,1};
+    rect_coord_dbl btm[4], top[4], left[4], right[4], back[4], front[4];
+    
+    // declare the basis unit vectors
+    rect_coord_dbl dir_x = {1.0,0.0,0.0}, dir_y = {0.0,1.0,0.0}, dir_z = {0.0,0.0,1.0};
     
     //set up btm and top nodes
     btm[0] = cb.cnr;
-    btm[1] = rectCoordAdd(btm[0],dir_x);
-    btm[2] = rectCoordAdd(btm[1],dir_y);
-    btm[3] = rectCoordAdd(btm[0],dir_y);
+    btm[1] = rectCoordAdd(btm[0],scalarProd(cb.len,dir_x));
+    btm[2] = rectCoordAdd(btm[1],scalarProd(cb.len,dir_y));
+    btm[3] = rectCoordAdd(btm[0],scalarProd(cb.len,dir_y));
+    //printRectCoord(btm,4);
     
-    top[0] = rectCoordAdd(btm[0],dir_z);
-    top[1] = rectCoordAdd(top[0],dir_x);
-    top[2] = rectCoordAdd(top[1],dir_y);
-    top[3] = rectCoordAdd(top[0],dir_y);
+    top[0] = rectCoordAdd(btm[0],scalarProd(cb.len,dir_z));
+    top[1] = rectCoordAdd(top[0],scalarProd(cb.len,dir_x));
+    top[2] = rectCoordAdd(top[1],scalarProd(cb.len,dir_y));
+    top[3] = rectCoordAdd(top[0],scalarProd(cb.len,dir_y));
+    //printRectCoord(top,4);
     
     //set up left and right nodes
     left[0] = cb.cnr;
-    left[1] = rectCoordAdd(left[0],dir_x);
-    left[2] = rectCoordAdd(left[1],dir_z);
-    left[3] = rectCoordAdd(left[0],dir_z);
+    left[1] = rectCoordAdd(left[0],scalarProd(cb.len,dir_x));
+    left[2] = rectCoordAdd(left[1],scalarProd(cb.len,dir_z));
+    left[3] = rectCoordAdd(left[0],scalarProd(cb.len,dir_z));
+    //printRectCoord(left,4);
     
-    right[0] = rectCoordAdd(left[0],dir_y);
-    right[1] = rectCoordAdd(right[0],dir_x);
-    right[2] = rectCoordAdd(right[1],dir_z);
-    right[3] = rectCoordAdd(right[0],dir_z);
+    right[0] = rectCoordAdd(left[0],scalarProd(cb.len,dir_y));
+    right[1] = rectCoordAdd(right[0],scalarProd(cb.len,dir_x));
+    right[2] = rectCoordAdd(right[1],scalarProd(cb.len,dir_z));
+    right[3] = rectCoordAdd(right[0],scalarProd(cb.len,dir_z));
+    //printRectCoord(right,4);
     
     //set up back and front nodes
     back[0] = cb.cnr;
-    back[1] = rectCoordAdd(back[0],dir_y);
-    back[2] = rectCoordAdd(back[1],dir_z);
-    back[3] = rectCoordAdd(back[0],dir_z);
+    back[1] = rectCoordAdd(back[0],scalarProd(cb.len,dir_y));
+    back[2] = rectCoordAdd(back[1],scalarProd(cb.len,dir_z));
+    back[3] = rectCoordAdd(back[0],scalarProd(cb.len,dir_z));
+    //printRectCoord(back,4);
     
-    front[0] = rectCoordAdd(back[0],dir_x);
-    front[1] = rectCoordAdd(front[0],dir_y);
-    front[2] = rectCoordAdd(front[1],dir_z);
-    front[3] = rectCoordAdd(front[0],dir_z);
+    front[0] = rectCoordAdd(back[0],scalarProd(cb.len,dir_x));
+    front[1] = rectCoordAdd(front[0],scalarProd(cb.len,dir_y));
+    front[2] = rectCoordAdd(front[1],scalarProd(cb.len,dir_z));
+    front[3] = rectCoordAdd(front[0],scalarProd(cb.len,dir_z));
+    //printRectCoord(front,4);
     
+    //declare an array nrml for determining the normal of the new plane
     rect_coord_dbl nrml[3];
     plane_dbl plane;
     int result;
     
-    //deal with the bottom and the top face
+    //deal with the bottom face
     for(int i=0;i<3;i++) {
         nrml[1] = dir_z;
         switch(i) {
@@ -1955,23 +1984,25 @@ __host__ __device__ int deterPtEdgeVolRel(const rect_coord_dbl pt, const cube_db
         plane.pt = btm[i];
         result = deterPtPlaneRel(pt,plane);
         if(result == 0) {
+            printf("bottom face: %dth node\n",i);
             return 0;
         }
     }
     
+    //deal with the top face
     for(int i=0;i<3;i++) {
         nrml[1] = scalarProd(-1,dir_z);
         switch(i) {
-            case 0: // edge determined by btm[0] and btm[1]
+            case 0: // edge determined by top[0] and top[1]
                 nrml[0] = dir_y;
                 break;
-            case 1: // edge determined by btm[1] and btm[2]
+            case 1: // edge determined by top[1] and top[2]
                 nrml[0] = scalarProd(-1,dir_x);
                 break;
-            case 2: // edge determined by btm[2] and btm[3]
+            case 2: // edge determined by top[2] and top[3]
                 nrml[0] = scalarProd(-1,dir_y);
                 break;
-            case 3: // edge determined by btm[3] and btm[0]
+            case 3: // edge determined by top[3] and top[0]
                 nrml[0] = dir_x;
                 break;
             default:
@@ -1982,24 +2013,25 @@ __host__ __device__ int deterPtEdgeVolRel(const rect_coord_dbl pt, const cube_db
         plane.pt = top[i];
         result = deterPtPlaneRel(pt,plane);
         if(result == 0) {
+            printf("top face: %dth node\n",i);
             return 0;
         }
     }
     
-    //deal with the left and the right face
+    //deal with the left face
     for(int i=0;i<3;i++) {
         nrml[1] = dir_y;
         switch(i) {
-            case 0: // edge determined by btm[0] and btm[1]
+            case 0: // edge determined by left[0] and left[1]
                 nrml[0] = dir_z;
                 break;
-            case 1: // edge determined by btm[1] and btm[2]
+            case 1: // edge determined by left[1] and left[2]
                 nrml[0] = scalarProd(-1,dir_x);
                 break;
-            case 2: // edge determined by btm[2] and btm[3]
+            case 2: // edge determined by left[2] and left[3]
                 nrml[0] = scalarProd(-1,dir_z);
                 break;
-            case 3: // edge determined by btm[3] and btm[0]
+            case 3: // edge determined by left[3] and left[0]
                 nrml[0] = dir_x;
                 break;
             default:
@@ -2010,20 +2042,22 @@ __host__ __device__ int deterPtEdgeVolRel(const rect_coord_dbl pt, const cube_db
         plane.pt = left[i];
         result = deterPtPlaneRel(pt,plane);
         if(result == 0) {
+            printf("left face: %dth node\n",i);
             return 0;
         }
     }
     
+    //deal with the right face
     for(int i=0;i<3;i++) {
         nrml[1] = scalarProd(-1,dir_y);
         switch(i) {
-            case 0: // edge determined by btm[0] and btm[1]
+            case 0: // edge determined by right[0] and right[1]
                 nrml[0] = dir_z;
                 break;
-            case 1: // edge determined by btm[1] and btm[2]
+            case 1: // edge determined by right[1] and right[2]
                 nrml[0] = scalarProd(-1,dir_x);
                 break;
-            case 2: // edge determined by btm[2] and btm[3]
+            case 2: // edge determined by right[2] and right[3]
                 nrml[0] = scalarProd(-1,dir_z);
                 break;
             case 3: // edge determined by btm[3] and btm[0]
@@ -2037,11 +2071,12 @@ __host__ __device__ int deterPtEdgeVolRel(const rect_coord_dbl pt, const cube_db
         plane.pt = right[i];
         result = deterPtPlaneRel(pt,plane);
         if(result == 0) {
+            printf("right face: %dth node\n",i);
             return 0;
         }
     }
     
-    //deal with the back and the front face
+    //deal with the back face
     for(int i=0;i<3;i++) {
         nrml[1] = dir_x;
         switch(i) {
@@ -2065,23 +2100,25 @@ __host__ __device__ int deterPtEdgeVolRel(const rect_coord_dbl pt, const cube_db
         plane.pt = back[i];
         result = deterPtPlaneRel(pt,plane);
         if(result == 0) {
+            printf("back face: %dth node\n",i);
             return 0;
         }
     }
     
+    //deal with the front face
     for(int i=0;i<3;i++) {
         nrml[1] = scalarProd(-1,dir_x);
         switch(i) {
-            case 0: // edge determined by btm[0] and btm[1]
+            case 0: // edge determined by front[0] and front[1]
                 nrml[0] = dir_z;
                 break;
-            case 1: // edge determined by btm[1] and btm[2]
+            case 1: // edge determined by front[1] and front[2]
                 nrml[0] = scalarProd(-1,dir_y);
                 break;
-            case 2: // edge determined by btm[2] and btm[3]
+            case 2: // edge determined by front[2] and front[3]
                 nrml[0] = scalarProd(-1,dir_z);
                 break;
-            case 3: // edge determined by btm[3] and btm[0]
+            case 3: // edge determined by front[3] and front[0]
                 nrml[0] = dir_y;
                 break;
             default:
@@ -2092,10 +2129,12 @@ __host__ __device__ int deterPtEdgeVolRel(const rect_coord_dbl pt, const cube_db
         plane.pt = front[i];
         result = deterPtPlaneRel(pt,plane);
         if(result == 0) {
+            printf("front face: %dth node\n",i);
             return 0;
         }
     }
     
+    // if not returned 0, then return 1, the point is inside the volume
     return 1;
 }
 

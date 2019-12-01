@@ -28,10 +28,6 @@ void readOBJ(const char *filename, rect_coord_dbl* p, tri_elem* e);
 void printPts(const rect_coord_flt* p,const int num);
 void printElems(const tri_elem* elem, const int num);
 
-void printCartCoord(const rect_coord_flt* pt, const int numPt);
-
-void printCartCoord(const rect_coord_dbl* pt, const int numPt);
-
 int findBB(const rect_coord_flt* pt, const int numPt, const float threshold, float x[2], 
     float y[2], float z[2]);
 

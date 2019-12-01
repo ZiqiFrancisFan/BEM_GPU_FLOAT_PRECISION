@@ -17,7 +17,7 @@
 
 int main(int argc, char *argv[])
 {
-    rect_coord_dbl pt = {0,1.9,2.2};
+    rect_coord_dbl pt = {1.0,1.0,3.01};
     cube_dbl cb;
     plane_dbl pln;
     pln.n = {1,0,0};
@@ -35,6 +35,12 @@ int main(int argc, char *argv[])
         printf("On the non-negative side.\n");
     } else {
         printf("On the negative side.\n");
+    }
+    flag = deterPtCubeEdgeVolRel(pt,cb);
+    if(flag) {
+        printf("In.\n");
+    } else {
+        printf("Not in.\n");
     }
     return EXIT_SUCCESS;
 }
