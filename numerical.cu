@@ -200,6 +200,34 @@ __host__ __device__ double rectDotMul(const rect_coord_dbl u, const rect_coord_d
     return u.coords[0]*v.coords[0]+u.coords[1]*v.coords[1]+u.coords[2]*v.coords[2];
 }
 
+__host__ __device__ float rectNorm(const rect_coord_flt v)
+{
+    return sqrtf(rectDotMul(v,v));
+}
+
+__host__ __device__ double rectNorm(const rect_coord_dbl v)
+{
+    return sqrt(rectDotMul(v,v));
+}
+
+__host__ __device__ rect_coord_flt rectCrossMul(const rect_coord_flt a, const rect_coord_flt b)
+{
+    rect_coord_flt temp;
+    temp.coords[0] = a.coords[1]*b.coords[2]-a.coords[2]*b.coords[1];
+    temp.coords[1] = -(a.coords[0]*b.coords[2]-a.coords[2]*b.coords[0]);
+    temp.coords[2] = a.coords[0]*b.coords[1]-a.coords[1]*b.coords[0];
+    return temp;
+}
+
+__host__ __device__ rect_coord_dbl rectCrossMul(const rect_coord_dbl a, const rect_coord_dbl b)
+{
+    rect_coord_dbl temp;
+    temp.coords[0] = a.coords[1]*b.coords[2]-a.coords[2]*b.coords[1];
+    temp.coords[1] = -(a.coords[0]*b.coords[2]-a.coords[2]*b.coords[0]);
+    temp.coords[2] = a.coords[0]*b.coords[1]-a.coords[1]*b.coords[0];
+    return temp;
+}
+
 __host__ __device__ rect_coord_dbl nrmlzRectCoord(const rect_coord_dbl v)
 {
     double nrm = sqrt(rectDotMul(v,v));
@@ -323,9 +351,9 @@ __global__ void rayTrisInt(const rect_coord_flt pt_s, const rect_coord_flt dir, 
     if(idx<numElem) {
         rect_coord_flt pt[3];
         for(int i=0;i<3;i++) {
-            pt[i].coords[0] = nod[elem[idx].nodes[i]].coords[0];
-            pt[i].coords[1] = nod[elem[idx].nodes[i]].coords[1];
-            pt[i].coords[2] = nod[elem[idx].nodes[i]].coords[2];
+            pt[i].coords[0] = nod[elem[idx].nod[i]].coords[0];
+            pt[i].coords[1] = nod[elem[idx].nod[i]].coords[1];
+            pt[i].coords[2] = nod[elem[idx].nod[i]].coords[2];
         }
         flag[idx] = ray_intersect_triangle(pt_s,dir,pt);
     }
@@ -364,7 +392,7 @@ int genCHIEF(const rect_coord_flt *pt, const int numPt, const tri_elem *elem, co
     int i, cnt;
     float threshold_inner = 0.0000001;
     float *dist_h = (float*)malloc(numPt*sizeof(float));
-    float minDist; //minimum distance between the chief point to all surface nodes
+    float minDist; //minimum distance between the chief point to all surface nod
     float *dist_d;
     CUDA_CALL(cudaMalloc((void**)&dist_d, numPt*sizeof(float)));
     rect_coord_flt dir; 
@@ -744,15 +772,15 @@ __global__ void atomicPtsElems_nsgl(const float k, const rect_coord_flt *pt, con
     int xIdx = blockIdx.x*blockDim.x+threadIdx.x; //Index for points
     int yIdx = blockIdx.y*blockDim.y+threadIdx.y; //Index for elements
     //The thread with indices xIdx and yIdx process the point xIdx and elem yIdx
-    if(xIdx>=idxPntStart && xIdx<=idxPntEnd && yIdx<numElem && xIdx!=elem[yIdx].nodes[0] 
-            && xIdx!=elem[yIdx].nodes[1] && xIdx!=elem[yIdx].nodes[2]) {
+    if(xIdx>=idxPntStart && xIdx<=idxPntEnd && yIdx<numElem && xIdx!=elem[yIdx].nod[0] 
+            && xIdx!=elem[yIdx].nod[1] && xIdx!=elem[yIdx].nod[2]) {
         int i, j;
         cuFloatComplex hCoeff[3], gCoeff[3], bc, pCoeffs[3], temp;
         float cCoeff;
         rect_coord_flt triNod[3];
-        triNod[0] = pt[elem[yIdx].nodes[0]];
-        triNod[1] = pt[elem[yIdx].nodes[1]];
-        triNod[2] = pt[elem[yIdx].nodes[2]];
+        triNod[0] = pt[elem[yIdx].nod[0]];
+        triNod[1] = pt[elem[yIdx].nod[1]];
+        triNod[2] = pt[elem[yIdx].nod[2]];
         g_h_c_nsgl(k,pt[xIdx],triNod,gCoeff,hCoeff,&cCoeff);
         
         //Update the A matrix
@@ -762,9 +790,9 @@ __global__ void atomicPtsElems_nsgl(const float k, const rect_coord_flt *pt, con
         }
         
         for(i=0;i<3;i++) {
-            //atomicFloatComplexAdd(&A[IDXC0(xIdx,elem[yIdx].nodes[i],lda)],pCoeffs[i]);
-            atomicAdd(&A[IDXC0(xIdx,elem[yIdx].nodes[i],lda)].x,cuCrealf(pCoeffs[i]));
-            atomicAdd(&A[IDXC0(xIdx,elem[yIdx].nodes[i],lda)].y,cuCimagf(pCoeffs[i]));
+            //atomicFloatComplexAdd(&A[IDXC0(xIdx,elem[yIdx].nod[i],lda)],pCoeffs[i]);
+            atomicAdd(&A[IDXC0(xIdx,elem[yIdx].nod[i],lda)].x,cuCrealf(pCoeffs[i]));
+            atomicAdd(&A[IDXC0(xIdx,elem[yIdx].nod[i],lda)].y,cuCimagf(pCoeffs[i]));
         }
         
         //Update from C coefficients
@@ -801,10 +829,10 @@ __global__ void atomicPtsElems_sgl(const float k, const rect_coord_flt *pt, cons
         
         rect_coord_flt nod[3];
         for(i=0;i<3;i++) {
-            nod[i] = pt[elem[idx].nodes[i]];
+            nod[i] = pt[elem[idx].nod[i]];
         }
         // Compute h and g coefficients
-        g_h_c_sgl(k,pt[elem[idx].nodes[0]],pt[elem[idx].nodes[1]],pt[elem[idx].nodes[2]],
+        g_h_c_sgl(k,pt[elem[idx].nod[0]],pt[elem[idx].nod[1]],pt[elem[idx].nod[2]],
                 nod,gCoeff_sgl1,hCoeff_sgl1,&cCoeff_sgl1,gCoeff_sgl2,hCoeff_sgl2,&cCoeff_sgl2,
                 gCoeff_sgl3,hCoeff_sgl3,&cCoeff_sgl3);
         
@@ -818,58 +846,58 @@ __global__ void atomicPtsElems_sgl(const float k, const rect_coord_flt *pt, cons
         
         //Update matrix A using pCoeffs
         for(j=0;j<3;j++) {
-            //atomicFloatComplexAdd(&A[IDXC0(elem[idx].nodes[0],elem[idx].nodes[j],lda)],
+            //atomicFloatComplexAdd(&A[IDXC0(elem[idx].nod[0],elem[idx].nod[j],lda)],
             //        pCoeffs_sgl1[j]);
-            atomicAdd(&A[IDXC0(elem[idx].nodes[0],elem[idx].nodes[j],lda)].x,
+            atomicAdd(&A[IDXC0(elem[idx].nod[0],elem[idx].nod[j],lda)].x,
                     cuCrealf(pCoeffs_sgl1[j]));
-            atomicAdd(&A[IDXC0(elem[idx].nodes[0],elem[idx].nodes[j],lda)].y,
+            atomicAdd(&A[IDXC0(elem[idx].nod[0],elem[idx].nod[j],lda)].y,
                     cuCimagf(pCoeffs_sgl1[j]));
-            //atomicFloatComplexAdd(&A[IDXC0(elem[idx].nodes[1],elem[idx].nodes[j],lda)],
+            //atomicFloatComplexAdd(&A[IDXC0(elem[idx].nod[1],elem[idx].nod[j],lda)],
             //        pCoeffs_sgl2[j]);
-            atomicAdd(&A[IDXC0(elem[idx].nodes[1],elem[idx].nodes[j],lda)].x,
+            atomicAdd(&A[IDXC0(elem[idx].nod[1],elem[idx].nod[j],lda)].x,
                     cuCrealf(pCoeffs_sgl2[j]));
-            atomicAdd(&A[IDXC0(elem[idx].nodes[1],elem[idx].nodes[j],lda)].y,
+            atomicAdd(&A[IDXC0(elem[idx].nod[1],elem[idx].nod[j],lda)].y,
                     cuCimagf(pCoeffs_sgl2[j]));
-            //atomicFloatComplexAdd(&A[IDXC0(elem[idx].nodes[2],elem[idx].nodes[j],lda)],
+            //atomicFloatComplexAdd(&A[IDXC0(elem[idx].nod[2],elem[idx].nod[j],lda)],
             //        pCoeffs_sgl3[j]);
-            atomicAdd(&A[IDXC0(elem[idx].nodes[2],elem[idx].nodes[j],lda)].x,
+            atomicAdd(&A[IDXC0(elem[idx].nod[2],elem[idx].nod[j],lda)].x,
                     cuCrealf(pCoeffs_sgl3[j]));
-            atomicAdd(&A[IDXC0(elem[idx].nodes[2],elem[idx].nodes[j],lda)].y,
+            atomicAdd(&A[IDXC0(elem[idx].nod[2],elem[idx].nod[j],lda)].y,
                     cuCimagf(pCoeffs_sgl3[j]));
         }
         
-        //atomicFloatComplexSub(&A[IDXC0(elem[idx].nodes[0],elem[idx].nodes[0],lda)],
+        //atomicFloatComplexSub(&A[IDXC0(elem[idx].nod[0],elem[idx].nod[0],lda)],
         //        make_cuFloatComplex(cCoeff_sgl1,0));
-        atomicAdd(&A[IDXC0(elem[idx].nodes[0],elem[idx].nodes[0],lda)].x,
+        atomicAdd(&A[IDXC0(elem[idx].nod[0],elem[idx].nod[0],lda)].x,
                 -cCoeff_sgl1);
-        //atomicFloatComplexSub(&A[IDXC0(elem[idx].nodes[1],elem[idx].nodes[1],lda)],
+        //atomicFloatComplexSub(&A[IDXC0(elem[idx].nod[1],elem[idx].nod[1],lda)],
         //        make_cuFloatComplex(cCoeff_sgl2,0));
-        atomicAdd(&A[IDXC0(elem[idx].nodes[1],elem[idx].nodes[1],lda)].x,
+        atomicAdd(&A[IDXC0(elem[idx].nod[1],elem[idx].nod[1],lda)].x,
                 -cCoeff_sgl2);
-        //atomicFloatComplexSub(&A[IDXC0(elem[idx].nodes[2],elem[idx].nodes[2],lda)],
+        //atomicFloatComplexSub(&A[IDXC0(elem[idx].nod[2],elem[idx].nod[2],lda)],
         //        make_cuFloatComplex(cCoeff_sgl3,0));
-        atomicAdd(&A[IDXC0(elem[idx].nodes[2],elem[idx].nodes[2],lda)].x,
+        atomicAdd(&A[IDXC0(elem[idx].nod[2],elem[idx].nod[2],lda)].x,
                 -cCoeff_sgl3);
         
         //Update matrix B using g Coefficients
         bc = cuCdivf(elem[idx].bc[2],elem[idx].bc[1]);
         for(i=0;i<numSrc;i++) {
             for(j=0;j<3;j++) {
-                //atomicFloatComplexSub(&B[IDXC0(elem[idx].nodes[0],i,ldb)],
+                //atomicFloatComplexSub(&B[IDXC0(elem[idx].nod[0],i,ldb)],
                 //        cuCmulf(bc,gCoeff_sgl1[j]));
                 temp = cuCmulf(bc,gCoeff_sgl1[j]);
-                atomicAdd(&B[IDXC0(elem[idx].nodes[0],i,ldb)].x,-cuCrealf(temp));
-                atomicAdd(&B[IDXC0(elem[idx].nodes[0],i,ldb)].y,-cuCimagf(temp));
-                //atomicFloatComplexSub(&B[IDXC0(elem[idx].nodes[1],i,ldb)],
+                atomicAdd(&B[IDXC0(elem[idx].nod[0],i,ldb)].x,-cuCrealf(temp));
+                atomicAdd(&B[IDXC0(elem[idx].nod[0],i,ldb)].y,-cuCimagf(temp));
+                //atomicFloatComplexSub(&B[IDXC0(elem[idx].nod[1],i,ldb)],
                 //        cuCmulf(bc,gCoeff_sgl2[j]));
                 temp = cuCmulf(bc,gCoeff_sgl2[j]);
-                atomicAdd(&B[IDXC0(elem[idx].nodes[1],i,ldb)].x,-cuCrealf(temp));
-                atomicAdd(&B[IDXC0(elem[idx].nodes[1],i,ldb)].y,-cuCimagf(temp));
-                //atomicFloatComplexSub(&B[IDXC0(elem[idx].nodes[2],i,ldb)],
+                atomicAdd(&B[IDXC0(elem[idx].nod[1],i,ldb)].x,-cuCrealf(temp));
+                atomicAdd(&B[IDXC0(elem[idx].nod[1],i,ldb)].y,-cuCimagf(temp));
+                //atomicFloatComplexSub(&B[IDXC0(elem[idx].nod[2],i,ldb)],
                 //        cuCmulf(bc,gCoeff_sgl3[j]));
                 temp = cuCmulf(bc,gCoeff_sgl3[j]);
-                atomicAdd(&B[IDXC0(elem[idx].nodes[2],i,ldb)].x,-cuCrealf(temp));
-                atomicAdd(&B[IDXC0(elem[idx].nodes[2],i,ldb)].y,-cuCimagf(temp));
+                atomicAdd(&B[IDXC0(elem[idx].nod[2],i,ldb)].x,-cuCrealf(temp));
+                atomicAdd(&B[IDXC0(elem[idx].nod[2],i,ldb)].y,-cuCimagf(temp));
             }
         }
     }
@@ -1541,7 +1569,7 @@ __device__ cuFloatComplex extrapolation_dir(const float wavNum, const rect_coord
     for(int i=0;i<numElem;i++) {
         rect_coord_flt nod[3];
         for(int j=0;j<3;j++) {
-            nod[j] = pt[elem[i].nodes[j]];
+            nod[j] = pt[elem[i].nod[j]];
         }
         cuFloatComplex gCoeff[3], hCoeff[3]; 
         float cCoeff[3];
@@ -1553,7 +1581,7 @@ __device__ cuFloatComplex extrapolation_dir(const float wavNum, const rect_coord
             temp = cuCdivf(elem[i].bc[0],elem[i].bc[1]);
             temp = cuCmulf(temp,gCoeff[j]);
             temp = cuCsubf(hCoeff[j],temp);
-            temp = cuCmulf(temp,p[elem[i].nodes[j]]);
+            temp = cuCmulf(temp,p[elem[i].nod[j]]);
             result = cuCsubf(result,temp);
         }
     }
@@ -1567,7 +1595,7 @@ __device__ cuFloatComplex extrapolation_pt(const float wavNum, const rect_coord_
     /*field extrapolation from the surface to a single point in free space
      x: the single point in free space
      elem: pointer to mesh elements
-     pt: pointer to mesh nodes and chief points
+     pt: pointer to mesh nod and chief points
      p: surface pressure
      strength: intensity of the source
      src: source location*/
@@ -1576,7 +1604,7 @@ __device__ cuFloatComplex extrapolation_pt(const float wavNum, const rect_coord_
     for(int i=0;i<numElem;i++) {
         rect_coord_flt nod[3];
         for(int j=0;j<3;j++) {
-            nod[j] = pt[elem[i].nodes[j]];
+            nod[j] = pt[elem[i].nod[j]];
         }
         cuFloatComplex gCoeff[3], hCoeff[3]; 
         float cCoeff[3];
@@ -1588,7 +1616,7 @@ __device__ cuFloatComplex extrapolation_pt(const float wavNum, const rect_coord_
             temp = cuCdivf(elem[i].bc[0],elem[i].bc[1]);
             temp = cuCmulf(temp,gCoeff[j]);
             temp = cuCsubf(hCoeff[j],temp);
-            temp = cuCmulf(temp,p[elem[i].nodes[j]]);
+            temp = cuCmulf(temp,p[elem[i].nod[j]]);
             result = cuCsubf(result,temp);
         }
     }
@@ -1602,7 +1630,7 @@ __device__ cuFloatComplex extrapolation_mp(const float wavNum, const rect_coord_
     /*field extrapolation from the surface to a single monopole in free space
      x: the single point in free space
      elem: pointer to mesh elements
-     pt: pointer to mesh nodes and chief points
+     pt: pointer to mesh nod and chief points
      p: surface pressure
      strength: intensity of the source
      src: source location
@@ -1612,7 +1640,7 @@ __device__ cuFloatComplex extrapolation_mp(const float wavNum, const rect_coord_
     for(int i=0;i<numElem;i++) {
         rect_coord_flt nod[3];
         for(int j=0;j<3;j++) {
-            nod[j] = pt[elem[i].nodes[j]];
+            nod[j] = pt[elem[i].nod[j]];
         }
         cuFloatComplex gCoeff[3], hCoeff[3]; 
         float cCoeff[3];
@@ -1624,7 +1652,7 @@ __device__ cuFloatComplex extrapolation_mp(const float wavNum, const rect_coord_
             temp = cuCdivf(elem[i].bc[0],elem[i].bc[1]);
             temp = cuCmulf(temp,gCoeff[j]);
             temp = cuCsubf(hCoeff[j],temp);
-            temp = cuCmulf(temp,p[elem[i].nodes[j]]);
+            temp = cuCmulf(temp,p[elem[i].nod[j]]);
             result = cuCsubf(result,temp);
         }
     }
@@ -1683,7 +1711,7 @@ int field_extrapolation_single_dir(const float wavNum, const rect_coord_flt* exp
      wavNum: wave number
      expPt: extrapolation points in free space
      elem: pointer to mesh elements
-     pt: pointer to mesh nodes and chief points
+     pt: pointer to mesh nod and chief points
      p: surface pressure
      strength: intensity of the sound source
      dir: direction of the plane wave
@@ -1731,7 +1759,7 @@ int field_extrapolation_single_pt(const float wavNum, const rect_coord_flt* expP
      wavNum: wave number
      expPt: pointer for extrapolation points
      elem: mesh elements
-     pt: nodes and chief points
+     pt: nod and chief points
      p: surface pressure
      strength: intensity of a source
      src: location of the point source
@@ -1911,13 +1939,13 @@ __host__ __device__ int deterPtCubeEdgeVolRel(const rect_coord_dbl pt, const cub
     /*determine the relationship between a point and the volume bounded by edge faces
      of a cube*/
     
-    //declare two rect_coord_dbl arrays for nodes at the bottom and the top face 
+    //declare two rect_coord_dbl arrays for nod at the bottom and the top face 
     rect_coord_dbl btm[4], top[4], left[4], right[4], back[4], front[4];
     
     // declare the basis unit vectors
     rect_coord_dbl dir_x = {1.0,0.0,0.0}, dir_y = {0.0,1.0,0.0}, dir_z = {0.0,0.0,1.0};
     
-    //set up btm and top nodes
+    //set up btm and top nod
     btm[0] = cb.cnr;
     btm[1] = rectCoordAdd(btm[0],scaRectMul(cb.len,dir_x));
     btm[2] = rectCoordAdd(btm[1],scaRectMul(cb.len,dir_y));
@@ -1930,7 +1958,7 @@ __host__ __device__ int deterPtCubeEdgeVolRel(const rect_coord_dbl pt, const cub
     top[3] = rectCoordAdd(top[0],scaRectMul(cb.len,dir_y));
     //printRectCoord(top,4);
     
-    //set up left and right nodes
+    //set up left and right nod
     left[0] = cb.cnr;
     left[1] = rectCoordAdd(left[0],scaRectMul(cb.len,dir_x));
     left[2] = rectCoordAdd(left[1],scaRectMul(cb.len,dir_z));
@@ -1943,7 +1971,7 @@ __host__ __device__ int deterPtCubeEdgeVolRel(const rect_coord_dbl pt, const cub
     right[3] = rectCoordAdd(right[0],scaRectMul(cb.len,dir_z));
     //printRectCoord(right,4);
     
-    //set up back and front nodes
+    //set up back and front nod
     back[0] = cb.cnr;
     back[1] = rectCoordAdd(back[0],scaRectMul(cb.len,dir_y));
     back[2] = rectCoordAdd(back[1],scaRectMul(cb.len,dir_z));
@@ -2146,7 +2174,7 @@ __host__ __device__ int deterPtCubeVtxVolRel(const rect_coord_dbl pt, const cube
             nrml[4], tempPt;
     plane_dbl plane;
     int result;
-    // deal with the eight nodes in order
+    // deal with the eight nod in order
     for(int i=0;i<8;i++) {
         switch(i) {
             case 0: //the first vertex
@@ -2230,15 +2258,95 @@ __host__ __device__ int deterPtCubeRel(const rect_coord_dbl pt, const cube_dbl c
 
 __host__ __device__ int deterLinePlaneInt(const line_dbl ln, const plane_dbl pln, double* t)
 {
-    const double eps = 0.000001;
-    if(abs(rectDotMul(ln.dir,pln.n))<eps) {
-        return 0;
+    if(abs(rectDotMul(ln.dir,pln.n))<EPS) {
+        //line parallel to plane
+        if(abs(rectDotMul(pln.n,rectCoordSub(ln.pt,pln.pt)))<EPS) {
+            return 2;
+        } else {
+            return 0;
+        }
     } else {
         double temp = rectDotMul(pln.n,rectCoordSub(pln.pt,ln.pt))/rectDotMul(pln.n,ln.dir);
         *t = temp;
         return 1;
     }
 }
+
+__host__ __device__ double triArea(const tri_dbl s)
+{
+    rect_coord_dbl vec[2];
+    vec[0] = rectCoordSub(s.nod[1],s.nod[0]);
+    vec[1] = rectCoordSub(s.nod[2],s.nod[0]);
+    return 0.5*rectNorm(rectCrossMul(vec[0],vec[1]));
+}
+
+__host__ __device__ double quadArea(const quad_dbl s)
+{
+    rect_coord_dbl vec[2];
+    vec[0] = rectCoordSub(s.nod[1],s.nod[0]);
+    vec[1] = rectCoordSub(s.nod[2],s.nod[0]);
+    return rectNorm(rectCrossMul(vec[0],vec[1]));
+}
+
+__host__ __device__ plane_dbl quad2plane(const quad_dbl qd)
+{
+    plane_dbl pln;
+    pln.pt = qd.nod[0];
+    rect_coord_dbl vec[2];
+    vec[0] = rectCoordSub(qd.nod[1],qd.nod[0]);
+    vec[1] = rectCoordSub(qd.nod[2],qd.nod[0]);
+    pln.n = nrmlzRectCoord(rectCrossMul(vec[0],vec[1]));
+    return pln;
+}
+
+__host__ __device__ int deterPtQuadRel(const rect_coord_dbl pt, const quad_dbl qd)
+{
+    double area = 0.0;
+    rect_coord_dbl vec[2];
+    for(int i=0;i<4;i++) {
+        vec[0] = rectCoordSub(qd.nod[i%4],pt);
+        vec[1] = rectCoordSub(qd.nod[(i+1)%4],pt);
+        area += 0.5*rectNorm(rectCrossMul(vec[0],vec[1]));
+    }
+    double area_quad = quadArea(qd);
+    if(abs(area-area_quad)<EPS) {
+        return 1; // in
+    } else {
+        return 0; // out
+    }
+}
+
+__host__ __device__ int deterLnSegQuadInt(const ln_seg_dbl lnSeg, const quad_dbl qd)
+{
+    int flag;
+    
+    //make a line containing the line segment
+    rect_coord_dbl dir = rectCoordSub(lnSeg.nod[1],lnSeg.nod[0]);
+    line_dbl ln;
+    ln.pt = lnSeg.nod[0];
+    ln.dir = dir;
+    plane_dbl pln = quad2plane(qd);
+    double t;
+    flag = deterLinePlaneInt(ln,pln,&t);
+    if(flag == 0) {
+        return 0;
+    } else {
+        if(flag==2) {
+            return 1;
+        } else {
+            //determines if a point is within a quad
+            rect_coord_dbl intersection = rectCoordAdd(ln.pt,scaRectMul(t,ln.dir));
+            if(deterPtQuadRel(intersection,qd)==1) {
+                return 1;
+            } else {
+                return  0;
+            }
+        }
+    }
+}
+
+
+
 
 __host__ __device__ int deterTriCubeInt(const rect_coord_dbl nod[3], const cube_dbl cb)
 {

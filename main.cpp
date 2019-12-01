@@ -17,18 +17,7 @@
 
 int main(int argc, char *argv[])
 {
-    rect_coord_dbl pt = {1.0,-2.1,1.0};
-    cube_dbl cb;
-    plane_dbl pln;
-    pln.n = {1,0,0};
-    pln.pt = {0,0,0};
-    cb.cnr = {0,0,0};
-    cb.len = 2.0;
-    int flag = deterPtCubeVtxVolRel(pt,cb);
-    if(flag) {
-        printf("In.\n");
-    } else {
-        printf("Not in.\n");
-    }
+    int s = 3%3;
+    printf("%d\n",s);
     return EXIT_SUCCESS;
 }

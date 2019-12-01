@@ -20,7 +20,7 @@
 
 struct tri_elem 
 {
-    int nodes[3];
+    int nod[3];
     cuFloatComplex bc[3];
 };
 
@@ -66,8 +66,8 @@ struct cube_dbl
 
 struct plane_dbl
 {
-    rect_coord_dbl n;
     rect_coord_dbl pt;
+    rect_coord_dbl n;
 };
 
 struct line_dbl
@@ -76,9 +76,32 @@ struct line_dbl
     rect_coord_dbl dir;
 };
 
+struct line_segment_dbl
+{
+    rect_coord_dbl nod[2];
+};
+
+struct tri_dbl
+{
+    rect_coord_dbl nod[3];
+};
+
+struct quad_dbl
+{
+    rect_coord_dbl nod[4];
+};
+
 typedef struct cube_dbl cube_dbl;
+
 typedef struct plane_dbl plane_dbl;
+
 typedef struct line_dbl line_dbl;
+
+typedef struct line_segment_dbl ln_seg_dbl;
+
+typedef struct quad_dbl quad_dbl;
+
+typedef struct tri_dbl tri_dbl;
 
 #endif /* DATASTRUCT_H */
 

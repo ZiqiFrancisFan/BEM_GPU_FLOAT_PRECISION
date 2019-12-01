@@ -742,9 +742,9 @@ void srcBoxes(const rect_coord_dbl *pnts, const tri_elem *elems, const int numEl
     rect_coord_dbl nod[3];
     
     for(int i=0;i<numElems;i++) {
-        nod[0] = pnts[elems[i].nodes[0]];
-        nod[1] = pnts[elems[i].nodes[1]];
-        nod[2] = pnts[elems[i].nodes[2]];
+        nod[0] = pnts[elems[i].nod[0]];
+        nod[1] = pnts[elems[i].nod[1]];
+        nod[2] = pnts[elems[i].nod[2]];
         pnts_ctr[i] = triCentroid(nod);
     }
     findBoundingCube(pnts_ctr,numElems,0.01,pnts_bnd,D);
@@ -827,7 +827,7 @@ void createMeshOccupancyGrid(const rect_coord_dbl* nod, const int numNod,
         const double sideLen, const int level, int* grid)
 {
     /*creates the occupancy grid for a mesh in the order of (x,y,z)
-     nod: nodes on the mesh
+     nod: nod on the mesh
      elem: elements on the mesh
      level: the level of the octree
      grid: the occupancy grid*/
@@ -839,7 +839,7 @@ void createMeshOccupancyGrid(const rect_coord_dbl* nod, const int numNod,
     for(int i=0;i<numElem;i++) {
         rect_coord_dbl triNod[3];
         for(int j=0;j<3;j++) {
-            triNod[j] = nod[elem[i].nodes[j]];
+            triNod[j] = nod[elem[i].nod[j]];
         }
         elemCtr[i] = triCentroid(triNod);
     }

@@ -47,9 +47,9 @@ void readOBJ(const char *filename, rect_coord_flt* p, tri_elem* e)
 
         if(line[0]=='f') {
             sscanf(line, "%s %d %d %d", type, &temp[0], &temp[1], &temp[2]);
-            e[j].nodes[0] = temp[0]-1;
-            e[j].nodes[1] = temp[1]-1;
-            e[j].nodes[2] = temp[2]-1;
+            e[j].nod[0] = temp[0]-1;
+            e[j].nod[1] = temp[1]-1;
+            e[j].nod[2] = temp[2]-1;
             e[j].bc[0] = make_cuFloatComplex(0,0); // ca=0
             e[j].bc[1] = make_cuFloatComplex(1,0); // cb=1
             e[j].bc[2] = make_cuFloatComplex(0,0); // cc=0
@@ -78,9 +78,9 @@ void readOBJ(const char *filename, rect_coord_dbl* p, tri_elem* e)
 
         if(line[0]=='f') {
             sscanf(line, "%s %d %d %d", type, &temp[0], &temp[1], &temp[2]);
-            e[j].nodes[0] = temp[0]-1;
-            e[j].nodes[1] = temp[1]-1;
-            e[j].nodes[2] = temp[2]-1;
+            e[j].nod[0] = temp[0]-1;
+            e[j].nod[1] = temp[1]-1;
+            e[j].nod[2] = temp[2]-1;
             e[j].bc[0] = make_cuFloatComplex(0,0); // ca=0
             e[j].bc[1] = make_cuFloatComplex(1,0); // cb=1
             e[j].bc[2] = make_cuFloatComplex(0,0); // cc=0
@@ -100,7 +100,7 @@ void printPts(const rect_coord_flt* p, const int num)
 void printElems(const tri_elem* elem, const int num) 
 {
     for(int i=0;i<num;i++) {
-        printf("(%d,%d,%d)\n",elem[i].nodes[0],elem[i].nodes[1],elem[i].nodes[2]);
+        printf("(%d,%d,%d)\n",elem[i].nod[0],elem[i].nod[1],elem[i].nod[2]);
     }
 }
 

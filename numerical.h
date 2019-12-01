@@ -156,7 +156,6 @@ while(0)
 #ifndef EPS
 #define EPS 0.0000001
 #endif
-
 //int genGaussParams(const int n, float *pt, float *wgt);
 
 int cuGenGaussParams(const int n, float* pt, float* wgt);
@@ -183,6 +182,10 @@ __host__ __device__ double rectDotMul(const rect_coord_dbl u, const rect_coord_d
 __host__ __device__ rect_coord_flt scaRectMul(const float lambda, const rect_coord_flt v);
 
 __host__ __device__ rect_coord_dbl scaRectMul(const double lambda, const rect_coord_dbl v);
+
+__host__ __device__ rect_coord_flt rectCrossMul(const rect_coord_flt a, const rect_coord_flt b);
+
+__host__ __device__ rect_coord_dbl rectCrossMul(const rect_coord_dbl a, const rect_coord_dbl b);
 
 __host__ __device__ rect_coord_flt crossProd(const rect_coord_flt u, const rect_coord_flt v);
 
@@ -244,6 +247,8 @@ int genFields_MultiPtSrcSglObj(const float strength, const float wavNum,
         const tri_elem* elems, const int numElems, const rect_coord_dbl cnr, const double d, 
         const int level, cuFloatComplex* fields);
 
+__host__ __device__ double triArea(const tri_dbl s);
+
 __host__ __device__ int deterPtPlaneRel(const rect_coord_dbl pt, const plane_dbl plane);
 
 __host__ __device__ int deterPtCubeRel(const rect_coord_dbl pt, const cube_dbl cube);
@@ -253,6 +258,8 @@ __host__ __device__ int deterPtCubeEdgeVolRel(const rect_coord_dbl pt, const cub
 __host__ __device__ int deterLinePlaneInt(const line_dbl ln, const plane_dbl pln, double* t);
 
 __host__ __device__ int deterPtCubeVtxVolRel(const rect_coord_dbl pt, const cube_dbl cb);
+
+__host__ __device__ int deterLinePlaneInt(const line_dbl ln, const plane_dbl pln, double* t);
 
 #endif /* NUMERICAL_H */
 
