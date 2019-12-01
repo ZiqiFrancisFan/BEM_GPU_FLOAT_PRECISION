@@ -6,6 +6,7 @@
 #include "numerical.h"
 #include "octree.h"
 #include "mesh.h"
+#include <math_constants.h>
 #include <cusolverDn.h>
 
 //air density and speed of sound
@@ -189,26 +190,26 @@ __host__ __device__ void printRectCoord(const rect_coord_dbl* pt, const int numP
     printf("\n");
 }
 
-__host__ __device__ float dotProd(const rect_coord_flt u, const rect_coord_flt v)
+__host__ __device__ float rectDotMul(const rect_coord_flt u, const rect_coord_flt v)
 {
     return u.coords[0]*v.coords[0]+u.coords[1]*v.coords[1]+u.coords[2]*v.coords[2];
 }
 
-__host__ __device__ double dotProd(const rect_coord_dbl u, const rect_coord_dbl v)
+__host__ __device__ double rectDotMul(const rect_coord_dbl u, const rect_coord_dbl v)
 {
     return u.coords[0]*v.coords[0]+u.coords[1]*v.coords[1]+u.coords[2]*v.coords[2];
 }
 
 __host__ __device__ rect_coord_dbl nrmlzRectCoord(const rect_coord_dbl v)
 {
-    double nrm = sqrt(dotProd(v,v));
-    return scalarProd(1.0/nrm,v);
+    double nrm = sqrt(rectDotMul(v,v));
+    return scaRectMul(1.0/nrm,v);
 }
 
 __host__ __device__ rect_coord_flt nrmlzRectCoord(const rect_coord_flt v)
 {
-    float nrm = sqrt(dotProd(v,v));
-    return scalarProd(1.0/nrm,v);
+    float nrm = sqrt(rectDotMul(v,v));
+    return scaRectMul(1.0/nrm,v);
 }
 
 __host__ __device__ rect_coord_flt crossProd(const rect_coord_flt u, const rect_coord_flt v)
@@ -238,7 +239,7 @@ __host__ __device__ rect_coord_flt rectCoordSub(const rect_coord_flt u, const re
     return result;
 }
 
-__host__ __device__ rect_coord_flt scalarProd(const float lambda, const rect_coord_flt v)
+__host__ __device__ rect_coord_flt scaRectMul(const float lambda, const rect_coord_flt v)
 {
     rect_coord_flt result;
     for(int i=0;i<3;i++) {
@@ -247,7 +248,7 @@ __host__ __device__ rect_coord_flt scalarProd(const float lambda, const rect_coo
     return result;
 }
 
-__host__ __device__ rect_coord_dbl scalarProd(const double lambda, const rect_coord_dbl v)
+__host__ __device__ rect_coord_dbl scaRectMul(const double lambda, const rect_coord_dbl v)
 {
     rect_coord_dbl result;
     for(int i=0;i<3;i++) {
@@ -276,8 +277,8 @@ __host__ __device__ rect_coord_dbl rectCoordSub(const rect_coord_dbl u, const re
 
 __host__ __device__ rect_coord_dbl triCentroid(rect_coord_dbl nod[3])
 {
-    rect_coord_dbl ctr_23 = scalarProd(0.5,rectCoordAdd(nod[1],nod[2]));
-    rect_coord_dbl centroid = rectCoordAdd(nod[0],scalarProd(2.0/3.0,rectCoordSub(ctr_23,nod[0])));
+    rect_coord_dbl ctr_23 = scaRectMul(0.5,rectCoordAdd(nod[1],nod[2]));
+    rect_coord_dbl centroid = rectCoordAdd(nod[0],scaRectMul(2.0/3.0,rectCoordSub(ctr_23,nod[0])));
     return centroid;
 }
 
@@ -290,24 +291,24 @@ __host__ __device__ bool ray_intersect_triangle(const rect_coord_flt O, const re
     E2 = rectCoordSub(nod[2],nod[0]);
     /*cross product of dir and v0 to v1*/
     rect_coord_flt P = crossProd(dir,E2);
-    float det = dotProd(P,E1);
+    float det = rectDotMul(P,E1);
     if(abs(det)<EPS) {
         return false;
     }
     /*Computation of parameter u*/
     rect_coord_flt T = rectCoordSub(O,nod[0]);
-    float u = 1.0f/det*dotProd(P,T);
+    float u = 1.0f/det*rectDotMul(P,T);
     if(u<0 || u>1) {
         return false;
     }
     /*Computation of parameter v*/
     rect_coord_flt Q = crossProd(T,E1);
-    float v = 1.0f/det*dotProd(Q,dir);
+    float v = 1.0f/det*rectDotMul(Q,dir);
     if(v<0 || u+v>1) {
         return false;
     }
     /*Computation of parameter t*/
-    float t = 1.0f/det*dotProd(Q,E2);
+    float t = 1.0f/det*rectDotMul(Q,E2);
     if(t<EPS) {
         return false;
     }
@@ -732,7 +733,7 @@ __host__ __device__ cuFloatComplex mpSrc(const float k, const float qs, const re
 
 __host__ __device__ cuFloatComplex dirSrc(const float k, const float strength, const rect_coord_flt dir, const rect_coord_flt evalLoc)
 {
-    float theta = -k*dotProd(dir,evalLoc);
+    float theta = -k*rectDotMul(dir,evalLoc);
     return make_cuFloatComplex(strength*cosf(theta),strength*sinf(theta));
 }
 
@@ -1896,7 +1897,7 @@ int genFields_MultiPtSrcSglObj(const float strength, const float wavNum,
 __host__ __device__ int deterPtPlaneRel(const rect_coord_dbl pt, const plane_dbl plane)
 {
     rect_coord_dbl vec = rectCoordSub(pt,plane.pt);
-    double result = dotProd(plane.n,vec);
+    double result = rectDotMul(plane.n,vec);
     if(result>=0) {
         // on the positive side of the plane normal
         return 1;
@@ -1918,41 +1919,41 @@ __host__ __device__ int deterPtCubeEdgeVolRel(const rect_coord_dbl pt, const cub
     
     //set up btm and top nodes
     btm[0] = cb.cnr;
-    btm[1] = rectCoordAdd(btm[0],scalarProd(cb.len,dir_x));
-    btm[2] = rectCoordAdd(btm[1],scalarProd(cb.len,dir_y));
-    btm[3] = rectCoordAdd(btm[0],scalarProd(cb.len,dir_y));
+    btm[1] = rectCoordAdd(btm[0],scaRectMul(cb.len,dir_x));
+    btm[2] = rectCoordAdd(btm[1],scaRectMul(cb.len,dir_y));
+    btm[3] = rectCoordAdd(btm[0],scaRectMul(cb.len,dir_y));
     //printRectCoord(btm,4);
     
-    top[0] = rectCoordAdd(btm[0],scalarProd(cb.len,dir_z));
-    top[1] = rectCoordAdd(top[0],scalarProd(cb.len,dir_x));
-    top[2] = rectCoordAdd(top[1],scalarProd(cb.len,dir_y));
-    top[3] = rectCoordAdd(top[0],scalarProd(cb.len,dir_y));
+    top[0] = rectCoordAdd(btm[0],scaRectMul(cb.len,dir_z));
+    top[1] = rectCoordAdd(top[0],scaRectMul(cb.len,dir_x));
+    top[2] = rectCoordAdd(top[1],scaRectMul(cb.len,dir_y));
+    top[3] = rectCoordAdd(top[0],scaRectMul(cb.len,dir_y));
     //printRectCoord(top,4);
     
     //set up left and right nodes
     left[0] = cb.cnr;
-    left[1] = rectCoordAdd(left[0],scalarProd(cb.len,dir_x));
-    left[2] = rectCoordAdd(left[1],scalarProd(cb.len,dir_z));
-    left[3] = rectCoordAdd(left[0],scalarProd(cb.len,dir_z));
+    left[1] = rectCoordAdd(left[0],scaRectMul(cb.len,dir_x));
+    left[2] = rectCoordAdd(left[1],scaRectMul(cb.len,dir_z));
+    left[3] = rectCoordAdd(left[0],scaRectMul(cb.len,dir_z));
     //printRectCoord(left,4);
     
-    right[0] = rectCoordAdd(left[0],scalarProd(cb.len,dir_y));
-    right[1] = rectCoordAdd(right[0],scalarProd(cb.len,dir_x));
-    right[2] = rectCoordAdd(right[1],scalarProd(cb.len,dir_z));
-    right[3] = rectCoordAdd(right[0],scalarProd(cb.len,dir_z));
+    right[0] = rectCoordAdd(left[0],scaRectMul(cb.len,dir_y));
+    right[1] = rectCoordAdd(right[0],scaRectMul(cb.len,dir_x));
+    right[2] = rectCoordAdd(right[1],scaRectMul(cb.len,dir_z));
+    right[3] = rectCoordAdd(right[0],scaRectMul(cb.len,dir_z));
     //printRectCoord(right,4);
     
     //set up back and front nodes
     back[0] = cb.cnr;
-    back[1] = rectCoordAdd(back[0],scalarProd(cb.len,dir_y));
-    back[2] = rectCoordAdd(back[1],scalarProd(cb.len,dir_z));
-    back[3] = rectCoordAdd(back[0],scalarProd(cb.len,dir_z));
+    back[1] = rectCoordAdd(back[0],scaRectMul(cb.len,dir_y));
+    back[2] = rectCoordAdd(back[1],scaRectMul(cb.len,dir_z));
+    back[3] = rectCoordAdd(back[0],scaRectMul(cb.len,dir_z));
     //printRectCoord(back,4);
     
-    front[0] = rectCoordAdd(back[0],scalarProd(cb.len,dir_x));
-    front[1] = rectCoordAdd(front[0],scalarProd(cb.len,dir_y));
-    front[2] = rectCoordAdd(front[1],scalarProd(cb.len,dir_z));
-    front[3] = rectCoordAdd(front[0],scalarProd(cb.len,dir_z));
+    front[0] = rectCoordAdd(back[0],scaRectMul(cb.len,dir_x));
+    front[1] = rectCoordAdd(front[0],scaRectMul(cb.len,dir_y));
+    front[2] = rectCoordAdd(front[1],scaRectMul(cb.len,dir_z));
+    front[3] = rectCoordAdd(front[0],scaRectMul(cb.len,dir_z));
     //printRectCoord(front,4);
     
     //declare an array nrml for determining the normal of the new plane
@@ -1968,10 +1969,10 @@ __host__ __device__ int deterPtCubeEdgeVolRel(const rect_coord_dbl pt, const cub
                 nrml[0] = dir_y;
                 break;
             case 1: // edge determined by btm[1] and btm[2]
-                nrml[0] = scalarProd(-1,dir_x);
+                nrml[0] = scaRectMul(-1,dir_x);
                 break;
             case 2: // edge determined by btm[2] and btm[3]
-                nrml[0] = scalarProd(-1,dir_y);
+                nrml[0] = scaRectMul(-1,dir_y);
                 break;
             case 3: // edge determined by btm[3] and btm[0]
                 nrml[0] = dir_x;
@@ -1991,16 +1992,16 @@ __host__ __device__ int deterPtCubeEdgeVolRel(const rect_coord_dbl pt, const cub
     
     //deal with the top face
     for(int i=0;i<3;i++) {
-        nrml[1] = scalarProd(-1,dir_z);
+        nrml[1] = scaRectMul(-1,dir_z);
         switch(i) {
             case 0: // edge determined by top[0] and top[1]
                 nrml[0] = dir_y;
                 break;
             case 1: // edge determined by top[1] and top[2]
-                nrml[0] = scalarProd(-1,dir_x);
+                nrml[0] = scaRectMul(-1,dir_x);
                 break;
             case 2: // edge determined by top[2] and top[3]
-                nrml[0] = scalarProd(-1,dir_y);
+                nrml[0] = scaRectMul(-1,dir_y);
                 break;
             case 3: // edge determined by top[3] and top[0]
                 nrml[0] = dir_x;
@@ -2026,10 +2027,10 @@ __host__ __device__ int deterPtCubeEdgeVolRel(const rect_coord_dbl pt, const cub
                 nrml[0] = dir_z;
                 break;
             case 1: // edge determined by left[1] and left[2]
-                nrml[0] = scalarProd(-1,dir_x);
+                nrml[0] = scaRectMul(-1,dir_x);
                 break;
             case 2: // edge determined by left[2] and left[3]
-                nrml[0] = scalarProd(-1,dir_z);
+                nrml[0] = scaRectMul(-1,dir_z);
                 break;
             case 3: // edge determined by left[3] and left[0]
                 nrml[0] = dir_x;
@@ -2049,16 +2050,16 @@ __host__ __device__ int deterPtCubeEdgeVolRel(const rect_coord_dbl pt, const cub
     
     //deal with the right face
     for(int i=0;i<3;i++) {
-        nrml[1] = scalarProd(-1,dir_y);
+        nrml[1] = scaRectMul(-1,dir_y);
         switch(i) {
             case 0: // edge determined by right[0] and right[1]
                 nrml[0] = dir_z;
                 break;
             case 1: // edge determined by right[1] and right[2]
-                nrml[0] = scalarProd(-1,dir_x);
+                nrml[0] = scaRectMul(-1,dir_x);
                 break;
             case 2: // edge determined by right[2] and right[3]
-                nrml[0] = scalarProd(-1,dir_z);
+                nrml[0] = scaRectMul(-1,dir_z);
                 break;
             case 3: // edge determined by btm[3] and btm[0]
                 nrml[0] = dir_x;
@@ -2084,10 +2085,10 @@ __host__ __device__ int deterPtCubeEdgeVolRel(const rect_coord_dbl pt, const cub
                 nrml[0] = dir_z;
                 break;
             case 1: // edge determined by btm[1] and btm[2]
-                nrml[0] = scalarProd(-1,dir_y);
+                nrml[0] = scaRectMul(-1,dir_y);
                 break;
             case 2: // edge determined by btm[2] and btm[3]
-                nrml[0] = scalarProd(-1,dir_z);
+                nrml[0] = scaRectMul(-1,dir_z);
                 break;
             case 3: // edge determined by btm[3] and btm[0]
                 nrml[0] = dir_y;
@@ -2107,16 +2108,16 @@ __host__ __device__ int deterPtCubeEdgeVolRel(const rect_coord_dbl pt, const cub
     
     //deal with the front face
     for(int i=0;i<3;i++) {
-        nrml[1] = scalarProd(-1,dir_x);
+        nrml[1] = scaRectMul(-1,dir_x);
         switch(i) {
             case 0: // edge determined by front[0] and front[1]
                 nrml[0] = dir_z;
                 break;
             case 1: // edge determined by front[1] and front[2]
-                nrml[0] = scalarProd(-1,dir_y);
+                nrml[0] = scaRectMul(-1,dir_y);
                 break;
             case 2: // edge determined by front[2] and front[3]
-                nrml[0] = scalarProd(-1,dir_z);
+                nrml[0] = scaRectMul(-1,dir_z);
                 break;
             case 3: // edge determined by front[3] and front[0]
                 nrml[0] = dir_y;
@@ -2138,12 +2139,85 @@ __host__ __device__ int deterPtCubeEdgeVolRel(const rect_coord_dbl pt, const cub
     return 1;
 }
 
+__host__ __device__ int deterPtCubeVtxVolRel(const rect_coord_dbl pt, const cube_dbl cb)
+{
+    // declare the basis unit vectors
+    rect_coord_dbl dir_x = {1.0,0.0,0.0}, dir_y = {0.0,1.0,0.0}, dir_z = {0.0,0.0,1.0}, 
+            nrml[4], tempPt;
+    plane_dbl plane;
+    int result;
+    // deal with the eight nodes in order
+    for(int i=0;i<8;i++) {
+        switch(i) {
+            case 0: //the first vertex
+                tempPt = cb.cnr;
+                nrml[0] = dir_x;
+                nrml[1] = dir_y;
+                nrml[2] = dir_z;
+                break;
+            case 1: //the second vertex
+                tempPt = rectCoordAdd(cb.cnr,scaRectMul(cb.len,dir_x));
+                nrml[0] = scaRectMul(-1,dir_x);
+                nrml[1] = dir_y;
+                nrml[2] = dir_z;
+                break;
+            case 2: //the third vertex
+                tempPt = rectCoordAdd(rectCoordAdd(cb.cnr,scaRectMul(cb.len,dir_x)),scaRectMul(cb.len,dir_y));
+                nrml[0] = scaRectMul(-1,dir_x);
+                nrml[1] = scaRectMul(-1,dir_y);
+                nrml[2] = dir_z;
+                break;
+            case 3: //the fourth vertex
+                tempPt = rectCoordAdd(cb.cnr,scaRectMul(cb.len,dir_y));
+                nrml[0] = dir_x;
+                nrml[1] = scaRectMul(-1,dir_y);
+                nrml[2] = dir_z;
+                break;
+            case 4: //the fifth vertex
+                tempPt = rectCoordAdd(cb.cnr,scaRectMul(cb.len,dir_z));
+                nrml[0] = dir_x;
+                nrml[1] = dir_y;
+                nrml[2] = scaRectMul(-1,dir_z);
+                break;
+            case 5: //the sixth vertex
+                tempPt = rectCoordAdd(rectCoordAdd(cb.cnr,scaRectMul(cb.len,dir_z)),scaRectMul(cb.len,dir_x));
+                nrml[0] = scaRectMul(-1,dir_x);
+                nrml[1] = dir_y;
+                nrml[2] = scaRectMul(-1,dir_z);
+                break;
+            case 6: //the seventh vertex
+                tempPt = rectCoordAdd(rectCoordAdd(rectCoordAdd(cb.cnr,scaRectMul(cb.len,dir_z)),
+                        scaRectMul(cb.len,dir_x)),scaRectMul(cb.len,dir_y));
+                nrml[0] = scaRectMul(-1,dir_x);
+                nrml[1] = scaRectMul(-1,dir_y);
+                nrml[2] = scaRectMul(-1,dir_z);
+                break;
+            case 7: //the eighth vertex
+                tempPt = rectCoordAdd(rectCoordAdd(cb.cnr,scaRectMul(cb.len,dir_z)),scaRectMul(cb.len,dir_y));
+                nrml[0] = dir_x;
+                nrml[1] = scaRectMul(-1,dir_y);
+                nrml[2] = scaRectMul(-1,dir_z);
+                break;
+            default:
+                printf("safety purpose.\n");
+        }
+        nrml[3] = nrmlzRectCoord(rectCoordAdd(rectCoordAdd(nrml[0],nrml[1]),nrml[2]));
+        plane.n = nrml[3];
+        plane.pt = tempPt;
+        result = deterPtPlaneRel(pt,plane);
+        if(result == 0) {
+            return 0;
+        }
+    }
+    return 1;
+}
+
 __host__ __device__ int deterPtCubeRel(const rect_coord_dbl pt, const cube_dbl cube)
 {
     rect_coord_dbl cnr_fru = cube.cnr;
-    cnr_fru = rectCoordAdd(cnr_fru,scalarProd(cube.len,{1,0,0}));
-    cnr_fru = rectCoordAdd(cnr_fru,scalarProd(cube.len,{0,1,0}));
-    cnr_fru = rectCoordAdd(cnr_fru,scalarProd(cube.len,{0,0,1}));
+    cnr_fru = rectCoordAdd(cnr_fru,scaRectMul(cube.len,{1,0,0}));
+    cnr_fru = rectCoordAdd(cnr_fru,scaRectMul(cube.len,{0,1,0}));
+    cnr_fru = rectCoordAdd(cnr_fru,scaRectMul(cube.len,{0,0,1}));
     double x_min = cube.cnr.coords[0], y_min = cube.cnr.coords[1], z_min = cube.cnr.coords[2], 
             x_max = cnr_fru.coords[0], y_max = cnr_fru.coords[1], z_max = cnr_fru.coords[2],
             x = pt.coords[0], y = pt.coords[1], z = pt.coords[2];
@@ -2154,8 +2228,20 @@ __host__ __device__ int deterPtCubeRel(const rect_coord_dbl pt, const cube_dbl c
     }
 }
 
-__host__ __device__ int deterPtCubeInt(const rect_coord_dbl, const cube_dbl cb)
+__host__ __device__ int deterLinePlaneInt(const line_dbl ln, const plane_dbl pln, double* t)
 {
-    //
+    const double eps = 0.000001;
+    if(abs(rectDotMul(ln.dir,pln.n))<eps) {
+        return 0;
+    } else {
+        double temp = rectDotMul(pln.n,rectCoordSub(pln.pt,ln.pt))/rectDotMul(pln.n,ln.dir);
+        *t = temp;
+        return 1;
+    }
+}
+
+__host__ __device__ int deterTriCubeInt(const rect_coord_dbl nod[3], const cube_dbl cb)
+{
+    /*this function determines if a triangle intersects with a cube*/
     return 1;
 }

@@ -70,8 +70,15 @@ struct plane_dbl
     rect_coord_dbl pt;
 };
 
+struct line_dbl
+{
+    rect_coord_dbl pt;
+    rect_coord_dbl dir;
+};
+
 typedef struct cube_dbl cube_dbl;
 typedef struct plane_dbl plane_dbl;
+typedef struct line_dbl line_dbl;
 
 #endif /* DATASTRUCT_H */
 

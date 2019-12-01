@@ -176,13 +176,13 @@ __host__ __device__ void printRectCoord(const rect_coord_dbl* pt, const int numP
 
 __host__ __device__ sph_coord_float rect2sph(const rect_coord_flt s);
 
-__host__ __device__ float dotProd(const rect_coord_flt u, const rect_coord_flt v);
+__host__ __device__ float rectDotMul(const rect_coord_flt u, const rect_coord_flt v);
 
-__host__ __device__ double dotProd(const rect_coord_dbl u, const rect_coord_dbl v);
+__host__ __device__ double rectDotMul(const rect_coord_dbl u, const rect_coord_dbl v);
 
-__host__ __device__ rect_coord_flt scalarProd(const float lambda, const rect_coord_flt v);
+__host__ __device__ rect_coord_flt scaRectMul(const float lambda, const rect_coord_flt v);
 
-__host__ __device__ rect_coord_dbl scalarProd(const double lambda, const rect_coord_dbl v);
+__host__ __device__ rect_coord_dbl scaRectMul(const double lambda, const rect_coord_dbl v);
 
 __host__ __device__ rect_coord_flt crossProd(const rect_coord_flt u, const rect_coord_flt v);
 
@@ -249,6 +249,10 @@ __host__ __device__ int deterPtPlaneRel(const rect_coord_dbl pt, const plane_dbl
 __host__ __device__ int deterPtCubeRel(const rect_coord_dbl pt, const cube_dbl cube);
 
 __host__ __device__ int deterPtCubeEdgeVolRel(const rect_coord_dbl pt, const cube_dbl cb);
+
+__host__ __device__ int deterLinePlaneInt(const line_dbl ln, const plane_dbl pln, double* t);
+
+__host__ __device__ int deterPtCubeVtxVolRel(const rect_coord_dbl pt, const cube_dbl cb);
 
 #endif /* NUMERICAL_H */
 
