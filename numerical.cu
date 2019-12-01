@@ -173,100 +173,119 @@ void print_cuFloatComplex_mat(const cuFloatComplex *A, const int numRow, const i
     }
 }
 
-__host__ __device__ float dotProd(const cart_coord_flt u, const cart_coord_flt v) {
+__host__ __device__ float dotProd(const rect_coord_flt u, const rect_coord_flt v)
+{
     return u.coords[0]*v.coords[0]+u.coords[1]*v.coords[1]+u.coords[2]*v.coords[2];
 }
 
-__host__ __device__ cart_coord_flt crossProd(const cart_coord_flt u, const cart_coord_flt v) {
-    cart_coord_flt r;
+__host__ __device__ double dotProd(const rect_coord_dbl u, const rect_coord_dbl v)
+{
+    return u.coords[0]*v.coords[0]+u.coords[1]*v.coords[1]+u.coords[2]*v.coords[2];
+}
+
+__host__ __device__ rect_coord_dbl nrmlzRectCoord(const rect_coord_dbl v)
+{
+    double nrm = sqrt(dotProd(v,v));
+    return scalarProd(1.0/nrm,v);
+}
+
+__host__ __device__ rect_coord_flt nrmlzRectCoord(const rect_coord_flt v)
+{
+    float nrm = sqrt(dotProd(v,v));
+    return scalarProd(1.0/nrm,v);
+}
+
+__host__ __device__ rect_coord_flt crossProd(const rect_coord_flt u, const rect_coord_flt v)
+{
+    rect_coord_flt r;
     r.coords[0] = (u.coords[1])*(v.coords[2])-(u.coords[2])*(v.coords[1]);
     r.coords[1] = (u.coords[2])*(v.coords[0])-(u.coords[0])*(v.coords[2]);
     r.coords[2] = (u.coords[0])*(v.coords[1])-(u.coords[1])*(v.coords[0]);
     return r;
 }
 
-__host__ __device__ cart_coord_flt cartCoordAdd(const cart_coord_flt u, const cart_coord_flt v)
+__host__ __device__ rect_coord_flt rectCoordAdd(const rect_coord_flt u, const rect_coord_flt v)
 {
-    cart_coord_flt result;
+    rect_coord_flt result;
     for(int i=0;i<3;i++) {
         result.coords[i] = u.coords[i]+v.coords[i];
     }
     return result;
 }
 
-__host__ __device__ cart_coord_flt cartCoordSub(const cart_coord_flt u, const cart_coord_flt v)
+__host__ __device__ rect_coord_flt rectCoordSub(const rect_coord_flt u, const rect_coord_flt v)
 {
-    cart_coord_flt result;
+    rect_coord_flt result;
     for(int i=0;i<3;i++) {
         result.coords[i] = u.coords[i]-v.coords[i];
     }
     return result;
 }
 
-__host__ __device__ cart_coord_flt scalarProd(const float lambda, const cart_coord_flt v)
+__host__ __device__ rect_coord_flt scalarProd(const float lambda, const rect_coord_flt v)
 {
-    cart_coord_flt result;
+    rect_coord_flt result;
     for(int i=0;i<3;i++) {
         result.coords[i] = lambda*v.coords[i];
     }
     return result;
 }
 
-__host__ __device__ cart_coord_dbl cartCoordAdd(const cart_coord_dbl u, const cart_coord_dbl v)
+__host__ __device__ rect_coord_dbl scalarProd(const double lambda, const rect_coord_dbl v)
 {
-    cart_coord_dbl result;
+    rect_coord_dbl result;
+    for(int i=0;i<3;i++) {
+        result.coords[i] = lambda*v.coords[i];
+    }
+    return result;
+}
+
+__host__ __device__ rect_coord_dbl rectCoordAdd(const rect_coord_dbl u, const rect_coord_dbl v)
+{
+    rect_coord_dbl result;
     for(int i=0;i<3;i++) {
         result.coords[i] = u.coords[i]+v.coords[i];
     }
     return result;
 }
 
-__host__ __device__ cart_coord_dbl cartCoordSub(const cart_coord_dbl u, const cart_coord_dbl v)
+__host__ __device__ rect_coord_dbl rectCoordSub(const rect_coord_dbl u, const rect_coord_dbl v)
 {
-    cart_coord_dbl result;
+    rect_coord_dbl result;
     for(int i=0;i<3;i++) {
         result.coords[i] = u.coords[i]-v.coords[i];
     }
     return result;
 }
 
-__host__ __device__ cart_coord_dbl scalarProd(const double lambda, const cart_coord_dbl v)
+__host__ __device__ rect_coord_dbl triCentroid(rect_coord_dbl nod[3])
 {
-    cart_coord_dbl result;
-    for(int i=0;i<3;i++) {
-        result.coords[i] = lambda*v.coords[i];
-    }
-    return result;
-}
-
-__host__ __device__ cart_coord_dbl triCentroid(cart_coord_dbl nod[3])
-{
-    cart_coord_dbl ctr_23 = scalarProd(0.5,cartCoordAdd(nod[1],nod[2]));
-    cart_coord_dbl centroid = cartCoordAdd(nod[0],scalarProd(2.0/3.0,cartCoordSub(ctr_23,nod[0])));
+    rect_coord_dbl ctr_23 = scalarProd(0.5,rectCoordAdd(nod[1],nod[2]));
+    rect_coord_dbl centroid = rectCoordAdd(nod[0],scalarProd(2.0/3.0,rectCoordSub(ctr_23,nod[0])));
     return centroid;
 }
 
-__host__ __device__ bool ray_intersect_triangle(const cart_coord_flt O, const cart_coord_flt dir, 
-        const cart_coord_flt nod[3])
+__host__ __device__ bool ray_intersect_triangle(const rect_coord_flt O, const rect_coord_flt dir, 
+        const rect_coord_flt nod[3])
 {
     /*vert0 is chosen as reference point*/
-    cart_coord_flt E1, E2;
-    E1 = cartCoordSub(nod[1],nod[0]);
-    E2 = cartCoordSub(nod[2],nod[0]);
+    rect_coord_flt E1, E2;
+    E1 = rectCoordSub(nod[1],nod[0]);
+    E2 = rectCoordSub(nod[2],nod[0]);
     /*cross product of dir and v0 to v1*/
-    cart_coord_flt P = crossProd(dir,E2);
+    rect_coord_flt P = crossProd(dir,E2);
     float det = dotProd(P,E1);
     if(abs(det)<EPS) {
         return false;
     }
     /*Computation of parameter u*/
-    cart_coord_flt T = cartCoordSub(O,nod[0]);
+    rect_coord_flt T = rectCoordSub(O,nod[0]);
     float u = 1.0f/det*dotProd(P,T);
     if(u<0 || u>1) {
         return false;
     }
     /*Computation of parameter v*/
-    cart_coord_flt Q = crossProd(T,E1);
+    rect_coord_flt Q = crossProd(T,E1);
     float v = 1.0f/det*dotProd(Q,dir);
     if(v<0 || u+v>1) {
         return false;
@@ -279,13 +298,13 @@ __host__ __device__ bool ray_intersect_triangle(const cart_coord_flt O, const ca
     return true;
 }
 
-__global__ void rayTrisInt(const cart_coord_flt pt_s, const cart_coord_flt dir, const cart_coord_flt *nod, 
+__global__ void rayTrisInt(const rect_coord_flt pt_s, const rect_coord_flt dir, const rect_coord_flt *nod, 
         const tri_elem *elem, const int numElem, bool *flag)
 {
     // decides if a point pnt is in a closed surface elem
     int idx = blockDim.x*blockIdx.x+threadIdx.x;
     if(idx<numElem) {
-        cart_coord_flt pt[3];
+        rect_coord_flt pt[3];
         for(int i=0;i<3;i++) {
             pt[i].coords[0] = nod[elem[idx].nodes[i]].coords[0];
             pt[i].coords[1] = nod[elem[idx].nodes[i]].coords[1];
@@ -295,7 +314,7 @@ __global__ void rayTrisInt(const cart_coord_flt pt_s, const cart_coord_flt dir, 
     }
 }
 
-__global__ void distPntPnts(const cart_coord_flt pt, const cart_coord_flt *nod, const int numNod, float *dist) {
+__global__ void distPntPnts(const rect_coord_flt pt, const rect_coord_flt *nod, const int numNod, float *dist) {
     int idx = blockDim.x*blockIdx.x + threadIdx.x;
     if(idx < numNod) {
         dist[idx] = __fsqrt_rn((pt.coords[0]-nod[idx].coords[0])*(pt.coords[0]-nod[idx].coords[0])
@@ -323,20 +342,20 @@ bool inBdry(const bool *flag, const int numFlag) {
     }
 }
 
-int genCHIEF(const cart_coord_flt *pt, const int numPt, const tri_elem *elem, const int numElem, 
-        cart_coord_flt *pCHIEF, const int numCHIEF) {
+int genCHIEF(const rect_coord_flt *pt, const int numPt, const tri_elem *elem, const int numElem, 
+        rect_coord_flt *pCHIEF, const int numCHIEF) {
     int i, cnt;
     float threshold_inner = 0.0000001;
     float *dist_h = (float*)malloc(numPt*sizeof(float));
     float minDist; //minimum distance between the chief point to all surface nodes
     float *dist_d;
     CUDA_CALL(cudaMalloc((void**)&dist_d, numPt*sizeof(float)));
-    cart_coord_flt dir; 
+    rect_coord_flt dir; 
     
     //transfer the point cloud to GPU
-    cart_coord_flt *pt_d;
-    CUDA_CALL(cudaMalloc((void**)&pt_d,numPt*sizeof(cart_coord_flt))); //point cloud allocated on device
-    CUDA_CALL(cudaMemcpy(pt_d,pt,numPt*sizeof(cart_coord_flt),cudaMemcpyHostToDevice)); //point cloud copied to device
+    rect_coord_flt *pt_d;
+    CUDA_CALL(cudaMalloc((void**)&pt_d,numPt*sizeof(rect_coord_flt))); //point cloud allocated on device
+    CUDA_CALL(cudaMemcpy(pt_d,pt,numPt*sizeof(rect_coord_flt),cudaMemcpyHostToDevice)); //point cloud copied to device
     
     //transfer the element cloud to GPU
     tri_elem *elem_d;
@@ -352,7 +371,7 @@ int genCHIEF(const cart_coord_flt *pt, const int numPt, const tri_elem *elem, co
     int blockWidth = 32;
     int gridWidth;
     float xrand, yrand, zrand, unifRandNum[3];
-    cart_coord_flt chief;
+    rect_coord_flt chief;
     
     //Find the bounding box
     float xb[2], yb[2], zb[2];
@@ -409,9 +428,9 @@ int genCHIEF(const cart_coord_flt *pt, const int numPt, const tri_elem *elem, co
     return EXIT_SUCCESS;
 }
 
-inline __device__ void crossNorm(const cart_coord_flt a, const cart_coord_flt b, cart_coord_flt *norm, float *length) 
+inline __device__ void crossNorm(const rect_coord_flt a, const rect_coord_flt b, rect_coord_flt *norm, float *length) 
 {
-    cart_coord_flt c;
+    rect_coord_flt c;
     c.coords[0] = a.coords[1]*b.coords[2]-a.coords[2]*b.coords[1];
     c.coords[1] = a.coords[2]*b.coords[0]-a.coords[0]*b.coords[2];
     c.coords[2] = a.coords[0]*b.coords[1]-a.coords[1]*b.coords[0];
@@ -423,7 +442,7 @@ inline __device__ void crossNorm(const cart_coord_flt a, const cart_coord_flt b,
     norm->coords[2] = c.coords[2] / *length;
 }
 
-__device__ void g_h_c_nsgl(const float k, const cart_coord_flt x, const cart_coord_flt p[3], 
+__device__ void g_h_c_nsgl(const float k, const rect_coord_flt x, const rect_coord_flt p[3], 
         cuFloatComplex gCoeff[3], cuFloatComplex hCoeff[3], float *cCoeff) {
     //Initalization of g, h and c
     //printf("(%f,%f,%f)\n",p[0].coords[0],p[0].coords[1],p[0].coords[2]);
@@ -436,7 +455,7 @@ __device__ void g_h_c_nsgl(const float k, const cart_coord_flt x, const cart_coo
     //Local variables
     float eta1, eta2, wn, wm, xi1, xi2, xi3, rho, theta, vertCrossProd, temp, 
             temp_gh[3], omega = k*speed, pPsiLpn2, radius, prpn2;
-    cart_coord_flt y, normal, rVec;
+    rect_coord_flt y, normal, rVec;
     cuFloatComplex Psi, pPsipn2;
     crossNorm(
     {
@@ -472,7 +491,7 @@ __device__ void g_h_c_nsgl(const float k, const cart_coord_flt x, const cart_coo
             };
             //printf("x: (%f,%f,%f), y: (%f,%f,%f)\n",x.coords[0],x.coords[1],x.coords[2],
             //        y.coords[0],y.coords[1],y.coords[2]);
-            rVec = cartCoordSub(y,x);
+            rVec = rectCoordSub(y,x);
             radius = __fsqrt_rn(rVec.coords[0]*rVec.coords[0]+rVec.coords[1]*rVec.coords[1]
                     +rVec.coords[2]*rVec.coords[2]);
             //printf("radius = %f\n",radius);
@@ -504,8 +523,8 @@ __device__ void g_h_c_nsgl(const float k, const cart_coord_flt x, const cart_coo
     gCoeff[2] = make_cuFloatComplex(-prodRhoOmega*cuCimagf(gCoeff[2]),prodRhoOmega*cuCrealf(gCoeff[2]));
 }
 
-__device__ void g_h_c_sgl(const float k, const cart_coord_flt x_sgl1, const cart_coord_flt x_sgl2, 
-        const cart_coord_flt x_sgl3, const cart_coord_flt p[3], 
+__device__ void g_h_c_sgl(const float k, const rect_coord_flt x_sgl1, const rect_coord_flt x_sgl2, 
+        const rect_coord_flt x_sgl3, const rect_coord_flt p[3], 
         cuFloatComplex gCoeff_sgl1[3], cuFloatComplex hCoeff_sgl1[3], float *cCoeff_sgl1,
         cuFloatComplex gCoeff_sgl2[3], cuFloatComplex hCoeff_sgl2[3], float *cCoeff_sgl2,
         cuFloatComplex gCoeff_sgl3[3], cuFloatComplex hCoeff_sgl3[3], float *cCoeff_sgl3) 
@@ -527,7 +546,7 @@ __device__ void g_h_c_sgl(const float k, const cart_coord_flt x_sgl1, const cart
     float eta1, eta2, wn, wm, xi1_sgl1, xi2_sgl1, xi3_sgl1, xi1_sgl2, xi2_sgl2, xi3_sgl2,
             xi1_sgl3, xi2_sgl3, xi3_sgl3, rho, theta, vertCrossProd, temp, 
             temp_gh[3], omega = k*speed, pPsiLpn2, radius, prpn2;
-    cart_coord_flt y_sgl1, y_sgl2, y_sgl3, normal, rVec;
+    rect_coord_flt y_sgl1, y_sgl2, y_sgl3, normal, rVec;
     cuFloatComplex Psi, pPsipn2;
     crossNorm(
     {
@@ -587,7 +606,7 @@ __device__ void g_h_c_sgl(const float k, const cart_coord_flt x_sgl1, const cart
             };
             
             //update coefficients with singularity on node 1
-            rVec = cartCoordSub(y_sgl1,x_sgl1);
+            rVec = rectCoordSub(y_sgl1,x_sgl1);
             radius = sqrtf(rVec.coords[0]*rVec.coords[0]+rVec.coords[1]*rVec.coords[1]+rVec.coords[2]*rVec.coords[2]);
             //printf("radius = %f\n",radius);
             prpn2 = ((y_sgl1.coords[0]-x_sgl1.coords[0])*normal.coords[0]+(y_sgl1.coords[1]-x_sgl1.coords[1])*normal.coords[1]
@@ -613,7 +632,7 @@ __device__ void g_h_c_sgl(const float k, const cart_coord_flt x_sgl1, const cart
             *cCoeff_sgl1 += temp*pPsiLpn2;
             
             //update coefficients with singularity on node 2
-            rVec = cartCoordSub(y_sgl2,x_sgl2);
+            rVec = rectCoordSub(y_sgl2,x_sgl2);
             radius = sqrtf(rVec.coords[0]*rVec.coords[0]+rVec.coords[1]*rVec.coords[1]+rVec.coords[2]*rVec.coords[2]);
             //printf("radius = %f\n",radius);
             prpn2 = ((y_sgl1.coords[0]-x_sgl1.coords[0])*normal.coords[0]+(y_sgl1.coords[1]-x_sgl1.coords[1])*normal.coords[1]
@@ -639,7 +658,7 @@ __device__ void g_h_c_sgl(const float k, const cart_coord_flt x_sgl1, const cart
             *cCoeff_sgl2 += temp*pPsiLpn2;
             
             //update coefficients with singularity on node 3
-            rVec = cartCoordSub(y_sgl3,x_sgl3);
+            rVec = rectCoordSub(y_sgl3,x_sgl3);
             radius = sqrtf(rVec.coords[0]*rVec.coords[0]+rVec.coords[1]*rVec.coords[1]+rVec.coords[2]*rVec.coords[2]);
             //printf("radius = %f\n",radius);
             prpn2 = ((y_sgl1.coords[0]-x_sgl1.coords[0])*normal.coords[0]+(y_sgl1.coords[1]-x_sgl1.coords[1])*normal.coords[1]
@@ -678,31 +697,31 @@ __device__ void g_h_c_sgl(const float k, const cart_coord_flt x_sgl1, const cart
     gCoeff_sgl3[2] = make_cuFloatComplex(-prodRhoOmega*cuCimagf(gCoeff_sgl3[2]),prodRhoOmega*cuCrealf(gCoeff_sgl3[2]));
 }
 
-__host__ __device__ cuFloatComplex ptSrc(const float k, const float amp, const cart_coord_flt srcLoc, const cart_coord_flt evalLoc)
+__host__ __device__ cuFloatComplex ptSrc(const float k, const float amp, const rect_coord_flt srcLoc, const rect_coord_flt evalLoc)
 {
     float fourPI = 4.0f*PI;
-    cart_coord_flt rVec = cartCoordSub(evalLoc,srcLoc);
+    rect_coord_flt rVec = rectCoordSub(evalLoc,srcLoc);
     float radius = sqrtf(rVec.coords[0]*rVec.coords[0]+rVec.coords[1]*rVec.coords[1]+rVec.coords[2]*rVec.coords[2]);
     return make_cuFloatComplex(amp*cosf(-k*radius)/(fourPI*radius),amp*sinf(-k*radius)/(fourPI*radius));
 }
 
-__host__ __device__ cuFloatComplex mpSrc(const float k, const float qs, const cart_coord_flt src, const cart_coord_flt eval)
+__host__ __device__ cuFloatComplex mpSrc(const float k, const float qs, const rect_coord_flt src, const rect_coord_flt eval)
 {
-    cart_coord_flt vec = cartCoordSub(eval,src);
+    rect_coord_flt vec = rectCoordSub(eval,src);
     float radius = sqrtf(vec.coords[0]*vec.coords[0]+vec.coords[1]*vec.coords[1]+vec.coords[2]*vec.coords[2]);
     cuFloatComplex result = make_cuFloatComplex(0,RHO_AIR*SPEED_SOUND*k*qs/(4*PI));
     result = cuCmulf(result,make_cuFloatComplex(cos(-k*radius)/radius,sin(-k*radius)/radius));
     return result;
 }
 
-__host__ __device__ cuFloatComplex dirSrc(const float k, const float strength, const cart_coord_flt dir, const cart_coord_flt evalLoc)
+__host__ __device__ cuFloatComplex dirSrc(const float k, const float strength, const rect_coord_flt dir, const rect_coord_flt evalLoc)
 {
     float theta = -k*dotProd(dir,evalLoc);
     return make_cuFloatComplex(strength*cosf(theta),strength*sinf(theta));
 }
 
 // compute non-singular relationship between points and elements
-__global__ void atomicPtsElems_nsgl(const float k, const cart_coord_flt *pt, const int numNod, 
+__global__ void atomicPtsElems_nsgl(const float k, const rect_coord_flt *pt, const int numNod, 
         const int idxPntStart, const int idxPntEnd, const tri_elem *elem, const int numElem, 
         cuFloatComplex *A, const int lda, cuFloatComplex *B, const int numSrc, const int ldb) {
     int xIdx = blockIdx.x*blockDim.x+threadIdx.x; //Index for points
@@ -713,7 +732,7 @@ __global__ void atomicPtsElems_nsgl(const float k, const cart_coord_flt *pt, con
         int i, j;
         cuFloatComplex hCoeff[3], gCoeff[3], bc, pCoeffs[3], temp;
         float cCoeff;
-        cart_coord_flt triNod[3];
+        rect_coord_flt triNod[3];
         triNod[0] = pt[elem[yIdx].nodes[0]];
         triNod[1] = pt[elem[yIdx].nodes[1]];
         triNod[2] = pt[elem[yIdx].nodes[2]];
@@ -752,7 +771,7 @@ __global__ void atomicPtsElems_nsgl(const float k, const cart_coord_flt *pt, con
     }
 }
 
-__global__ void atomicPtsElems_sgl(const float k, const cart_coord_flt *pt, const tri_elem *elem, 
+__global__ void atomicPtsElems_sgl(const float k, const rect_coord_flt *pt, const tri_elem *elem, 
         const int numElem, cuFloatComplex *A, const int lda, cuFloatComplex *B, 
         const int numSrc, const int ldb) {
     int idx = blockIdx.x*blockDim.x+threadIdx.x;
@@ -763,7 +782,7 @@ __global__ void atomicPtsElems_sgl(const float k, const cart_coord_flt *pt, cons
                 pCoeffs_sgl2[3], pCoeffs_sgl3[3], bc, temp;
         float cCoeff_sgl1, cCoeff_sgl2, cCoeff_sgl3;
         
-        cart_coord_flt nod[3];
+        rect_coord_flt nod[3];
         for(i=0;i<3;i++) {
             nod[i] = pt[elem[idx].nodes[i]];
         }
@@ -840,8 +859,8 @@ __global__ void atomicPtsElems_sgl(const float k, const cart_coord_flt *pt, cons
 }
 
 int atomicGenSystem(const float k, const tri_elem *elem, const int numElem, 
-        const cart_coord_flt *nod, const int numNod, const cart_coord_flt *chief, const int numCHIEF, 
-        const cart_coord_flt *src, const int numSrc, cuFloatComplex *A, const int lda, 
+        const rect_coord_flt *nod, const int numNod, const rect_coord_flt *chief, const int numCHIEF, 
+        const rect_coord_flt *src, const int numSrc, cuFloatComplex *A, const int lda, 
         cuFloatComplex *B, const int ldb) {
     int i, j;
     cudaEvent_t start, stop;
@@ -854,7 +873,7 @@ int atomicGenSystem(const float k, const tri_elem *elem, const int numElem,
     CUDA_CALL(cudaMemcpy(elem_d,elem,numElem*sizeof(tri_elem),cudaMemcpyHostToDevice));
     
     //Move points to GPU
-    cart_coord_flt *pt_h = (cart_coord_flt*)malloc((numNod+numCHIEF)*sizeof(cart_coord_flt));
+    rect_coord_flt *pt_h = (rect_coord_flt*)malloc((numNod+numCHIEF)*sizeof(rect_coord_flt));
     for(i=0;i<numNod;i++) {
         pt_h[i] = nod[i];
     }
@@ -862,9 +881,9 @@ int atomicGenSystem(const float k, const tri_elem *elem, const int numElem,
         pt_h[numNod+i] = chief[i];
     }
     
-    cart_coord_flt *pt_d;
-    CUDA_CALL(cudaMalloc(&pt_d,(numNod+numCHIEF)*sizeof(cart_coord_flt)));
-    CUDA_CALL(cudaMemcpy(pt_d,pt_h,(numNod+numCHIEF)*sizeof(cart_coord_flt),cudaMemcpyHostToDevice));
+    rect_coord_flt *pt_d;
+    CUDA_CALL(cudaMalloc(&pt_d,(numNod+numCHIEF)*sizeof(rect_coord_flt)));
+    CUDA_CALL(cudaMemcpy(pt_d,pt_h,(numNod+numCHIEF)*sizeof(rect_coord_flt),cudaMemcpyHostToDevice));
     
     //Initialization of A
     for(i=0;i<numNod+numCHIEF;i++) {
@@ -991,8 +1010,8 @@ int qrSolver(const cuFloatComplex *A, const int mA, const int nA, const int ldA,
 }
 
 int bemSolver_pt(const float k, const tri_elem *elem, const int numElem, 
-        const cart_coord_flt *nod, const int numNod, const cart_coord_flt *chief, const int numCHIEF, 
-        const cart_coord_flt *src, const int numSrc, cuFloatComplex *B, const int ldb)
+        const rect_coord_flt *nod, const int numNod, const rect_coord_flt *chief, const int numCHIEF, 
+        const rect_coord_flt *src, const int numSrc, cuFloatComplex *B, const int ldb)
 {
     int i, j;
     cudaEvent_t start, stop;
@@ -1005,7 +1024,7 @@ int bemSolver_pt(const float k, const tri_elem *elem, const int numElem,
     CUDA_CALL(cudaMemcpy(elem_d,elem,numElem*sizeof(tri_elem),cudaMemcpyHostToDevice));
     
     //Move points to GPU
-    // cart_coord_flt *pt_h = (cart_coord_flt*)malloc((numNod+numCHIEF)*sizeof(cart_coord_flt));
+    // rect_coord_flt *pt_h = (rect_coord_flt*)malloc((numNod+numCHIEF)*sizeof(rect_coord_flt));
     // for(i=0;i<numNod;i++) {
     //     pt_h[i] = nod[i];
     // }
@@ -1013,10 +1032,10 @@ int bemSolver_pt(const float k, const tri_elem *elem, const int numElem,
     //     pt_h[numNod+i] = chief[i];
     // }
     
-    cart_coord_flt *pt_d;
-    CUDA_CALL(cudaMalloc(&pt_d, (numNod + numCHIEF) * sizeof(cart_coord_flt)));
-    CUDA_CALL(cudaMemcpy(pt_d, nod, numNod * sizeof(cart_coord_flt),cudaMemcpyHostToDevice));
-    CUDA_CALL(cudaMemcpy(pt_d + numNod, chief, numCHIEF * sizeof(cart_coord_flt),cudaMemcpyHostToDevice));
+    rect_coord_flt *pt_d;
+    CUDA_CALL(cudaMalloc(&pt_d, (numNod + numCHIEF) * sizeof(rect_coord_flt)));
+    CUDA_CALL(cudaMemcpy(pt_d, nod, numNod * sizeof(rect_coord_flt),cudaMemcpyHostToDevice));
+    CUDA_CALL(cudaMemcpy(pt_d + numNod, chief, numCHIEF * sizeof(rect_coord_flt),cudaMemcpyHostToDevice));
     
     CUDA_CALL(cudaEventRecord(start));
     //Generate the system
@@ -1120,8 +1139,8 @@ int bemSolver_pt(const float k, const tri_elem *elem, const int numElem,
 }
 
 int bemSolver_mp(const float k, const tri_elem *elem, const int numElem, 
-        const cart_coord_flt *nod, const int numNod, const cart_coord_flt *chief, const int numCHIEF, 
-        const cart_coord_flt *src, const int numSrc, cuFloatComplex *B, const int ldb)
+        const rect_coord_flt *nod, const int numNod, const rect_coord_flt *chief, const int numCHIEF, 
+        const rect_coord_flt *src, const int numSrc, cuFloatComplex *B, const int ldb)
 {
     int i, j;
     cudaEvent_t start, stop;
@@ -1134,7 +1153,7 @@ int bemSolver_mp(const float k, const tri_elem *elem, const int numElem,
     CUDA_CALL(cudaMemcpy(elem_d,elem,numElem*sizeof(tri_elem),cudaMemcpyHostToDevice));
     
     //Move points to GPU
-    // cart_coord_flt *pt_h = (cart_coord_flt*)malloc((numNod+numCHIEF)*sizeof(cart_coord_flt));
+    // rect_coord_flt *pt_h = (rect_coord_flt*)malloc((numNod+numCHIEF)*sizeof(rect_coord_flt));
     // for(i=0;i<numNod;i++) {
     //     pt_h[i] = nod[i];
     // }
@@ -1142,10 +1161,10 @@ int bemSolver_mp(const float k, const tri_elem *elem, const int numElem,
     //     pt_h[numNod+i] = chief[i];
     // }
     
-    cart_coord_flt *pt_d;
-    CUDA_CALL(cudaMalloc(&pt_d, (numNod + numCHIEF) * sizeof(cart_coord_flt)));
-    CUDA_CALL(cudaMemcpy(pt_d, nod, numNod * sizeof(cart_coord_flt),cudaMemcpyHostToDevice));
-    CUDA_CALL(cudaMemcpy(pt_d + numNod, chief, numCHIEF * sizeof(cart_coord_flt),cudaMemcpyHostToDevice));
+    rect_coord_flt *pt_d;
+    CUDA_CALL(cudaMalloc(&pt_d, (numNod + numCHIEF) * sizeof(rect_coord_flt)));
+    CUDA_CALL(cudaMemcpy(pt_d, nod, numNod * sizeof(rect_coord_flt),cudaMemcpyHostToDevice));
+    CUDA_CALL(cudaMemcpy(pt_d + numNod, chief, numCHIEF * sizeof(rect_coord_flt),cudaMemcpyHostToDevice));
     
     CUDA_CALL(cudaEventRecord(start));
     //Generate the system
@@ -1250,8 +1269,8 @@ int bemSolver_mp(const float k, const tri_elem *elem, const int numElem,
 }
 
 int bemSolver_dir(const float k, const tri_elem *elem, const int numElem, 
-        const cart_coord_flt *nod, const int numNod, const cart_coord_flt *chief, const int numCHIEF, 
-        const cart_coord_flt *dir, const int numSrc, cuFloatComplex *B, const int ldb)
+        const rect_coord_flt *nod, const int numNod, const rect_coord_flt *chief, const int numCHIEF, 
+        const rect_coord_flt *dir, const int numSrc, cuFloatComplex *B, const int ldb)
 {
     int i, j;
     cudaEvent_t start, stop;
@@ -1264,7 +1283,7 @@ int bemSolver_dir(const float k, const tri_elem *elem, const int numElem,
     CUDA_CALL(cudaMemcpy(elem_d,elem,numElem*sizeof(tri_elem),cudaMemcpyHostToDevice));
     
     //Move points to GPU
-    // cart_coord_flt *pt_h = (cart_coord_flt*)malloc((numNod+numCHIEF)*sizeof(cart_coord_flt));
+    // rect_coord_flt *pt_h = (rect_coord_flt*)malloc((numNod+numCHIEF)*sizeof(rect_coord_flt));
     // for(i=0;i<numNod;i++) {
     //     pt_h[i] = nod[i];
     // }
@@ -1272,10 +1291,10 @@ int bemSolver_dir(const float k, const tri_elem *elem, const int numElem,
     //     pt_h[numNod+i] = chief[i];
     // }
     
-    cart_coord_flt *pt_d;
-    CUDA_CALL(cudaMalloc(&pt_d,(numNod+numCHIEF)*sizeof(cart_coord_flt)));
-    CUDA_CALL(cudaMemcpy(pt_d,nod,numNod*sizeof(cart_coord_flt),cudaMemcpyHostToDevice));
-    CUDA_CALL(cudaMemcpy(pt_d+numNod,chief,numCHIEF*sizeof(cart_coord_flt),cudaMemcpyHostToDevice));
+    rect_coord_flt *pt_d;
+    CUDA_CALL(cudaMalloc(&pt_d,(numNod+numCHIEF)*sizeof(rect_coord_flt)));
+    CUDA_CALL(cudaMemcpy(pt_d,nod,numNod*sizeof(rect_coord_flt),cudaMemcpyHostToDevice));
+    CUDA_CALL(cudaMemcpy(pt_d+numNod,chief,numCHIEF*sizeof(rect_coord_flt),cudaMemcpyHostToDevice));
     
     CUDA_CALL(cudaEventRecord(start));
     //Generate the system
@@ -1411,7 +1430,7 @@ gsl_complex hprime(const int n, const double r)
 }
 */
 
-__host__ __device__ sph_coord_float cart2sph(const cart_coord_flt s)
+__host__ __device__ sph_coord_float rect2sph(const rect_coord_flt s)
 {
     sph_coord_float temp;
     temp.coords[0] = sqrtf(powf(s.coords[0],2)+powf(s.coords[1],2)+powf(s.coords[2],2));
@@ -1420,18 +1439,18 @@ __host__ __device__ sph_coord_float cart2sph(const cart_coord_flt s)
     return temp;
 }
 
-__host__ __device__ cart_coord_flt sph2cart(const sph_coord_float s)
+__host__ __device__ rect_coord_flt sph2rect(const sph_coord_float s)
 {
     float r = s.coords[0], theta = s.coords[1], phi = s.coords[2];
     float x = r*sinf(theta)*cosf(phi), y = r*sinf(theta)*sinf(phi), z = r*cosf(theta);
-    cart_coord_flt result;
+    rect_coord_flt result;
     result.coords[0] = x;
     result.coords[1] = y;
     result.coords[2] = z;
     return result;
 }
 
-__host__ __device__ sph_coord_double cart2sph(const cart_coord_dbl s)
+__host__ __device__ sph_coord_double rect2sph(const rect_coord_dbl s)
 {
     sph_coord_double temp;
     temp.coords[0] = sqrt(pow(s.coords[0],2)+pow(s.coords[1],2)+pow(s.coords[2],2));
@@ -1440,11 +1459,11 @@ __host__ __device__ sph_coord_double cart2sph(const cart_coord_dbl s)
     return temp;
 }
 
-__host__ __device__ cart_coord_dbl sph2cart(const sph_coord_double s)
+__host__ __device__ rect_coord_dbl sph2rect(const sph_coord_double s)
 {
     double r = s.coords[0], theta = s.coords[1], phi = s.coords[2];
     double x = r*sin(theta)*cos(phi), y = r*sin(theta)*sin(phi), z = r*cos(theta);
-    cart_coord_dbl result;
+    rect_coord_dbl result;
     result.coords[0] = x;
     result.coords[1] = y;
     result.coords[2] = z;
@@ -1452,7 +1471,7 @@ __host__ __device__ cart_coord_dbl sph2cart(const sph_coord_double s)
 }
 
 /*
-void computeRigidSphereScattering(const cart_coord_flt *pt, const int numPt, const double a, 
+void computeRigidSphereScattering(const rect_coord_flt *pt, const int numPt, const double a, 
         const double r, const double wavNum, const double strength)
 {
     gsl_complex *p = (gsl_complex*)malloc(numPt*sizeof(gsl_complex));
@@ -1462,7 +1481,7 @@ void computeRigidSphereScattering(const cart_coord_flt *pt, const int numPt, con
     //const int truncNum = 30;
     for(int i=0;i<numPt;i++)
     {
-        tempCoord = cart2sph(pt[i]);
+        tempCoord = rect2sph(pt[i]);
         result = rigidSphereScattering(wavNum,strength,a,tempCoord.coords[0],tempCoord.coords[1]);
         p[i] = result;
         printf("(%.8f,%.8f)\n",GSL_REAL(p[i]),GSL_IMAG(p[i]));
@@ -1490,9 +1509,9 @@ gsl_complex rigidSphereScattering(const double wavNum, const double strength, co
 }
 */
 
-__device__ cuFloatComplex extrapolation_dir(const float wavNum, const cart_coord_flt x, 
-        const tri_elem* elem, const int numElem, const cart_coord_flt* pt, 
-        const cuFloatComplex* p, const float strength, const cart_coord_flt dir)
+__device__ cuFloatComplex extrapolation_dir(const float wavNum, const rect_coord_flt x, 
+        const tri_elem* elem, const int numElem, const rect_coord_flt* pt, 
+        const cuFloatComplex* p, const float strength, const rect_coord_flt dir)
 {
     /*field extrapolation from the surface to a single point in free space
      wavNum: wave number
@@ -1503,7 +1522,7 @@ __device__ cuFloatComplex extrapolation_dir(const float wavNum, const cart_coord
     cuFloatComplex result = dirSrc(wavNum,strength,dir,x);
     cuFloatComplex temp;
     for(int i=0;i<numElem;i++) {
-        cart_coord_flt nod[3];
+        rect_coord_flt nod[3];
         for(int j=0;j<3;j++) {
             nod[j] = pt[elem[i].nodes[j]];
         }
@@ -1524,9 +1543,9 @@ __device__ cuFloatComplex extrapolation_dir(const float wavNum, const cart_coord
     return result;
 }
 
-__device__ cuFloatComplex extrapolation_pt(const float wavNum, const cart_coord_flt x, 
-        const tri_elem* elem, const int numElem, const cart_coord_flt* pt, 
-        const cuFloatComplex* p, const float strength, const cart_coord_flt src)
+__device__ cuFloatComplex extrapolation_pt(const float wavNum, const rect_coord_flt x, 
+        const tri_elem* elem, const int numElem, const rect_coord_flt* pt, 
+        const cuFloatComplex* p, const float strength, const rect_coord_flt src)
 {
     /*field extrapolation from the surface to a single point in free space
      x: the single point in free space
@@ -1538,7 +1557,7 @@ __device__ cuFloatComplex extrapolation_pt(const float wavNum, const cart_coord_
     cuFloatComplex result = ptSrc(wavNum,strength,src,x);
     cuFloatComplex temp;
     for(int i=0;i<numElem;i++) {
-        cart_coord_flt nod[3];
+        rect_coord_flt nod[3];
         for(int j=0;j<3;j++) {
             nod[j] = pt[elem[i].nodes[j]];
         }
@@ -1559,9 +1578,9 @@ __device__ cuFloatComplex extrapolation_pt(const float wavNum, const cart_coord_
     return result;
 }
 
-__device__ cuFloatComplex extrapolation_mp(const float wavNum, const cart_coord_flt x, 
-        const tri_elem* elem, const int numElem, const cart_coord_flt* pt, 
-        const cuFloatComplex* p, const float strength, const cart_coord_flt src)
+__device__ cuFloatComplex extrapolation_mp(const float wavNum, const rect_coord_flt x, 
+        const tri_elem* elem, const int numElem, const rect_coord_flt* pt, 
+        const cuFloatComplex* p, const float strength, const rect_coord_flt src)
 {
     /*field extrapolation from the surface to a single monopole in free space
      x: the single point in free space
@@ -1574,7 +1593,7 @@ __device__ cuFloatComplex extrapolation_mp(const float wavNum, const cart_coord_
     cuFloatComplex result = mpSrc(wavNum,strength,src,x);
     cuFloatComplex temp;
     for(int i=0;i<numElem;i++) {
-        cart_coord_flt nod[3];
+        rect_coord_flt nod[3];
         for(int j=0;j<3;j++) {
             nod[j] = pt[elem[i].nodes[j]];
         }
@@ -1595,9 +1614,9 @@ __device__ cuFloatComplex extrapolation_mp(const float wavNum, const cart_coord_
     return result;
 }
 
-__global__ void extrapolations_dir(const float wavNum, const cart_coord_flt* expPt, const int numExpPt,
-        const tri_elem* elem, const int numElem, const cart_coord_flt* pt, const cuFloatComplex* p, 
-        const float strength, const cart_coord_flt dir, cuFloatComplex *p_exp)
+__global__ void extrapolations_dir(const float wavNum, const rect_coord_flt* expPt, const int numExpPt,
+        const tri_elem* elem, const int numElem, const rect_coord_flt* pt, const cuFloatComplex* p, 
+        const float strength, const rect_coord_flt dir, cuFloatComplex *p_exp)
 {
     /*
      extrapolation from surface pressure to multiple points in free space
@@ -1613,9 +1632,9 @@ __global__ void extrapolations_dir(const float wavNum, const cart_coord_flt* exp
     }
 }
 
-__global__ void extrapolations_pt(const float wavNum, const cart_coord_flt* expPt, const int numExpPt,
-        const tri_elem* elem, const int numElem, const cart_coord_flt* pt, const cuFloatComplex* p, 
-        const float strength, const cart_coord_flt src, cuFloatComplex *p_exp)
+__global__ void extrapolations_pt(const float wavNum, const rect_coord_flt* expPt, const int numExpPt,
+        const tri_elem* elem, const int numElem, const rect_coord_flt* pt, const cuFloatComplex* p, 
+        const float strength, const rect_coord_flt src, cuFloatComplex *p_exp)
 {
     /*extrapolation from surface pressure to multiple points in free space
      wavNum: wave number
@@ -1629,9 +1648,9 @@ __global__ void extrapolations_pt(const float wavNum, const cart_coord_flt* expP
     }
 }
 
-__global__ void extrapolations_mp(const float wavNum, const cart_coord_flt* expPt, const int numExpPt,
-        const tri_elem* elem, const int numElem, const cart_coord_flt* pt, const cuFloatComplex* p, 
-        const float strength, const cart_coord_flt src, cuFloatComplex *p_exp)
+__global__ void extrapolations_mp(const float wavNum, const rect_coord_flt* expPt, const int numExpPt,
+        const tri_elem* elem, const int numElem, const rect_coord_flt* pt, const cuFloatComplex* p, 
+        const float strength, const rect_coord_flt src, cuFloatComplex *p_exp)
 {
     int idx = blockIdx.x*blockDim.x+threadIdx.x;
     if(idx < numExpPt) {
@@ -1639,9 +1658,9 @@ __global__ void extrapolations_mp(const float wavNum, const cart_coord_flt* expP
     }
 }
 
-int field_extrapolation_single_dir(const float wavNum, const cart_coord_flt* expPt, const int numExpPt, 
-        const tri_elem* elem, const int numElem, const cart_coord_flt* pt, const int numPt, 
-        const cuFloatComplex* p, const float strength, const cart_coord_flt dir, cuFloatComplex *pExp)
+int field_extrapolation_single_dir(const float wavNum, const rect_coord_flt* expPt, const int numExpPt, 
+        const tri_elem* elem, const int numElem, const rect_coord_flt* pt, const int numPt, 
+        const cuFloatComplex* p, const float strength, const rect_coord_flt dir, cuFloatComplex *pExp)
 {
     /*extrapolation of acoustic field from surface pressure
      wavNum: wave number
@@ -1655,15 +1674,15 @@ int field_extrapolation_single_dir(const float wavNum, const cart_coord_flt* exp
     int width = 16, numBlock = (numExpPt+width-1)/width;
     
     // allocate memory on GPU and copy data to GPU memory
-    cart_coord_flt *expPt_d, *pt_d;
+    rect_coord_flt *expPt_d, *pt_d;
     tri_elem *elem_d;
     cuFloatComplex *p_d, *pExp_d;
     
-    CUDA_CALL(cudaMalloc(&expPt_d,numExpPt*sizeof(cart_coord_flt)));
-    CUDA_CALL(cudaMemcpy(expPt_d,expPt,numExpPt*sizeof(cart_coord_flt),cudaMemcpyHostToDevice));
+    CUDA_CALL(cudaMalloc(&expPt_d,numExpPt*sizeof(rect_coord_flt)));
+    CUDA_CALL(cudaMemcpy(expPt_d,expPt,numExpPt*sizeof(rect_coord_flt),cudaMemcpyHostToDevice));
     
-    CUDA_CALL(cudaMalloc(&pt_d,numPt*sizeof(cart_coord_flt)));
-    CUDA_CALL(cudaMemcpy(pt_d,pt,numPt*sizeof(cart_coord_flt),cudaMemcpyHostToDevice));
+    CUDA_CALL(cudaMalloc(&pt_d,numPt*sizeof(rect_coord_flt)));
+    CUDA_CALL(cudaMemcpy(pt_d,pt,numPt*sizeof(rect_coord_flt),cudaMemcpyHostToDevice));
     
     CUDA_CALL(cudaMalloc(&elem_d,numElem*sizeof(tri_elem)));
     CUDA_CALL(cudaMemcpy(elem_d,elem,numElem*sizeof(tri_elem),cudaMemcpyHostToDevice));
@@ -1687,9 +1706,9 @@ int field_extrapolation_single_dir(const float wavNum, const cart_coord_flt* exp
     return EXIT_SUCCESS;
 }
 
-int field_extrapolation_single_pt(const float wavNum, const cart_coord_flt* expPt, const int numExpPt, 
-        const tri_elem* elem, const int numElem, const cart_coord_flt* pt, const int numPt, 
-        const cuFloatComplex* p, const float strength, const cart_coord_flt src, cuFloatComplex *pExp)
+int field_extrapolation_single_pt(const float wavNum, const rect_coord_flt* expPt, const int numExpPt, 
+        const tri_elem* elem, const int numElem, const rect_coord_flt* pt, const int numPt, 
+        const cuFloatComplex* p, const float strength, const rect_coord_flt src, cuFloatComplex *pExp)
 {
     /*Extrapolation of an acoustic field from surface pressure and a single point source
      wavNum: wave number
@@ -1703,15 +1722,15 @@ int field_extrapolation_single_pt(const float wavNum, const cart_coord_flt* expP
     int width = 16, numBlock = (numExpPt+width-1)/width;
     
     // allocate memory on GPU and copy data to GPU memory
-    cart_coord_flt *expPt_d, *pt_d;
+    rect_coord_flt *expPt_d, *pt_d;
     tri_elem *elem_d;
     cuFloatComplex *p_d, *pExp_d;
     
-    CUDA_CALL(cudaMalloc(&expPt_d,numExpPt*sizeof(cart_coord_flt)));
-    CUDA_CALL(cudaMemcpy(expPt_d,expPt,numExpPt*sizeof(cart_coord_flt),cudaMemcpyHostToDevice));
+    CUDA_CALL(cudaMalloc(&expPt_d,numExpPt*sizeof(rect_coord_flt)));
+    CUDA_CALL(cudaMemcpy(expPt_d,expPt,numExpPt*sizeof(rect_coord_flt),cudaMemcpyHostToDevice));
     
-    CUDA_CALL(cudaMalloc(&pt_d,numPt*sizeof(cart_coord_flt)));
-    CUDA_CALL(cudaMemcpy(pt_d,pt,numPt*sizeof(cart_coord_flt),cudaMemcpyHostToDevice));
+    CUDA_CALL(cudaMalloc(&pt_d,numPt*sizeof(rect_coord_flt)));
+    CUDA_CALL(cudaMemcpy(pt_d,pt,numPt*sizeof(rect_coord_flt),cudaMemcpyHostToDevice));
     
     CUDA_CALL(cudaMalloc(&elem_d,numElem*sizeof(tri_elem)));
     CUDA_CALL(cudaMemcpy(elem_d,elem,numElem*sizeof(tri_elem),cudaMemcpyHostToDevice));
@@ -1735,22 +1754,22 @@ int field_extrapolation_single_pt(const float wavNum, const cart_coord_flt* expP
     return EXIT_SUCCESS;
 }
 
-int field_extrapolation_single_mp(const float wavNum, const cart_coord_flt* expPt, const int numExpPt, 
-        const tri_elem* elem, const int numElem, const cart_coord_flt* pt, const int numPt, 
-        const cuFloatComplex* p, const float strength, const cart_coord_flt src, cuFloatComplex *pExp)
+int field_extrapolation_single_mp(const float wavNum, const rect_coord_flt* expPt, const int numExpPt, 
+        const tri_elem* elem, const int numElem, const rect_coord_flt* pt, const int numPt, 
+        const cuFloatComplex* p, const float strength, const rect_coord_flt src, cuFloatComplex *pExp)
 {
     int width = 16, numBlock = (numExpPt+width-1)/width;
     
     // allocate memory on GPU and copy data to GPU memory
-    cart_coord_flt *expPt_d, *pt_d;
+    rect_coord_flt *expPt_d, *pt_d;
     tri_elem *elem_d;
     cuFloatComplex *p_d, *pExp_d;
     
-    CUDA_CALL(cudaMalloc(&expPt_d,numExpPt*sizeof(cart_coord_flt)));
-    CUDA_CALL(cudaMemcpy(expPt_d,expPt,numExpPt*sizeof(cart_coord_flt),cudaMemcpyHostToDevice));
+    CUDA_CALL(cudaMalloc(&expPt_d,numExpPt*sizeof(rect_coord_flt)));
+    CUDA_CALL(cudaMemcpy(expPt_d,expPt,numExpPt*sizeof(rect_coord_flt),cudaMemcpyHostToDevice));
     
-    CUDA_CALL(cudaMalloc(&pt_d,numPt*sizeof(cart_coord_flt)));
-    CUDA_CALL(cudaMemcpy(pt_d,pt,numPt*sizeof(cart_coord_flt),cudaMemcpyHostToDevice));
+    CUDA_CALL(cudaMalloc(&pt_d,numPt*sizeof(rect_coord_flt)));
+    CUDA_CALL(cudaMemcpy(pt_d,pt,numPt*sizeof(rect_coord_flt),cudaMemcpyHostToDevice));
     
     CUDA_CALL(cudaMalloc(&elem_d,numElem*sizeof(tri_elem)));
     CUDA_CALL(cudaMemcpy(elem_d,elem,numElem*sizeof(tri_elem),cudaMemcpyHostToDevice));
@@ -1774,20 +1793,20 @@ int field_extrapolation_single_mp(const float wavNum, const cart_coord_flt* expP
     return EXIT_SUCCESS;
 }
 
-cart_coord_flt cartCoordDouble2cartCoordFloat(const cart_coord_dbl t)
+rect_coord_flt rectCoordDbl2rectCoordFlt(const rect_coord_dbl t)
 {
-    cart_coord_flt result;
+    rect_coord_flt result;
     for(int i=0;i<3;i++) {
         result.coords[i] = t.coords[i];
     }
     return result;
 }
 
-void cartCoordDoubleArr2cartCoordFloatArr(const cart_coord_dbl* dArr, 
-        const int num, cart_coord_flt* fArr)
+void rectCoordDblArr2rectCoordFltArr(const rect_coord_dbl* dArr, 
+        const int num, rect_coord_flt* fArr)
 {
     for(int i=0;i<num;i++) {
-        fArr[i] = cartCoordDouble2cartCoordFloat(dArr[i]);
+        fArr[i] = rectCoordDbl2rectCoordFlt(dArr[i]);
     }
 }
 
@@ -1812,8 +1831,8 @@ void reorgField(cuFloatComplex* field, const int l)
 }
 
 int genFields_MultiPtSrcSglObj(const float strength, const float wavNum, 
-        const cart_coord_flt* srcs, const int numSrcs, const cart_coord_dbl* pts, const int numPts, 
-        const tri_elem* elems, const int numElems, const cart_coord_dbl cnr, const double d, 
+        const rect_coord_flt* srcs, const int numSrcs, const rect_coord_dbl* pts, const int numPts, 
+        const tri_elem* elems, const int numElems, const rect_coord_dbl cnr, const double d, 
         const int level, cuFloatComplex* fields)
 {
     /*generate an acoustic field with a given boundary
@@ -1821,11 +1840,11 @@ int genFields_MultiPtSrcSglObj(const float strength, const float wavNum,
      cnr: lowest corner of the bounding box
      d: side length of the bounding box
      fields: pressure array equal to the number of boxes at level l times number of sources*/
-    cart_coord_flt *pts_f = (cart_coord_flt*)malloc(numPts*sizeof(cart_coord_flt));
-    cartCoordDoubleArr2cartCoordFloatArr(pts,numPts,pts_f);
+    rect_coord_flt *pts_f = (rect_coord_flt*)malloc(numPts*sizeof(rect_coord_flt));
+    rectCoordDblArr2rectCoordFltArr(pts,numPts,pts_f);
     
     // generate chief points
-    cart_coord_flt chief[NUMCHIEF];
+    rect_coord_flt chief[NUMCHIEF];
     genCHIEF(pts_f,numPts,elems,numElems,chief,NUMCHIEF);
     
     // allocate memory for the right-hand side of the linear system
@@ -1836,14 +1855,14 @@ int genFields_MultiPtSrcSglObj(const float strength, const float wavNum,
     // compute the extrapolation points of the field
     // note that the indices first increase in z, then in y and at last in x
     int numExpPts = (int)pow(8,level);
-    cart_coord_dbl *expPts = (cart_coord_dbl*)malloc(numExpPts*sizeof(cart_coord_dbl));
+    rect_coord_dbl *expPts = (rect_coord_dbl*)malloc(numExpPts*sizeof(rect_coord_dbl));
     for(int i=0;i<numExpPts;i++) {
-        cart_coord_dbl pt_scaled = boxCenter(i,level);
-        cart_coord_dbl pt_descaled = descale(pt_scaled,cnr,d);
+        rect_coord_dbl pt_scaled = boxCenter(i,level);
+        rect_coord_dbl pt_descaled = descale(pt_scaled,cnr,d);
         expPts[i] = pt_descaled;
     }
-    cart_coord_flt *expPts_f = (cart_coord_flt*)malloc(numExpPts*sizeof(cart_coord_flt));
-    cartCoordDoubleArr2cartCoordFloatArr(expPts,numExpPts,expPts_f);
+    rect_coord_flt *expPts_f = (rect_coord_flt*)malloc(numExpPts*sizeof(rect_coord_flt));
+    rectCoordDblArr2rectCoordFltArr(expPts,numExpPts,expPts_f);
     free(expPts);
     
     // extrapolate the acoustic field from the surface to free space
@@ -1856,4 +1875,248 @@ int genFields_MultiPtSrcSglObj(const float strength, const float wavNum,
     }
     
     return EXIT_SUCCESS;
+}
+
+__host__ __device__ int deterPtPlaneRel(const rect_coord_dbl pt, const plane_dbl plane)
+{
+    rect_coord_dbl vec = rectCoordSub(pt,plane.pt);
+    double result = dotProd(plane.n,vec);
+    if(result>=0) {
+        return 1;
+    } else {
+        return 0;
+    }
+}
+
+__host__ __device__ int deterPtEdgeVolRel(const rect_coord_dbl pt, const cube_dbl cb)
+{
+    //declare two rect_coord_dbl arrays for nodes at the bottom and the top face 
+    rect_coord_dbl btm[4], top[4], left[4], right[4], front[4], back[4];
+    rect_coord_dbl dir_x = {1,0,0}, dir_y = {0,1,0}, dir_z = {0,0,1};
+    
+    //set up btm and top nodes
+    btm[0] = cb.cnr;
+    btm[1] = rectCoordAdd(btm[0],dir_x);
+    btm[2] = rectCoordAdd(btm[1],dir_y);
+    btm[3] = rectCoordAdd(btm[0],dir_y);
+    
+    top[0] = rectCoordAdd(btm[0],dir_z);
+    top[1] = rectCoordAdd(top[0],dir_x);
+    top[2] = rectCoordAdd(top[1],dir_y);
+    top[3] = rectCoordAdd(top[0],dir_y);
+    
+    //set up left and right nodes
+    left[0] = cb.cnr;
+    left[1] = rectCoordAdd(left[0],dir_x);
+    left[2] = rectCoordAdd(left[1],dir_z);
+    left[3] = rectCoordAdd(left[0],dir_z);
+    
+    right[0] = rectCoordAdd(left[0],dir_y);
+    right[1] = rectCoordAdd(right[0],dir_x);
+    right[2] = rectCoordAdd(right[1],dir_z);
+    right[3] = rectCoordAdd(right[0],dir_z);
+    
+    //set up back and front nodes
+    back[0] = cb.cnr;
+    back[1] = rectCoordAdd(back[0],dir_y);
+    back[2] = rectCoordAdd(back[1],dir_z);
+    back[3] = rectCoordAdd(back[0],dir_z);
+    
+    front[0] = rectCoordAdd(back[0],dir_x);
+    front[1] = rectCoordAdd(front[0],dir_y);
+    front[2] = rectCoordAdd(front[1],dir_z);
+    front[3] = rectCoordAdd(front[0],dir_z);
+    
+    rect_coord_dbl nrml[3];
+    plane_dbl plane;
+    int result;
+    
+    //deal with the bottom and the top face
+    for(int i=0;i<3;i++) {
+        nrml[1] = dir_z;
+        switch(i) {
+            case 0: // edge determined by btm[0] and btm[1]
+                nrml[0] = dir_y;
+                break;
+            case 1: // edge determined by btm[1] and btm[2]
+                nrml[0] = scalarProd(-1,dir_x);
+                break;
+            case 2: // edge determined by btm[2] and btm[3]
+                nrml[0] = scalarProd(-1,dir_y);
+                break;
+            case 3: // edge determined by btm[3] and btm[0]
+                nrml[0] = dir_x;
+                break;
+            default:
+                printf("Entered the wrong branch.\n");
+        }
+        nrml[3] = nrmlzRectCoord(rectCoordAdd(nrml[0],nrml[1]));
+        plane.n = nrml[3];
+        plane.pt = btm[i];
+        result = deterPtPlaneRel(pt,plane);
+        if(result == 0) {
+            return 0;
+        }
+    }
+    
+    for(int i=0;i<3;i++) {
+        nrml[1] = scalarProd(-1,dir_z);
+        switch(i) {
+            case 0: // edge determined by btm[0] and btm[1]
+                nrml[0] = dir_y;
+                break;
+            case 1: // edge determined by btm[1] and btm[2]
+                nrml[0] = scalarProd(-1,dir_x);
+                break;
+            case 2: // edge determined by btm[2] and btm[3]
+                nrml[0] = scalarProd(-1,dir_y);
+                break;
+            case 3: // edge determined by btm[3] and btm[0]
+                nrml[0] = dir_x;
+                break;
+            default:
+                printf("Entered the wrong branch.\n");
+        }
+        nrml[3] = nrmlzRectCoord(rectCoordAdd(nrml[0],nrml[1]));
+        plane.n = nrml[3];
+        plane.pt = top[i];
+        result = deterPtPlaneRel(pt,plane);
+        if(result == 0) {
+            return 0;
+        }
+    }
+    
+    //deal with the left and the right face
+    for(int i=0;i<3;i++) {
+        nrml[1] = dir_y;
+        switch(i) {
+            case 0: // edge determined by btm[0] and btm[1]
+                nrml[0] = dir_z;
+                break;
+            case 1: // edge determined by btm[1] and btm[2]
+                nrml[0] = scalarProd(-1,dir_x);
+                break;
+            case 2: // edge determined by btm[2] and btm[3]
+                nrml[0] = scalarProd(-1,dir_z);
+                break;
+            case 3: // edge determined by btm[3] and btm[0]
+                nrml[0] = dir_x;
+                break;
+            default:
+                printf("Entered the wrong branch.\n");
+        }
+        nrml[3] = nrmlzRectCoord(rectCoordAdd(nrml[0],nrml[1]));
+        plane.n = nrml[3];
+        plane.pt = left[i];
+        result = deterPtPlaneRel(pt,plane);
+        if(result == 0) {
+            return 0;
+        }
+    }
+    
+    for(int i=0;i<3;i++) {
+        nrml[1] = scalarProd(-1,dir_y);
+        switch(i) {
+            case 0: // edge determined by btm[0] and btm[1]
+                nrml[0] = dir_z;
+                break;
+            case 1: // edge determined by btm[1] and btm[2]
+                nrml[0] = scalarProd(-1,dir_x);
+                break;
+            case 2: // edge determined by btm[2] and btm[3]
+                nrml[0] = scalarProd(-1,dir_z);
+                break;
+            case 3: // edge determined by btm[3] and btm[0]
+                nrml[0] = dir_x;
+                break;
+            default:
+                printf("Entered the wrong branch.\n");
+        }
+        nrml[3] = nrmlzRectCoord(rectCoordAdd(nrml[0],nrml[1]));
+        plane.n = nrml[3];
+        plane.pt = right[i];
+        result = deterPtPlaneRel(pt,plane);
+        if(result == 0) {
+            return 0;
+        }
+    }
+    
+    //deal with the back and the front face
+    for(int i=0;i<3;i++) {
+        nrml[1] = dir_x;
+        switch(i) {
+            case 0: // edge determined by back[0] and back[1]
+                nrml[0] = dir_z;
+                break;
+            case 1: // edge determined by btm[1] and btm[2]
+                nrml[0] = scalarProd(-1,dir_y);
+                break;
+            case 2: // edge determined by btm[2] and btm[3]
+                nrml[0] = scalarProd(-1,dir_z);
+                break;
+            case 3: // edge determined by btm[3] and btm[0]
+                nrml[0] = dir_y;
+                break;
+            default:
+                printf("Entered the wrong branch.\n");
+        }
+        nrml[3] = nrmlzRectCoord(rectCoordAdd(nrml[0],nrml[1]));
+        plane.n = nrml[3];
+        plane.pt = back[i];
+        result = deterPtPlaneRel(pt,plane);
+        if(result == 0) {
+            return 0;
+        }
+    }
+    
+    for(int i=0;i<3;i++) {
+        nrml[1] = scalarProd(-1,dir_x);
+        switch(i) {
+            case 0: // edge determined by btm[0] and btm[1]
+                nrml[0] = dir_z;
+                break;
+            case 1: // edge determined by btm[1] and btm[2]
+                nrml[0] = scalarProd(-1,dir_y);
+                break;
+            case 2: // edge determined by btm[2] and btm[3]
+                nrml[0] = scalarProd(-1,dir_z);
+                break;
+            case 3: // edge determined by btm[3] and btm[0]
+                nrml[0] = dir_y;
+                break;
+            default:
+                printf("Entered the wrong branch.\n");
+        }
+        nrml[3] = nrmlzRectCoord(rectCoordAdd(nrml[0],nrml[1]));
+        plane.n = nrml[3];
+        plane.pt = front[i];
+        result = deterPtPlaneRel(pt,plane);
+        if(result == 0) {
+            return 0;
+        }
+    }
+    
+    return 1;
+}
+
+__host__ __device__ int deterPtCubeRel(const rect_coord_dbl pt, const cube_dbl cube)
+{
+    rect_coord_dbl cnr_fru = cube.cnr;
+    cnr_fru = rectCoordAdd(cnr_fru,scalarProd(cube.len,{1,0,0}));
+    cnr_fru = rectCoordAdd(cnr_fru,scalarProd(cube.len,{0,1,0}));
+    cnr_fru = rectCoordAdd(cnr_fru,scalarProd(cube.len,{0,0,1}));
+    double x_min = cube.cnr.coords[0], y_min = cube.cnr.coords[1], z_min = cube.cnr.coords[2], 
+            x_max = cnr_fru.coords[0], y_max = cnr_fru.coords[1], z_max = cnr_fru.coords[2],
+            x = pt.coords[0], y = pt.coords[1], z = pt.coords[2];
+    if(x >= x_min && x<= x_max && y >= y_min && y<= y_max && z >= z_min && z<= z_max) {
+        return 1;
+    } else {
+        return 0;
+    }
+}
+
+__host__ __device__ int deterPtCubeInt(const rect_coord_dbl, const cube_dbl cb)
+{
+    //
+    return 1;
 }

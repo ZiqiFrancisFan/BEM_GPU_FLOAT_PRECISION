@@ -17,41 +17,24 @@
 
 int main(int argc, char *argv[])
 {
-    time_t start, end;
-    int numNod, numElem;
-    findNum("./mesh/sphere_100mm_320.obj",&numNod,&numElem);
-    cart_coord_dbl *nod_dp = (cart_coord_dbl*)malloc(numNod*sizeof(cart_coord_dbl));
-    cart_coord_dbl *nod_sc = (cart_coord_dbl*)malloc(numNod*sizeof(cart_coord_dbl));
-    cart_coord_flt *nod_fp = (cart_coord_flt*)malloc(numNod*sizeof(cart_coord_flt));
-    tri_elem *elem = (tri_elem*)malloc(numElem*sizeof(tri_elem));
-    readOBJ("./mesh/sphere_100mm_320.obj",nod_dp,elem);
-    readOBJ("./mesh/sphere_100mm_320.obj",nod_fp,elem);
-    cart_coord_dbl cnr = {-0.2,-0.2,-0.2};
-    double sideLength = 0.4;
-    scalePnts(nod_dp,numNod,cnr,sideLength,nod_sc);
-    int l = deterLmax(nod_sc,numNod,1);
-    printf("The level to be used: %d\n",l);
-    cart_coord_flt src = {-1.0,0,0};
-    int numSrc = 1, numBox = pow(8,l);
-    float freq = 500, wavNum = 2*PI*freq/SPEED_SOUND;
-    cuFloatComplex *fields = (cuFloatComplex*)malloc(numSrc*numBox*sizeof(cuFloatComplex));
-    int *grid = (int*)malloc(numBox*sizeof(int));
-    printf("grid allocated.\n");
-    time(&start);
-    //HOST_CALL(genFields_MultiPtSrcSglObj(STRENGTH,wavNum,&src,numSrc,nod_dp,numNod,elem,numElem,cnr,sideLength,l,fields));
-    createMeshOccupancyGrid(nod_dp,numNod,elem,numElem,cnr,sideLength,l,grid);
-    time(&end);
-    double duration = double(end-start);
-    printf("Duration for field extrapolation and generation of occupancy grid: %lf seconds\n",duration);
-    //print_cuFloatComplex_mat(fields,1,10,1);
-    
-    write_occupancy_grid(grid,l,"./data/grid");
-    
-    free(nod_dp);
-    free(nod_sc);
-    free(nod_fp);
-    free(elem);
-    free(fields);
-    free(grid);
+    rect_coord_dbl pt = {0,1.9,2.2};
+    cube_dbl cb;
+    plane_dbl pln;
+    pln.n = {1,0,0};
+    pln.pt = {0,0,0};
+    cb.cnr = {0,0,0};
+    cb.len = 2.0;
+    int flag = deterPtCubeRel(pt,cb);
+    if(flag) {
+        printf("In.\n");
+    } else {
+        printf("Not in.\n");
+    }
+    flag = deterPtPlaneRel(pt,pln);
+    if(flag) {
+        printf("On the non-negative side.\n");
+    } else {
+        printf("On the negative side.\n");
+    }
     return EXIT_SUCCESS;
 }

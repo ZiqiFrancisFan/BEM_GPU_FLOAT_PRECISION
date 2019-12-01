@@ -24,7 +24,7 @@ struct tri_elem
     cuFloatComplex bc[3];
 };
 
-struct cart_coord_flt 
+struct rect_coord_flt 
 {
     // x, y, z in ascending order
     float coords[3];
@@ -38,11 +38,11 @@ struct sph_coord_float
 
 typedef struct tri_elem tri_elem;
 
-typedef struct cart_coord_flt cart_coord_flt;
+typedef struct rect_coord_flt rect_coord_flt;
 
 typedef struct sph_coord_float sph_coord_float;
 
-struct cart_coord_dbl
+struct rect_coord_dbl
 {
     // x, y, z in ascending order
     double coords[3];
@@ -54,17 +54,24 @@ struct sph_coord_double
     double coords[3];
 };
 
-typedef struct cart_coord_dbl cart_coord_dbl;
+typedef struct rect_coord_dbl rect_coord_dbl;
 
 typedef struct sph_coord_double sph_coord_double;
 
 struct cube_dbl
 {
-    cart_coord_dbl cnr;
+    rect_coord_dbl cnr;
     double len;
 };
 
-typedef struct cube_double cube_double;
+struct plane_dbl
+{
+    rect_coord_dbl n;
+    rect_coord_dbl pt;
+};
+
+typedef struct cube_dbl cube_dbl;
+typedef struct plane_dbl plane_dbl;
 
 #endif /* DATASTRUCT_H */
 

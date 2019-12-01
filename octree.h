@@ -38,14 +38,14 @@ int child(int num, int cld);
 
 void children(const int num, int *cldrn);
 
-cart_coord_dbl scale(const cart_coord_dbl x, const cart_coord_dbl x_min, const double d);
+rect_coord_dbl scale(const rect_coord_dbl x, const rect_coord_dbl x_min, const double d);
 
-cart_coord_dbl descale(const cart_coord_dbl x_s, const cart_coord_dbl x_min, const double d);
+rect_coord_dbl descale(const rect_coord_dbl x_s, const rect_coord_dbl x_min, const double d);
 
 double descale_1d(const double a, const double D, const double v_min);
 
-void scalePnts(const cart_coord_dbl* pnt, const int numPnts, const cart_coord_dbl pnt_min, 
-        const double d, cart_coord_dbl* pnt_scaled);
+void scalePnts(const rect_coord_dbl* pnt, const int numPnts, const rect_coord_dbl pnt_min, 
+        const double d, rect_coord_dbl* pnt_scaled);
 
 void dec2bin_frac(double s, int l, int *h);
 
@@ -57,9 +57,9 @@ void bitDeintleave(const int *result, const int l, int *x, int *y, int *z);
 
 int indArr2num(const int *ind, const int l, const int d);
 
-int pnt2boxnum(const cart_coord_dbl pnt, const int l);
+int pnt2boxnum(const rect_coord_dbl pnt, const int l);
 
-cart_coord_dbl boxCenter(const int num, const int l);
+rect_coord_dbl boxCenter(const int num, const int l);
 
 int neighbors(const int num, const int l, int *numNeighbors, int *nbr);
 
@@ -75,7 +75,7 @@ void Union(const int *set1, const int *set2, int *set3);
 
 void difference(const int *set1, const int *set2, int *set3);
 
-void pnts2numSet(const cart_coord_dbl *pnts, const int numPnts, const int l, 
+void pnts2numSet(const rect_coord_dbl *pnts, const int numPnts, const int l, 
         int *set);
 
 void sampleSpace(const int l, int *set);
@@ -91,26 +91,26 @@ void I4(const int num, const int l, int *set);
 
 void orderArray(const int *a, const int num, int *ind);
 
-void printPnts(const cart_coord_dbl *pt, const int numPt);
+void printPnts(const rect_coord_dbl *pt, const int numPt);
 
-void printPnts_d(const cart_coord_dbl *p, const int numPnts);
+void printPnts_d(const rect_coord_dbl *p, const int numPnts);
 
-void genOctPt(const int level, cart_coord_dbl *pt);
+void genOctPt(const int level, rect_coord_dbl *pt);
 
-int deterLmax(const cart_coord_dbl *pnts, const int numPnts, const int s);
+int deterLmax(const rect_coord_dbl *pnts, const int numPnts, const int s);
 
-void findBoundingCube(const cart_coord_dbl *pnts, const int numPnts, const double eps, 
-        cart_coord_dbl *pnts_b, double *d);
+void findBoundingCube(const rect_coord_dbl *pnts, const int numPnts, const double eps, 
+        rect_coord_dbl *pnts_b, double *d);
 
-void srcBoxes(const cart_coord_dbl *pnts, const tri_elem *elems, const int numElems, 
-        const int s, int *srcBoxSet, int *lmax, double *D, cart_coord_dbl *pnt_min);
+void srcBoxes(const rect_coord_dbl *pnts, const tri_elem *elems, const int numElems, 
+        const int s, int *srcBoxSet, int *lmax, double *D, rect_coord_dbl *pnt_min);
 
 int findSetInd(const int *X, const int num);
 
 void sortSet(int *set);
 
-void createMeshOccupancyGrid(const cart_coord_dbl* nod, const int numNod, 
-        const tri_elem* elem, const int numElem, const cart_coord_dbl cnr, 
+void createMeshOccupancyGrid(const rect_coord_dbl* nod, const int numNod, 
+        const tri_elem* elem, const int numElem, const rect_coord_dbl cnr, 
         const double sideLen, const int level, int* grid);
 
 int write_occupancy_grid(const int* grid, const int level, const char* filename);
