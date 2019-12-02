@@ -573,7 +573,9 @@ __host__ __device__ int deterPtLnSegRel(const rect_coord_dbl pt, const ln_seg_db
 
 __host__ __device__ int deterLnSegLnSegRel(const ln_seg_dbl seg1, const ln_seg_dbl seg2)
 {
-    /*determines the relation between two line segments*/
+    /*determines the relation between two line segments
+     0: no intersection
+     1: intersection*/
     line_dbl ln1 = lnSeg2ln(seg1), ln2 = lnSeg2ln(seg2);
     double t1, t2;
     int relLnLn = deterLnLnRel(ln1,ln2,&t1,&t2);
@@ -583,6 +585,7 @@ __host__ __device__ int deterLnSegLnSegRel(const ln_seg_dbl seg1, const ln_seg_d
     }
     else {
         if(relLnLn==1) {
+            // the two lines have one intersection
             if(t1>=0 && t1<=1 && t2>=0 && t2<=1) {
                 return 1;
             }
@@ -594,10 +597,24 @@ __host__ __device__ int deterLnSegLnSegRel(const ln_seg_dbl seg1, const ln_seg_d
             // the two lines are the same line
             if(deterPtLnSegRel(seg1.nod[0],seg2)==0 
                     && deterPtLnSegRel(seg1.nod[1],seg2)==0) {
+                // no intersection
                 return 0;
             }
             else {
-                return 1;
+                //determine if one or infinitely many intersection points
+                for(int i=0;i<2;i++) {
+                    for(int j=0;j<2;j++) {
+                        if(rectCoordEqual(seg1.nod[i],seg2.nod[j])) {
+                            rect_coord_dbl vec[2];
+                            vec[0] = rectCoordSub(seg1.nod[(i+1)%2],seg1.nod[i]);
+                            vec[1] = rectCoordSub(seg2.nod[(j+1)%2],seg1.nod[j]);
+                            if(rectDotMul(vec[0],vec[1])<0) {
+                                return 1;
+                            }
+                        }
+                    }
+                }
+                return 2;
             }
         }
     }
