@@ -240,6 +240,26 @@ __host__ __device__ rect_coord_flt nrmlzRectCoord(const rect_coord_flt v)
     return scaRectMul(1.0/nrm,v);
 }
 
+__host__ __device__ int equalRectCoord(const rect_coord_flt v1, const rect_coord_flt v2)
+{
+    rect_coord_flt v = rectCoordSub(v1,v2);
+    if(rectNorm(v) < EPS) {
+        return 1;
+    } else {
+        return 0;
+    }
+}
+
+__host__ __device__ int equalRectCoord(const rect_coord_dbl v1, const rect_coord_dbl v2)
+{
+    rect_coord_dbl v = rectCoordSub(v1,v2);
+    if(rectNorm(v) < EPS) {
+        return 1;
+    } else {
+        return 0;
+    }
+}
+
 __host__ __device__ rect_coord_flt crossProd(const rect_coord_flt u, const rect_coord_flt v)
 {
     rect_coord_flt r;
@@ -2256,7 +2276,7 @@ __host__ __device__ int deterPtCubeRel(const rect_coord_dbl pt, const cube_dbl c
     }
 }
 
-__host__ __device__ int deterLinePlaneInt(const line_dbl ln, const plane_dbl pln, double* t)
+__host__ __device__ int deterLinePlaneRel(const line_dbl ln, const plane_dbl pln, double* t)
 {
     if(abs(rectDotMul(ln.dir,pln.n))<EPS) {
         //line parallel to plane
@@ -2290,6 +2310,7 @@ __host__ __device__ double quadArea(const quad_dbl s)
 
 __host__ __device__ plane_dbl quad2plane(const quad_dbl qd)
 {
+    /*get the plane containing a quad*/
     plane_dbl pln;
     pln.pt = qd.nod[0];
     rect_coord_dbl vec[2];
@@ -2299,8 +2320,17 @@ __host__ __device__ plane_dbl quad2plane(const quad_dbl qd)
     return pln;
 }
 
+__host__ __device__ line_dbl lnSeg2ln(const ln_seg_dbl ls)
+{
+    line_dbl l;
+    l.pt = ls.nod[0];
+    l.dir = rectCoordSub(ls.nod[1],ls.nod[0]);
+    return l;
+}
+
 __host__ __device__ int deterPtQuadRel(const rect_coord_dbl pt, const quad_dbl qd)
 {
+    /*determine the relationship between a point and a quad on the same plane*/
     double area = 0.0;
     rect_coord_dbl vec[2];
     for(int i=0;i<4;i++) {
@@ -2316,8 +2346,104 @@ __host__ __device__ int deterPtQuadRel(const rect_coord_dbl pt, const quad_dbl q
     }
 }
 
-__host__ __device__ int deterLnSegQuadInt(const ln_seg_dbl lnSeg, const quad_dbl qd)
+__host__ __device__ double rectCoordDet(const rect_coord_dbl vec[3])
 {
+    double result, v1x, v1y, v1z, v2x, v2y, v2z, v3x, v3y, v3z;
+    
+    v1x = vec[0].coords[0];
+    v1y = vec[0].coords[1];
+    v1z = vec[0].coords[2];
+    
+    v2x = vec[1].coords[0];
+    v2y = vec[1].coords[1];
+    v2z = vec[1].coords[2];
+    
+    v3x = vec[2].coords[0];
+    v3y = vec[2].coords[1];
+    v3z = vec[2].coords[2];
+    
+    result = v1x*(v2y*v3z-v3y*v2z)-v2x*(v1y*v3z-v3y*v1z)+v3x*(v1y*v2z-v2y*v1z);
+    
+    return result;
+}
+
+__host__ __device__ int deterLnLnRel(const line_dbl ln1, const line_dbl ln2, double *t1, double *t2)
+{   
+    if(abs(rectNorm(rectCrossMul(ln1.dir,ln2.dir)))<EPS) {
+        // the two lines are either parallel or the same line
+        
+        // check if a point on line 1 is on line 2
+        rect_coord_dbl vec = rectCoordSub(ln1.pt,ln2.pt);
+        if(rectNorm(vec)<EPS) {
+            //the points are the same
+            return 2; 
+        } else {
+            if(rectNorm(rectCrossMul(vec,ln2.dir))<EPS) {
+                // vec is a multiple of ln2.dir
+                return 2; 
+            } else {
+                // the two lines are parallel
+                return 0;
+            }
+        }
+    } else {
+        //the two lines are not parallel or the same
+        
+        //take two different points on each line
+        if(rectNorm(rectCoordSub(ln1.pt,ln2.pt))<EPS) {
+            //the two points on the line is the same point
+            *t1 = 0;
+            *t2 = 0;
+            return 1;
+        } else {
+            rect_coord_dbl pt[4], vec[3];
+            pt[0] = ln1.pt;
+            pt[1] = rectCoordAdd(ln1.pt,scaRectMul(1.0,ln1.dir));
+            pt[2] = ln2.pt;
+            pt[3] = rectCoordAdd(ln2.pt,scaRectMul(1.0,ln2.dir));
+            vec[0] = rectCoordSub(pt[1],pt[0]);
+            vec[1] = rectCoordSub(pt[2],pt[0]);
+            vec[2] = rectCoordSub(pt[3],pt[0]);
+            if(abs(rectCoordDet(vec))<EPS) {
+                //skew lines
+                return 0;
+            } else {
+                // the two lines intersects. compute it.
+                // first find the valid sub-system
+                double coeff1[2], coeff2[2];
+                for(int i=0;i<3;i++) {
+                    coeff1[0] = ln1.dir.coords[i%3];
+                    coeff1[1] = ln1.dir.coords[(i+1)%3];
+                    coeff2[0] = ln2.dir.coords[i%3];
+                    coeff2[1] = ln2.dir.coords[(i+1)%3];
+                    //check the determinant of the current system;
+                    double det = coeff1[0]*coeff2[1]-coeff1[1]*coeff2[0];
+                    if(abs(det)>EPS) {
+                        // get the right-hand side
+                        double rhs1[2], rhs2[2];
+                        rhs1[0] = ln1.pt.coords[i%3];
+                        rhs1[1] = ln1.pt.coords[(i+1)%3];
+                        rhs2[0] = ln2.pt.coords[i%3];
+                        rhs2[1] = ln2.pt.coords[(i+1)%3];
+                        double rhs;
+                        rhs = (rhs2[0]-rhs1[0])*coeff2[1]-(rhs2[1]-rhs1[1])*coeff2[0];
+                        *t1 = rhs/det;
+                        rhs = (rhs2[0]-rhs1[0])*coeff1[1]-(rhs2[1]-rhs1[1])*coeff1[0];
+                        *t2 = rhs/det;
+                        break;
+                    }
+                }
+                return 1;
+            }
+        }
+        
+        
+    }
+}
+
+__host__ __device__ int deterLnSegQuadRel(const ln_seg_dbl lnSeg, const quad_dbl qd)
+{
+    /*determine if a line segment intersects a quad*/
     int flag;
     
     //make a line containing the line segment
@@ -2325,22 +2451,39 @@ __host__ __device__ int deterLnSegQuadInt(const ln_seg_dbl lnSeg, const quad_dbl
     line_dbl ln;
     ln.pt = lnSeg.nod[0];
     ln.dir = dir;
+    
+    // define a plane containing the quad
     plane_dbl pln = quad2plane(qd);
+    
+    // determine the intersection between the line and the plane
     double t;
-    flag = deterLinePlaneInt(ln,pln,&t);
-    if(flag == 0) {
+    flag = deterLinePlaneRel(ln,pln,&t);
+    if(flag==0) {
+        // no intersection
         return 0;
     } else {
         if(flag==2) {
-            return 1;
-        } else {
-            //determines if a point is within a quad
-            rect_coord_dbl intersection = rectCoordAdd(ln.pt,scaRectMul(t,ln.dir));
-            if(deterPtQuadRel(intersection,qd)==1) {
+            // infinitely many intersections
+            if((deterPtQuadRel(lnSeg.nod[0],qd)==1) || (deterPtQuadRel(lnSeg.nod[1],qd)==1)) {
+                //oen of the nodes is within the quad
                 return 1;
             } else {
-                return  0;
+                // none of the nodes is within the quad, test if segments intersect
+                
             }
+        } else {
+            //determines if a point is within a quad
+            if(t<0 || t>1) {
+                return 0;
+            } else {
+                rect_coord_dbl intersection = rectCoordAdd(ln.pt,scaRectMul(t,ln.dir));
+                if(deterPtQuadRel(intersection,qd)==1) {
+                    return 1;
+                } else {
+                    return  0;
+                }
+            }
+            
         }
     }
 }

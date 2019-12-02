@@ -259,7 +259,11 @@ __host__ __device__ int deterLinePlaneInt(const line_dbl ln, const plane_dbl pln
 
 __host__ __device__ int deterPtCubeVtxVolRel(const rect_coord_dbl pt, const cube_dbl cb);
 
-__host__ __device__ int deterLinePlaneInt(const line_dbl ln, const plane_dbl pln, double* t);
+__host__ __device__ int deterLinePlaneRel(const line_dbl ln, const plane_dbl pln, double* t);
+
+__host__ __device__ double rectCoordDet(const rect_coord_dbl vec[3]);
+
+__host__ __device__ int deterLnSegQuadRel(const ln_seg_dbl lnSeg, const quad_dbl qd);
 
 #endif /* NUMERICAL_H */
 
