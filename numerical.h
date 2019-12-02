@@ -265,6 +265,10 @@ __host__ __device__ double rectCoordDet(const rect_coord_dbl vec[3]);
 
 __host__ __device__ int deterLnLnRel(const line_dbl ln1, const line_dbl ln2, double* t1, double* t2);
 
+__host__ __device__ int deterPtLnSegRel(const rect_coord_dbl pt, const ln_seg_dbl lnSeg);
+
+__host__ __device__ int deterLnSegLnSegRel(const ln_seg_dbl seg1, const ln_seg_dbl seg2);
+
 __host__ __device__ int deterLnSegQuadRel(const ln_seg_dbl lnSeg, const quad_dbl qd);
 
 #endif /* NUMERICAL_H */

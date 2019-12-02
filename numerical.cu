@@ -2377,16 +2377,19 @@ __host__ __device__ int deterLnLnRel(const line_dbl ln1, const line_dbl ln2, dou
         if(rectNorm(vec)<EPS) {
             //the points are the same
             return 2; 
-        } else {
+        } 
+        else {
             if(rectNorm(rectCrossMul(vec,ln2.dir))<EPS) {
                 // vec is a multiple of ln2.dir
                 return 2; 
-            } else {
+            } 
+            else {
                 // the two lines are parallel
                 return 0;
             }
         }
-    } else {
+    } 
+    else {
         //the two lines either are skew or intersect
         rect_coord_dbl pt[4];
         pt[0] = ln1.pt;
@@ -2400,22 +2403,26 @@ __host__ __device__ int deterLnLnRel(const line_dbl ln1, const line_dbl ln2, dou
             if(rectCoordEqual(pt[0],pt[2])) {
                 *t1 = 0;
                 *t2 = 0;
-            } else {
+            } 
+            else {
                 if(rectCoordEqual(pt[0],pt[3])) {
                     *t1 = 0;
                     *t2 = 1.0;
-                } else {
+                } 
+                else {
                     if(rectCoordEqual(pt[1],pt[2])) {
                         *t1 = 1.0;
                         *t2 = 0.0;
-                    } else {
+                    } 
+                    else {
                         *t1 = 1.0;
                         *t2 = 1.0;
                     }
                 }
             }
             return 1;
-        } else {
+        } 
+        else {
             //
             rect_coord_dbl vec[3];
             vec[0] = rectCoordSub(pt[1],pt[0]);
@@ -2426,7 +2433,8 @@ __host__ __device__ int deterLnLnRel(const line_dbl ln1, const line_dbl ln2, dou
             if(abs(rectCoordDet(vec))>EPS) {
                 //skew lines
                 return 0;
-            } else {
+            } 
+            else {
                 // the two lines intersects. compute it.
                 // first find the valid sub-system
                 double coeff1[2], coeff2[2];
@@ -2460,16 +2468,83 @@ __host__ __device__ int deterLnLnRel(const line_dbl ln1, const line_dbl ln2, dou
     }
 }
 
+__host__ __device__ int deterPtLnRel(const rect_coord_dbl pt, const line_dbl ln)
+{
+    /*determines the relation between a point and a line*/
+    rect_coord_dbl vec = rectCoordSub(pt,ln.pt);
+    if(rectNorm(rectCrossMul(vec,ln.dir))<EPS) {
+        return 1;
+    } 
+    else {
+        return 0;
+    }
+}
+
+__host__ __device__ int deterPtLnSegRel(const rect_coord_dbl pt, const ln_seg_dbl lnSeg)
+{
+    /*determines the relation between a point and a line segment*/
+    line_dbl ln = lnSeg2ln(lnSeg);
+    if(deterPtLnRel(pt,ln)==0) {
+        //point not on the line containing the line segment
+        return 0;
+    } 
+    else {
+        double t;
+        rect_coord_dbl vec = rectCoordSub(pt,ln.pt);
+        for(int i=0;i<3;i++) {
+            if(abs(ln.dir.coords[i])>EPS) {
+                t = vec.coords[i]/ln.dir.coords[i];
+                break;
+            }
+        }
+        if(t>=0 && t<=1) {
+            return 1;
+        }
+        else {
+            return 0;
+        }
+    }
+}
+
+__host__ __device__ int deterLnSegLnSegRel(const ln_seg_dbl seg1, const ln_seg_dbl seg2)
+{
+    /*determines the relation between two line segments*/
+    line_dbl ln1 = lnSeg2ln(seg1), ln2 = lnSeg2ln(seg2);
+    double t1, t2;
+    int relLnLn = deterLnLnRel(ln1,ln2,&t1,&t2);
+    if(relLnLn==0) {
+        // the two lines are skew to each other
+        return 0;
+    }
+    else {
+        if(relLnLn==1) {
+            if(t1>=0 && t1<=1 && t2>=0 && t2<=1) {
+                return 1;
+            }
+            else {
+                return 0;
+            }
+        }
+        else {
+            // the two lines are the same line
+            if(deterPtLnSegRel(seg1.nod[0],seg2)==0 
+                    && deterPtLnSegRel(seg1.nod[1],seg2)==0) {
+                return 0;
+            }
+            else {
+                return 1;
+            }
+        }
+    }
+}
+
 __host__ __device__ int deterLnSegQuadRel(const ln_seg_dbl lnSeg, const quad_dbl qd)
 {
     /*determine if a line segment intersects a quad*/
     int flag;
     
-    //make a line containing the line segment
-    rect_coord_dbl dir = rectCoordSub(lnSeg.nod[1],lnSeg.nod[0]);
-    line_dbl ln;
-    ln.pt = lnSeg.nod[0];
-    ln.dir = dir;
+    //make a line containing the line segment    
+    line_dbl ln = lnSeg2ln(lnSeg);
     
     // define a plane containing the quad
     plane_dbl pln = quad2plane(qd);
@@ -2478,27 +2553,64 @@ __host__ __device__ int deterLnSegQuadRel(const ln_seg_dbl lnSeg, const quad_dbl
     double t;
     flag = deterLinePlaneRel(ln,pln,&t);
     if(flag==0) {
-        // no intersection
+        // no intersection between the line and the plane
         return 0;
-    } else {
+    } 
+    else {
         if(flag==2) {
             // infinitely many intersections
-            if((deterPtQuadRel(lnSeg.nod[0],qd)==1) || (deterPtQuadRel(lnSeg.nod[1],qd)==1)) {
+            if(deterPtQuadRel(lnSeg.nod[0],qd)==1 || deterPtQuadRel(lnSeg.nod[1],qd)==1) {
                 //oen of the nodes is within the quad
                 return 1;
-            } else {
+            } 
+            else {
                 // none of the nodes is within the quad, test if segments intersect
-                
+                for(int i=0;i<4;i++) {
+                    ln_seg_dbl qdLnSeg;
+                    qdLnSeg.nod[0] = qd.nod[i%4];
+                    qdLnSeg.nod[1] = qd.nod[(i+1)%4];
+                    line_dbl qdLn = lnSeg2ln(qdLnSeg);
+                    double t1, t2;
+                    int rel = deterLnLnRel(ln,qdLn,&t1,&t2);
+                    if(rel==0) {
+                        //lines are skew to each other
+                        return 0;
+                    } 
+                    else {
+                        if(rel==1) {
+                            //lines have a single intersection
+                            if(t1>=0 && t1<=1 && t2>=0 && t2<=1) {
+                                //there exists a single intersection
+                                return 1;
+                            } 
+                            else {
+                                return 0;
+                            }
+                        }
+                        else {
+                            if(deterPtLnSegRel(lnSeg.nod[0],qdLnSeg)==1 || 
+                                    deterPtLnSegRel(lnSeg.nod[1],qdLnSeg)==1) {
+                                return 1;
+                            }
+                            else {
+                                return 0;
+                            }
+                        }
+                    }
+                }
             }
-        } else {
+        } 
+        else {
             //determines if a point is within a quad
             if(t<0 || t>1) {
                 return 0;
-            } else {
+            } 
+            else {
                 rect_coord_dbl intersection = rectCoordAdd(ln.pt,scaRectMul(t,ln.dir));
                 if(deterPtQuadRel(intersection,qd)==1) {
                     return 1;
-                } else {
+                } 
+                else {
                     return  0;
                 }
             }

@@ -17,23 +17,17 @@
 
 int main(int argc, char *argv[])
 {
-    line_dbl ln1, ln2;
-    ln1.pt = {-1,0,0};
-    ln1.dir = {2,0,0};
-    ln2.pt = {0,1,0};
-    ln2.dir = {0,-2,0};
-    double t1, t2;
-    int result = deterLnLnRel(ln1,ln2,&t1,&t2);
-    if(result==0) {
-        printf("The two lines do not intersect.\n");
-    } else {
-        if(result==1) {
-            rect_coord_dbl intersection = rectCoordAdd(ln1.pt,scaRectMul(t1,ln1.dir));
-            printf("The one intersection point is (%lf,%lf,%lf).\n",intersection.coords[0],
-                    intersection.coords[1],intersection.coords[2]);
-        } else {
-            printf("The two lines are the same.\n");
-        }
+    ln_seg_dbl seg1, seg2;
+    seg1.nod[0] = {1,1,0};
+    seg1.nod[1] = {2,2,0};
+    seg2.nod[0] = {0,1,0};
+    seg2.nod[1] = {1,0,0};
+    int rel = deterLnSegLnSegRel(seg1,seg2);
+    if(rel==0) {
+        printf("No intersection\n");
+    }
+    else {
+        printf("Intersects.\n");
     }
     return EXIT_SUCCESS;
 }
