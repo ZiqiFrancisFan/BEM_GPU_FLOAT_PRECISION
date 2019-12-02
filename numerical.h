@@ -197,6 +197,18 @@ __host__ __device__ rect_coord_dbl rectCoordAdd(const rect_coord_dbl u, const re
 
 __host__ __device__ rect_coord_dbl rectCoordSub(const rect_coord_dbl u, const rect_coord_dbl v);
 
+__host__ __device__ rect_coord_dbl nrmlzRectCoord(const rect_coord_dbl v);
+
+__host__ __device__ rect_coord_flt nrmlzRectCoord(const rect_coord_flt v);
+
+__host__ __device__ float rectNorm(const rect_coord_flt v);
+
+__host__ __device__ double rectNorm(const rect_coord_dbl v);
+
+__host__ __device__ int rectCoordEqual(const rect_coord_flt v1, const rect_coord_flt v2);
+
+__host__ __device__ int rectCoordEqual(const rect_coord_dbl v1, const rect_coord_dbl v2);
+
 __host__ __device__ bool ray_intersect_triangle(const rect_coord_flt O, const rect_coord_flt dir, 
         const rect_coord_flt nod[3]);
 
@@ -246,30 +258,6 @@ int genFields_MultiPtSrcSglObj(const float strength, const float wavNum,
         const rect_coord_flt* srcs, const int numSrcs, const rect_coord_dbl* pts, const int numPts, 
         const tri_elem* elems, const int numElems, const rect_coord_dbl cnr, const double d, 
         const int level, cuFloatComplex* fields);
-
-__host__ __device__ double triArea(const tri_dbl s);
-
-__host__ __device__ int deterPtPlaneRel(const rect_coord_dbl pt, const plane_dbl plane);
-
-__host__ __device__ int deterPtCubeRel(const rect_coord_dbl pt, const cube_dbl cube);
-
-__host__ __device__ int deterPtCubeEdgeVolRel(const rect_coord_dbl pt, const cube_dbl cb);
-
-__host__ __device__ int deterLinePlaneInt(const line_dbl ln, const plane_dbl pln, double* t);
-
-__host__ __device__ int deterPtCubeVtxVolRel(const rect_coord_dbl pt, const cube_dbl cb);
-
-__host__ __device__ int deterLinePlaneRel(const line_dbl ln, const plane_dbl pln, double* t);
-
-__host__ __device__ double rectCoordDet(const rect_coord_dbl vec[3]);
-
-__host__ __device__ int deterLnLnRel(const line_dbl ln1, const line_dbl ln2, double* t1, double* t2);
-
-__host__ __device__ int deterPtLnSegRel(const rect_coord_dbl pt, const ln_seg_dbl lnSeg);
-
-__host__ __device__ int deterLnSegLnSegRel(const ln_seg_dbl seg1, const ln_seg_dbl seg2);
-
-__host__ __device__ int deterLnSegQuadRel(const ln_seg_dbl lnSeg, const quad_dbl qd);
 
 #endif /* NUMERICAL_H */
 

@@ -14,6 +14,7 @@
 #include "mesh.h"
 #include "octree.h"
 #include "numerical.h"
+#include "geometry.h"
 
 int main(int argc, char *argv[])
 {

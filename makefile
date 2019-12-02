@@ -189,13 +189,13 @@ else
 endif
 
 
-OBJ = main.o numerical.o mesh.o octree.o
+OBJ = main.o numerical.o mesh.o octree.o geometry.o
 #     Bias.o  
 
 main : $(OBJ)
 	$(EXEC) $(NVCC) $(ALL_LDFLAGS) $(GENCODE_FLAGS) -o $@ $+ $(LIBRARIES)
 
-main.o : main.cpp numerical.h mesh.h dataStructs.h
+main.o : main.cpp numerical.h mesh.h dataStructs.h geometry.h
 	$(EXEC) $(HOST_COMPILER) $(INCLUDES) $(CCFLAGS) $(EXTRA_CCFLAGS) -c main.cpp
 
 numerical.o : numerical.cu numerical.h mesh.h dataStructs.h octree.h
@@ -206,6 +206,9 @@ mesh.o: mesh.cpp mesh.h numerical.h dataStructs.h
 	
 octree.o: octree.cpp octree.h numerical.h dataStructs.h mesh.h
 	$(NVCC) $(INCLUDES) $(ALL_CCFLAGS) $(EXTRA_CCFLAGS) $(GENCODE_FLAGS) -c octree.cpp
+	
+geometry.o: geometry.cu geometry.h numerical.h dataStructs.h
+	$(NVCCONLY) -dc $(INCLUDES) $(ALL_CCFLAGS) $(EXTRA_CCFLAGS) $(GENCODE_FLAGS) geometry.cu
 
 
 # main: $(OBJ)
