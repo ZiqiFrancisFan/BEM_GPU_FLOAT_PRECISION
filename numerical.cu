@@ -240,7 +240,7 @@ __host__ __device__ rect_coord_flt nrmlzRectCoord(const rect_coord_flt v)
     return scaRectMul(1.0/nrm,v);
 }
 
-__host__ __device__ int equalRectCoord(const rect_coord_flt v1, const rect_coord_flt v2)
+__host__ __device__ int rectCoordEqual(const rect_coord_flt v1, const rect_coord_flt v2)
 {
     rect_coord_flt v = rectCoordSub(v1,v2);
     if(rectNorm(v) < EPS) {
@@ -250,7 +250,7 @@ __host__ __device__ int equalRectCoord(const rect_coord_flt v1, const rect_coord
     }
 }
 
-__host__ __device__ int equalRectCoord(const rect_coord_dbl v1, const rect_coord_dbl v2)
+__host__ __device__ int rectCoordEqual(const rect_coord_dbl v1, const rect_coord_dbl v2)
 {
     rect_coord_dbl v = rectCoordSub(v1,v2);
     if(rectNorm(v) < EPS) {
@@ -2367,7 +2367,7 @@ __host__ __device__ double rectCoordDet(const rect_coord_dbl vec[3])
     return result;
 }
 
-__host__ __device__ int deterLnLnRel(const line_dbl ln1, const line_dbl ln2, double *t1, double *t2)
+__host__ __device__ int deterLnLnRel(const line_dbl ln1, const line_dbl ln2, double* t1, double* t2)
 {   
     if(abs(rectNorm(rectCrossMul(ln1.dir,ln2.dir)))<EPS) {
         // the two lines are either parallel or the same line
@@ -2387,24 +2387,43 @@ __host__ __device__ int deterLnLnRel(const line_dbl ln1, const line_dbl ln2, dou
             }
         }
     } else {
-        //the two lines are not parallel or the same
-        
-        //take two different points on each line
-        if(rectNorm(rectCoordSub(ln1.pt,ln2.pt))<EPS) {
+        //the two lines either are skew or intersect
+        rect_coord_dbl pt[4];
+        pt[0] = ln1.pt;
+        pt[1] = rectCoordAdd(ln1.pt,scaRectMul(1.0,ln1.dir));
+        pt[2] = ln2.pt;
+        pt[3] = rectCoordAdd(ln2.pt,scaRectMul(1.0,ln2.dir));
+        //printRectCoord(pt,4);
+        if(rectCoordEqual(pt[0],pt[2]) || rectCoordEqual(pt[0],pt[3]) || 
+                rectCoordEqual(pt[1],pt[2]) || rectCoordEqual(pt[1],pt[3])) {
             //the two points on the line is the same point
-            *t1 = 0;
-            *t2 = 0;
+            if(rectCoordEqual(pt[0],pt[2])) {
+                *t1 = 0;
+                *t2 = 0;
+            } else {
+                if(rectCoordEqual(pt[0],pt[3])) {
+                    *t1 = 0;
+                    *t2 = 1.0;
+                } else {
+                    if(rectCoordEqual(pt[1],pt[2])) {
+                        *t1 = 1.0;
+                        *t2 = 0.0;
+                    } else {
+                        *t1 = 1.0;
+                        *t2 = 1.0;
+                    }
+                }
+            }
             return 1;
         } else {
-            rect_coord_dbl pt[4], vec[3];
-            pt[0] = ln1.pt;
-            pt[1] = rectCoordAdd(ln1.pt,scaRectMul(1.0,ln1.dir));
-            pt[2] = ln2.pt;
-            pt[3] = rectCoordAdd(ln2.pt,scaRectMul(1.0,ln2.dir));
+            //
+            rect_coord_dbl vec[3];
             vec[0] = rectCoordSub(pt[1],pt[0]);
             vec[1] = rectCoordSub(pt[2],pt[0]);
             vec[2] = rectCoordSub(pt[3],pt[0]);
-            if(abs(rectCoordDet(vec))<EPS) {
+            
+            //printf("The determinant is: %f\n",rectCoordDet(vec));
+            if(abs(rectCoordDet(vec))>EPS) {
                 //skew lines
                 return 0;
             } else {
@@ -2486,6 +2505,8 @@ __host__ __device__ int deterLnSegQuadRel(const ln_seg_dbl lnSeg, const quad_dbl
             
         }
     }
+    
+    return 1;
 }
 
 
