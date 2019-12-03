@@ -4,6 +4,7 @@
  * and open the template in the editor.
  */
 #include "geometry.h"
+#include "octree.h"
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -909,5 +910,66 @@ __host__ __device__ int deterTriCubeInt(const tri_dbl tri, const cube_dbl cb)
     }
     
     return 0;
+}
+
+__global__ void testTriCbInt(const tri_dbl* tri, const int numTri, const cube_dbl* cb, 
+        const int numCb, int* flag)
+{
+    /*the global function for testing triangle-cube intersection
+     tri: an array of triangles
+     numTri: the number of triangles
+     cb: an array of cubes
+     numCb: the number of cubes
+     flag: an array of flags, initialized to zero, of size numCb*/
+    int idx_x = blockIdx.x*blockDim.x+threadIdx.x; // triangle index
+    int idx_y = blockIdx.y*blockDim.y+threadIdx.y; // cube index
+    
+    if(idx_x < numTri && idx_y < numCb) {
+        int rel = deterTriCubeInt(tri[idx_x],cb[idx_y]);
+        atomicAdd(&flag[idx_y],rel);
+    }
+}
+
+__host__ int voxelSpace(const tri_dbl* tri, const int numTri, const cube_dbl* cb, 
+        const int numCb, int* flag)
+{
+    /*voxelize a space into occupance grids
+     tri: an array of triangles
+     numTri: the number of triangles
+     cb: an array of cubes
+     numCb: number of cubes
+     flag: an array of flags for cube occupancy*/
+    tri_dbl *tri_d;
+    CUDA_CALL(cudaMalloc(&tri_d,numTri*sizeof(tri_dbl)));
+    CUDA_CALL(cudaMemcpy(tri_d,tri,numTri*sizeof(tri_dbl),cudaMemcpyHostToDevice));
+    
+    cube_dbl *cb_d;
+    CUDA_CALL(cudaMalloc(&cb_d,numCb*sizeof(cube_dbl)));
+    CUDA_CALL(cudaMemcpy(cb_d,cb,numCb*sizeof(cube_dbl),cudaMemcpyHostToDevice));
+    
+    memset(flag,0,numCb*sizeof(cube_dbl));
+    int *flag_d;
+    CUDA_CALL(cudaMalloc(&flag_d,numCb*sizeof(int)));
+    CUDA_CALL(cudaMemcpy(flag_d,flag,numCb*sizeof(int),cudaMemcpyHostToDevice));
+    
+    int xNumBlocks, xWidth = 16, yNumBlocks, yWidth = 16;
+    xNumBlocks = (numTri+xWidth-1)/xWidth;
+    yNumBlocks = (numCb+yWidth-1)/yWidth;
+    
+    dim3 gridLayout, blockLayout;
+    gridLayout.x = xNumBlocks;
+    gridLayout.y = yNumBlocks;
+    
+    blockLayout.x = xWidth;
+    blockLayout.y = yWidth;
+    
+    testTriCbInt<<<gridLayout,blockLayout>>>(tri_d,numTri,cb_d,numCb,flag_d);
+    HOST_CALL(cudaMemcpy(flag,flag_d,numCb*sizeof(int),cudaMemcpyDeviceToHost));
+    
+    CUDA_CALL(cudaFree(flag_d));
+    CUDA_CALL(cudaFree(cb_d));
+    CUDA_CALL(cudaFree(tri_d));
+    
+    return EXIT_SUCCESS;
 }
 
