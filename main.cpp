@@ -18,22 +18,19 @@
 
 int main(int argc, char *argv[])
 {
-    ln_seg_dbl seg1, seg2;
-    seg1.nod[0] = {1,1,0};
-    seg1.nod[1] = {2,2,0};
-    seg2.nod[0] = {1.9,1.9,0};
-    seg2.nod[1] = {2.1,2.1,0};
-    int rel = deterLnSegLnSegRel(seg1,seg2);
+    ln_seg_dbl seg;
+    seg.nod[0] = {1,1,0};
+    seg.nod[1] = {0.5,0.5,0};
+    tri_dbl tri;
+    tri.nod[0] = {0,0,0};
+    tri.nod[1] = {1,0,0};
+    tri.nod[2] = {0,1,0};
+    int rel = deterLnSegTriRel(seg,tri);
     if(rel==0) {
-        printf("No intersection\n");
+        printf("No intersection.\n");
     }
     else {
-        if(rel==1) {
-            printf("One intersection.\n");
-        }
-        else {
-            printf("Infitely many intersections\n");
-        }
+        printf("Intersection.\n");
     }
     return EXIT_SUCCESS;
 }

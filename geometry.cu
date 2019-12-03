@@ -373,6 +373,17 @@ __host__ __device__ double quadArea(const quad_dbl s)
     return rectNorm(rectCrossMul(vec[0],vec[1]));
 }
 
+__host__ __device__ plane_dbl tri2plane(const tri_dbl tri)
+{
+    plane_dbl pln;
+    pln.pt = tri.nod[0];
+    rect_coord_dbl vec[2];
+    vec[0] = rectCoordSub(tri.nod[1],tri.nod[0]);
+    vec[1] = rectCoordSub(tri.nod[2],tri.nod[0]);
+    pln.n = nrmlzRectCoord(rectCrossMul(vec[0],vec[1]));
+    return pln;
+}
+
 __host__ __device__ plane_dbl quad2plane(const quad_dbl qd)
 {
     /*get the plane containing a quad*/
@@ -393,9 +404,33 @@ __host__ __device__ line_dbl lnSeg2ln(const ln_seg_dbl ls)
     return l;
 }
 
+__host__ __device__ int deterPtTriRel(const rect_coord_dbl pt, const tri_dbl tri)
+{
+    /*determine the relationship between a point and a quad on the same plane
+     return: 
+     1: pt in tri
+     0: pt outsidie tri*/
+    double area = 0.0;
+    rect_coord_dbl vec[2];
+    for(int i=0;i<3;i++) {
+        vec[0] = rectCoordSub(tri.nod[i%3],pt);
+        vec[1] = rectCoordSub(tri.nod[(i+1)%3],pt);
+        area += 0.5*rectNorm(rectCrossMul(vec[0],vec[1]));
+    }
+    double area_tri = triArea(tri);
+    if(abs(area-area_tri)<EPS) {
+        return 1; // in
+    } else {
+        return 0; // out
+    }
+}
+
 __host__ __device__ int deterPtQuadRel(const rect_coord_dbl pt, const quad_dbl qd)
 {
-    /*determine the relationship between a point and a quad on the same plane*/
+    /*determine the relationship between a point and a quad on the same plane
+     return: 
+     1: pt in qd
+     0: pt outside qd*/
     double area = 0.0;
     rect_coord_dbl vec[2];
     for(int i=0;i<4;i++) {
@@ -574,8 +609,12 @@ __host__ __device__ int deterPtLnSegRel(const rect_coord_dbl pt, const ln_seg_db
 __host__ __device__ int deterLnSegLnSegRel(const ln_seg_dbl seg1, const ln_seg_dbl seg2)
 {
     /*determines the relation between two line segments
+     seg1: a line segment
+     seg2: a line segment
+     return: 
      0: no intersection
-     1: intersection*/
+     1: intersection
+     2: infinitely many intersections*/
     line_dbl ln1 = lnSeg2ln(seg1), ln2 = lnSeg2ln(seg2);
     double t1, t2;
     int relLnLn = deterLnLnRel(ln1,ln2,&t1,&t2);
@@ -622,10 +661,14 @@ __host__ __device__ int deterLnSegLnSegRel(const ln_seg_dbl seg1, const ln_seg_d
 
 __host__ __device__ int deterLnSegQuadRel(const ln_seg_dbl lnSeg, const quad_dbl qd)
 {
-    /*determine if a line segment intersects a quad*/
+    /*determine if a line segment intersects a quad
+     the difference between single intersection and infinitely many intersections 
+     is not made.
+     0: no intersection
+     1: intersection*/
     int flag;
     
-    //make a line containing the line segment    
+    //make a line containing the line segment   
     line_dbl ln = lnSeg2ln(lnSeg);
     
     // define a plane containing the quad
@@ -634,13 +677,15 @@ __host__ __device__ int deterLnSegQuadRel(const ln_seg_dbl lnSeg, const quad_dbl
     // determine the intersection between the line and the plane
     double t;
     flag = deterLinePlaneRel(ln,pln,&t);
+    
+    // differentiate between different cases
     if(flag==0) {
         // no intersection between the line and the plane
         return 0;
     } 
     else {
         if(flag==2) {
-            // infinitely many intersections
+            // infinitely many intersections between the line and plane
             if(deterPtQuadRel(lnSeg.nod[0],qd)==1 || deterPtQuadRel(lnSeg.nod[1],qd)==1) {
                 //oen of the nodes is within the quad
                 return 1;
@@ -651,47 +696,26 @@ __host__ __device__ int deterLnSegQuadRel(const ln_seg_dbl lnSeg, const quad_dbl
                     ln_seg_dbl qdLnSeg;
                     qdLnSeg.nod[0] = qd.nod[i%4];
                     qdLnSeg.nod[1] = qd.nod[(i+1)%4];
-                    line_dbl qdLn = lnSeg2ln(qdLnSeg);
-                    double t1, t2;
-                    int rel = deterLnLnRel(ln,qdLn,&t1,&t2);
-                    if(rel==0) {
-                        //lines are skew to each other
-                        return 0;
-                    } 
-                    else {
-                        if(rel==1) {
-                            //lines have a single intersection
-                            if(t1>=0 && t1<=1 && t2>=0 && t2<=1) {
-                                //there exists a single intersection
-                                return 1;
-                            } 
-                            else {
-                                return 0;
-                            }
-                        }
-                        else {
-                            if(deterPtLnSegRel(lnSeg.nod[0],qdLnSeg)==1 || 
-                                    deterPtLnSegRel(lnSeg.nod[1],qdLnSeg)==1) {
-                                return 1;
-                            }
-                            else {
-                                return 0;
-                            }
-                        }
+                    if(deterLnSegLnSegRel(lnSeg,qdLnSeg)!=0) {
+                        // the line segment intersects a quad line segment
+                        return 1;
                     }
                 }
+                return 0;
             }
-        } 
+        }
         else {
             //determines if a point is within a quad
             if(t<0 || t>1) {
+                // intersection not on the line segment
                 return 0;
             } 
             else {
                 rect_coord_dbl intersection = rectCoordAdd(ln.pt,scaRectMul(t,ln.dir));
                 if(deterPtQuadRel(intersection,qd)==1) {
+                    // intersection in the quad
                     return 1;
-                } 
+                }
                 else {
                     return  0;
                 }
@@ -699,16 +723,204 @@ __host__ __device__ int deterLnSegQuadRel(const ln_seg_dbl lnSeg, const quad_dbl
             
         }
     }
-    
-    return 1;
 }
 
-
-
-
-__host__ __device__ int deterTriCubeInt(const rect_coord_dbl nod[3], const cube_dbl cb)
+__host__ __device__ int deterLnSegTriRel(const ln_seg_dbl lnSeg, const tri_dbl tri)
 {
-    /*this function determines if a triangle intersects with a cube*/
-    return 1;
+    /*determine if a line segment intersects a quad
+     0: no intersection
+     1: intersection*/
+    int flag;
+    
+    //make a line containing the line segment    
+    line_dbl ln = lnSeg2ln(lnSeg);
+    
+    // define a plane containing the triangle
+    plane_dbl pln = tri2plane(tri);
+    
+    // determine the intersection between the line and the plane
+    double t;
+    flag = deterLinePlaneRel(ln,pln,&t);
+    if(flag==0) {
+        // no intersection between the line and the plane
+        return 0;
+    } 
+    else {
+        if(flag==2) {
+            // infinitely many intersections between the line and plane
+            if(deterPtTriRel(lnSeg.nod[0],tri)==1 || deterPtTriRel(lnSeg.nod[1],tri)==1) {
+                //oen of the nodes is within the quad
+                return 1;
+            } 
+            else {
+                // none of the nodes is within the triangle, test if segments intersect
+                for(int i=0;i<3;i++) {
+                    ln_seg_dbl triLnSeg;
+                    triLnSeg.nod[0] = tri.nod[i%3];
+                    triLnSeg.nod[1] = tri.nod[(i+1)%3];
+                    if(deterLnSegLnSegRel(lnSeg,triLnSeg)!=0) {
+                        // the line segment intersects a trianagle line segment
+                        return 1;
+                    }
+                }
+                return 0;
+            }
+        }
+        else {
+            //determines if a point is within a quad
+            if(t<0 || t>1) {
+                // intersection not on the line segment
+                return 0;
+            } 
+            else {
+                rect_coord_dbl intersection = rectCoordAdd(ln.pt,scaRectMul(t,ln.dir));
+                if(deterPtTriRel(intersection,tri)==1) {
+                    // intersection in the tri
+                    return 1;
+                }
+                else {
+                    return  0;
+                }
+            }
+            
+        }
+    }
+}
+
+__host__ __device__ int deterTriCubeInt(const tri_dbl tri, const cube_dbl cb)
+{
+    /*this function determines if a triangle intersects with a cube
+     tri: an triangle
+     cb: a cube
+     return: 
+     1: intersection
+     0: no intersection*/
+    
+    //test nodes of the triangle against the cube
+    int nodRel[3];
+    for(int i=0;i<3;i++) {
+        nodRel[i] = deterPtCubeRel(tri.nod[i],cb);
+        if(nodRel[i]==1) {
+            // node i is in the cube, thus the cube is occupied
+            return 1;
+        }
+    }
+    
+    for(int i=0;i<3;i++) {
+        nodRel[i] = deterPtCubeEdgeVolRel(tri.nod[i],cb);
+    }
+    if(nodRel[0]==0 && nodRel[1]==0 && nodRel[2]==0) {
+        return 0;
+    }
+    
+    for(int i=0;i<3;i++) {
+        nodRel[i] = deterPtCubeVtxVolRel(tri.nod[i],cb);
+    }
+    if(nodRel[0]==0 && nodRel[1]==0 && nodRel[2]==0) {
+        return 0;
+    }
+    
+    //test the intersection between edges of the triangle and the six faces of the cube
+    int rel = 0;
+    ln_seg_dbl triEdge[3];
+    quad_dbl cbFace[6];
+    ln_seg_dbl cbDiag[4];
+    
+    //set up translation vectors
+    rect_coord_dbl dir_x = {1,0,0}, dir_y = {0,1,0}, dir_z = {0,0,1};
+    dir_x = scaRectMul(cb.len,dir_x);
+    dir_y = scaRectMul(cb.len,dir_y);
+    dir_z = scaRectMul(cb.len,dir_z);
+    
+    //set the edges, faces and diagonals
+    for(int i=0;i<3;i++) {
+        triEdge[i].nod[0] = tri.nod[i];
+        triEdge[i].nod[1] = tri.nod[(i+1)%3];
+    }
+    
+    for(int i=0;i<6;i++) {
+        rect_coord_dbl pt;
+        switch(i) {
+            case 0: //bottom x-y plane
+                pt = cb.cnr;
+                cbFace[i].nod[0] = pt;
+                cbFace[i].nod[1] = rectCoordAdd(cbFace[i].nod[0],dir_x);
+                cbFace[i].nod[2] = rectCoordAdd(cbFace[i].nod[1],dir_y);
+                cbFace[i].nod[3] = rectCoordAdd(cbFace[i].nod[2],scaRectMul(-1,dir_x));
+                break;
+            case 1: //up x-y plane
+                pt = rectCoordAdd(pt,dir_z);
+                cbFace[i].nod[0] = pt;
+                cbFace[i].nod[1] = rectCoordAdd(cbFace[i].nod[0],dir_x);
+                cbFace[i].nod[2] = rectCoordAdd(cbFace[i].nod[1],dir_y);
+                cbFace[i].nod[3] = rectCoordAdd(cbFace[i].nod[2],scaRectMul(-1,dir_x));
+                break;
+            case 2: //left y-z plane
+                pt = cb.cnr;
+                cbFace[i].nod[0] = pt;
+                cbFace[i].nod[1] = rectCoordAdd(cbFace[i].nod[0],dir_x);
+                cbFace[i].nod[2] = rectCoordAdd(cbFace[i].nod[1],dir_z);
+                cbFace[i].nod[3] = rectCoordAdd(cbFace[i].nod[2],scaRectMul(-1,dir_x));
+                break;
+            case 3: //right y-z plane
+                pt = rectCoordAdd(cb.cnr,dir_y);
+                cbFace[i].nod[0] = pt;
+                cbFace[i].nod[1] = rectCoordAdd(cbFace[i].nod[0],dir_x);
+                cbFace[i].nod[2] = rectCoordAdd(cbFace[i].nod[1],dir_z);
+                cbFace[i].nod[3] = rectCoordAdd(cbFace[i].nod[2],scaRectMul(-1,dir_x));
+                break;
+            case 4: //back z-x plane
+                pt = cb.cnr;
+                cbFace[i].nod[0] = pt;
+                cbFace[i].nod[1] = rectCoordAdd(cbFace[i].nod[0],dir_y);
+                cbFace[i].nod[2] = rectCoordAdd(cbFace[i].nod[1],dir_z);
+                cbFace[i].nod[3] = rectCoordAdd(cbFace[i].nod[2],scaRectMul(-1,dir_y));
+                break;
+            case 5: //front z-x plane
+                pt = rectCoordAdd(cb.cnr,dir_x);
+                cbFace[i].nod[0] = pt;
+                cbFace[i].nod[1] = rectCoordAdd(cbFace[i].nod[0],dir_y);
+                cbFace[i].nod[2] = rectCoordAdd(cbFace[i].nod[1],dir_z);
+                cbFace[i].nod[3] = rectCoordAdd(cbFace[i].nod[2],scaRectMul(-1,dir_y));
+                break;
+            default:
+                printf("Should not enter this.\n");
+        }
+    }
+    
+    // first diagnonal
+    cbDiag[0].nod[0] = cb.cnr;
+    cbDiag[0].nod[1] = rectCoordAdd(rectCoordAdd(rectCoordAdd(cbDiag[0].nod[0],dir_x),dir_y),dir_z);
+    
+    // second diagnonal
+    cbDiag[1].nod[0] = rectCoordAdd(cbDiag[0].nod[0],dir_x);
+    cbDiag[1].nod[1] = rectCoordAdd(rectCoordAdd(rectCoordAdd(cbDiag[1].nod[0],dir_y),scaRectMul(-1,dir_x)),dir_z);
+    
+    // third diagnoal
+    cbDiag[2].nod[0] = rectCoordAdd(cbDiag[1].nod[0],dir_y);
+    cbDiag[2].nod[1] = rectCoordAdd(rectCoordAdd(rectCoordAdd(cbDiag[2].nod[0],scaRectMul(-1,dir_x)),scaRectMul(-1,dir_y)),dir_z);
+    
+    // fourth diagonal
+    cbDiag[3].nod[0] = rectCoordAdd(cbDiag[2].nod[0],scaRectMul(-1,dir_x));
+    cbDiag[3].nod[1] = rectCoordAdd(rectCoordAdd(rectCoordAdd(cbDiag[3].nod[0],scaRectMul(-1,dir_y)),dir_x),dir_z);
+    
+    // determine if any of the three edges of the triangle intersects the faces;
+    for(int i=0;i<3;i++) {
+        for(int j=0;i<6;j++) {
+            rel = deterLnSegQuadRel(triEdge[i],cbFace[j]);
+            if(rel==1) {
+                return 1;
+            }
+        }
+    }
+    
+    for(int i=0;i<4;i++) {
+        rel = deterLnSegTriRel(cbDiag[i],tri);
+        if(rel==1) {
+            return 1;
+        }
+    }
+    
+    return 0;
 }
 

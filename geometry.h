@@ -45,5 +45,9 @@ __host__ __device__ int deterLnSegLnSegRel(const ln_seg_dbl seg1, const ln_seg_d
 
 __host__ __device__ int deterLnSegQuadRel(const ln_seg_dbl lnSeg, const quad_dbl qd);
 
+__host__ __device__ int deterLnSegQuadRel(const ln_seg_dbl lnSeg, const quad_dbl qd);
+
+__host__ __device__ int deterLnSegTriRel(const ln_seg_dbl lnSeg, const tri_dbl tri);
+
 #endif /* GEOMETRY_H */
 
