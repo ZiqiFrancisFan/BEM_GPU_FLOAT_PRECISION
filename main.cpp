@@ -23,9 +23,9 @@ int main(int argc, char *argv[])
     cb.len = 1.0;
     
     tri_dbl tri;
-    tri.nod[0] = {2.9,0,0};
-    tri.nod[1] = {0,2.9,0};
-    tri.nod[2] = {0,0,2.9};
+    tri.nod[0] = {-3,0,0};
+    tri.nod[1] = {0,3,0};
+    tri.nod[2] = {0,0,3};
     
     int rel = deterTriCubeInt(tri,cb);
     if(rel==1) {

@@ -806,20 +806,6 @@ __host__ __device__ int deterTriCubeInt(const tri_dbl tri, const cube_dbl cb)
         }
     }
     
-    for(int i=0;i<3;i++) {
-        nodRel[i] = deterPtCubeEdgeVolRel(tri.nod[i],cb);
-    }
-    if(nodRel[0]==0 && nodRel[1]==0 && nodRel[2]==0) {
-        return 0;
-    }
-    
-    for(int i=0;i<3;i++) {
-        nodRel[i] = deterPtCubeVtxVolRel(tri.nod[i],cb);
-    }
-    if(nodRel[0]==0 && nodRel[1]==0 && nodRel[2]==0) {
-        return 0;
-    }
-    
     //test the intersection between edges of the triangle and the six faces of the cube
     int rel = 0;
     ln_seg_dbl triEdge[3];
@@ -905,6 +891,7 @@ __host__ __device__ int deterTriCubeInt(const tri_dbl tri, const cube_dbl cb)
     cbDiag[3].nod[1] = rectCoordAdd(rectCoordAdd(rectCoordAdd(cbDiag[3].nod[0],scaRectMul(-1,dir_y)),dir_x),dir_z);
     
     // determine if any of the three edges of the triangle intersects the faces;
+    //printf("Entered diagonal test.\n");
     for(int i=0;i<3;i++) {
         for(int j=0;i<6;j++) {
             rel = deterLnSegQuadRel(triEdge[i],cbFace[j]);
