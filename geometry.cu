@@ -98,7 +98,7 @@ __host__ __device__ int deterPtCubeEdgeVolRel(const rect_coord_dbl pt, const cub
         plane.pt = btm[i];
         result = deterPtPlaneRel(pt,plane);
         if(result == 0) {
-            printf("bottom face: %dth node\n",i);
+            //printf("bottom face: %dth node\n",i);
             return 0;
         }
     }
@@ -126,8 +126,8 @@ __host__ __device__ int deterPtCubeEdgeVolRel(const rect_coord_dbl pt, const cub
         plane.n = nrml[3];
         plane.pt = top[i];
         result = deterPtPlaneRel(pt,plane);
-        if(result == 0) {
-            printf("top face: %dth node\n",i);
+        if(result==0) {
+            //printf("top face: %dth node\n",i);
             return 0;
         }
     }
@@ -155,8 +155,8 @@ __host__ __device__ int deterPtCubeEdgeVolRel(const rect_coord_dbl pt, const cub
         plane.n = nrml[3];
         plane.pt = left[i];
         result = deterPtPlaneRel(pt,plane);
-        if(result == 0) {
-            printf("left face: %dth node\n",i);
+        if(result==0) {
+            //printf("left face: %dth node\n",i);
             return 0;
         }
     }
@@ -184,8 +184,8 @@ __host__ __device__ int deterPtCubeEdgeVolRel(const rect_coord_dbl pt, const cub
         plane.n = nrml[3];
         plane.pt = right[i];
         result = deterPtPlaneRel(pt,plane);
-        if(result == 0) {
-            printf("right face: %dth node\n",i);
+        if(result==0) {
+            //printf("right face: %dth node\n",i);
             return 0;
         }
     }
@@ -213,8 +213,8 @@ __host__ __device__ int deterPtCubeEdgeVolRel(const rect_coord_dbl pt, const cub
         plane.n = nrml[3];
         plane.pt = back[i];
         result = deterPtPlaneRel(pt,plane);
-        if(result == 0) {
-            printf("back face: %dth node\n",i);
+        if(result==0) {
+            //printf("back face: %dth node\n",i);
             return 0;
         }
     }
@@ -242,8 +242,8 @@ __host__ __device__ int deterPtCubeEdgeVolRel(const rect_coord_dbl pt, const cub
         plane.n = nrml[3];
         plane.pt = front[i];
         result = deterPtPlaneRel(pt,plane);
-        if(result == 0) {
-            printf("front face: %dth node\n",i);
+        if(result==0) {
+            //printf("front face: %dth node\n",i);
             return 0;
         }
     }

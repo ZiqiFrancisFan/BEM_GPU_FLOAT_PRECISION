@@ -18,19 +18,21 @@
 
 int main(int argc, char *argv[])
 {
-    ln_seg_dbl seg;
-    seg.nod[0] = {1,1,0};
-    seg.nod[1] = {0.5,0.5,0};
+    cube_dbl cb;
+    cb.cnr = {0,0,0};
+    cb.len = 1.0;
+    
     tri_dbl tri;
-    tri.nod[0] = {0,0,0};
-    tri.nod[1] = {1,0,0};
-    tri.nod[2] = {0,1,0};
-    int rel = deterLnSegTriRel(seg,tri);
-    if(rel==0) {
-        printf("No intersection.\n");
+    tri.nod[0] = {2.9,0,0};
+    tri.nod[1] = {0,2.9,0};
+    tri.nod[2] = {0,0,2.9};
+    
+    int rel = deterTriCubeInt(tri,cb);
+    if(rel==1) {
+        printf("Intersection is not empty.\n");
     }
     else {
-        printf("Intersection.\n");
+        printf("Intersection is empty.\n");
     }
     return EXIT_SUCCESS;
 }
