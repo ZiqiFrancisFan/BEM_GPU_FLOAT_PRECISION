@@ -20,12 +20,12 @@ int main(int argc, char *argv[])
 {
     cube_dbl cb;
     cb.cnr = {0,0,0};
-    cb.len = 1.0;
+    cb.len = 0.00001;
     
     tri_dbl tri;
-    tri.nod[0] = {-3,0,0};
-    tri.nod[1] = {0,3,0};
-    tri.nod[2] = {0,0,3};
+    tri.nod[0] = {0.00002,0,0};
+    tri.nod[1] = {0,0.00002,0};
+    tri.nod[2] = {0,0,0.00002};
     
     int rel = deterTriCubeInt(tri,cb);
     if(rel==1) {

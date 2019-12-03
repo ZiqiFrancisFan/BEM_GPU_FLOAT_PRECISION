@@ -154,7 +154,7 @@ while(0)
 #endif
 
 #ifndef EPS
-#define EPS 0.0000001
+#define EPS 0.000000001
 #endif
 //int genGaussParams(const int n, float *pt, float *wgt);
 
