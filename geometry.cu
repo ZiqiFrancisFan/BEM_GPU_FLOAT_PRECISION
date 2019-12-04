@@ -8,10 +8,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-__host__ __device__ int deterPtPlaneRel(const rect_coord_dbl pt, const plane_dbl plane)
+__host__ __device__ int deterPtPlaneRel(const vec3d pt, const plane_dbl plane)
 {
-    rect_coord_dbl vec = rectCoordSub(pt,plane.pt);
-    double result = rectDotMul(plane.n,vec);
+    vec3d vec = vecSub(pt,plane.pt);
+    double result = vecDotMul(plane.n,vec);
     if(result>=0) {
         // on the positive side of the plane normal
         return 1;
@@ -20,58 +20,58 @@ __host__ __device__ int deterPtPlaneRel(const rect_coord_dbl pt, const plane_dbl
     }
 }
 
-__host__ __device__ int deterPtCubeEdgeVolRel(const rect_coord_dbl pt, const aa_cube_dbl cb)
+__host__ __device__ int deterPtCubeEdgeVolRel(const vec3d pt, const aa_cube_dbl cb)
 {
     /*determine the relationship between a point and the volume bounded by edge faces
      of a cube*/
     
-    //declare two rect_coord_dbl arrays for nod at the bottom and the top face 
-    rect_coord_dbl btm[4], top[4], left[4], right[4], back[4], front[4];
+    //declare two vec3d arrays for nod at the bottom and the top face 
+    vec3d btm[4], top[4], left[4], right[4], back[4], front[4];
     
     // declare the basis unit vectors
-    rect_coord_dbl dir_x = {1.0,0.0,0.0}, dir_y = {0.0,1.0,0.0}, dir_z = {0.0,0.0,1.0};
+    vec3d dir_x = {1.0,0.0,0.0}, dir_y = {0.0,1.0,0.0}, dir_z = {0.0,0.0,1.0};
     
     //set up btm and top nod
     btm[0] = cb.cnr;
-    btm[1] = rectCoordAdd(btm[0],scaRectMul(cb.len,dir_x));
-    btm[2] = rectCoordAdd(btm[1],scaRectMul(cb.len,dir_y));
-    btm[3] = rectCoordAdd(btm[0],scaRectMul(cb.len,dir_y));
+    btm[1] = vecAdd(btm[0],scaRectMul(cb.len,dir_x));
+    btm[2] = vecAdd(btm[1],scaRectMul(cb.len,dir_y));
+    btm[3] = vecAdd(btm[0],scaRectMul(cb.len,dir_y));
     //printRectCoord(btm,4);
     
-    top[0] = rectCoordAdd(btm[0],scaRectMul(cb.len,dir_z));
-    top[1] = rectCoordAdd(top[0],scaRectMul(cb.len,dir_x));
-    top[2] = rectCoordAdd(top[1],scaRectMul(cb.len,dir_y));
-    top[3] = rectCoordAdd(top[0],scaRectMul(cb.len,dir_y));
+    top[0] = vecAdd(btm[0],scaRectMul(cb.len,dir_z));
+    top[1] = vecAdd(top[0],scaRectMul(cb.len,dir_x));
+    top[2] = vecAdd(top[1],scaRectMul(cb.len,dir_y));
+    top[3] = vecAdd(top[0],scaRectMul(cb.len,dir_y));
     //printRectCoord(top,4);
     
     //set up left and right nod
     left[0] = cb.cnr;
-    left[1] = rectCoordAdd(left[0],scaRectMul(cb.len,dir_x));
-    left[2] = rectCoordAdd(left[1],scaRectMul(cb.len,dir_z));
-    left[3] = rectCoordAdd(left[0],scaRectMul(cb.len,dir_z));
+    left[1] = vecAdd(left[0],scaRectMul(cb.len,dir_x));
+    left[2] = vecAdd(left[1],scaRectMul(cb.len,dir_z));
+    left[3] = vecAdd(left[0],scaRectMul(cb.len,dir_z));
     //printRectCoord(left,4);
     
-    right[0] = rectCoordAdd(left[0],scaRectMul(cb.len,dir_y));
-    right[1] = rectCoordAdd(right[0],scaRectMul(cb.len,dir_x));
-    right[2] = rectCoordAdd(right[1],scaRectMul(cb.len,dir_z));
-    right[3] = rectCoordAdd(right[0],scaRectMul(cb.len,dir_z));
+    right[0] = vecAdd(left[0],scaRectMul(cb.len,dir_y));
+    right[1] = vecAdd(right[0],scaRectMul(cb.len,dir_x));
+    right[2] = vecAdd(right[1],scaRectMul(cb.len,dir_z));
+    right[3] = vecAdd(right[0],scaRectMul(cb.len,dir_z));
     //printRectCoord(right,4);
     
     //set up back and front nod
     back[0] = cb.cnr;
-    back[1] = rectCoordAdd(back[0],scaRectMul(cb.len,dir_y));
-    back[2] = rectCoordAdd(back[1],scaRectMul(cb.len,dir_z));
-    back[3] = rectCoordAdd(back[0],scaRectMul(cb.len,dir_z));
+    back[1] = vecAdd(back[0],scaRectMul(cb.len,dir_y));
+    back[2] = vecAdd(back[1],scaRectMul(cb.len,dir_z));
+    back[3] = vecAdd(back[0],scaRectMul(cb.len,dir_z));
     //printRectCoord(back,4);
     
-    front[0] = rectCoordAdd(back[0],scaRectMul(cb.len,dir_x));
-    front[1] = rectCoordAdd(front[0],scaRectMul(cb.len,dir_y));
-    front[2] = rectCoordAdd(front[1],scaRectMul(cb.len,dir_z));
-    front[3] = rectCoordAdd(front[0],scaRectMul(cb.len,dir_z));
+    front[0] = vecAdd(back[0],scaRectMul(cb.len,dir_x));
+    front[1] = vecAdd(front[0],scaRectMul(cb.len,dir_y));
+    front[2] = vecAdd(front[1],scaRectMul(cb.len,dir_z));
+    front[3] = vecAdd(front[0],scaRectMul(cb.len,dir_z));
     //printRectCoord(front,4);
     
     //declare an array nrml for determining the normal of the new plane
-    rect_coord_dbl nrml[3];
+    vec3d nrml[3];
     plane_dbl plane;
     int result;
     
@@ -94,7 +94,7 @@ __host__ __device__ int deterPtCubeEdgeVolRel(const rect_coord_dbl pt, const aa_
             default:
                 printf("Entered the wrong branch.\n");
         }
-        nrml[3] = nrmlzRectCoord(rectCoordAdd(nrml[0],nrml[1]));
+        nrml[3] = nrmlzRectCoord(vecAdd(nrml[0],nrml[1]));
         plane.n = nrml[3];
         plane.pt = btm[i];
         result = deterPtPlaneRel(pt,plane);
@@ -123,7 +123,7 @@ __host__ __device__ int deterPtCubeEdgeVolRel(const rect_coord_dbl pt, const aa_
             default:
                 printf("Entered the wrong branch.\n");
         }
-        nrml[3] = nrmlzRectCoord(rectCoordAdd(nrml[0],nrml[1]));
+        nrml[3] = nrmlzRectCoord(vecAdd(nrml[0],nrml[1]));
         plane.n = nrml[3];
         plane.pt = top[i];
         result = deterPtPlaneRel(pt,plane);
@@ -152,7 +152,7 @@ __host__ __device__ int deterPtCubeEdgeVolRel(const rect_coord_dbl pt, const aa_
             default:
                 printf("Entered the wrong branch.\n");
         }
-        nrml[3] = nrmlzRectCoord(rectCoordAdd(nrml[0],nrml[1]));
+        nrml[3] = nrmlzRectCoord(vecAdd(nrml[0],nrml[1]));
         plane.n = nrml[3];
         plane.pt = left[i];
         result = deterPtPlaneRel(pt,plane);
@@ -181,7 +181,7 @@ __host__ __device__ int deterPtCubeEdgeVolRel(const rect_coord_dbl pt, const aa_
             default:
                 printf("Entered the wrong branch.\n");
         }
-        nrml[3] = nrmlzRectCoord(rectCoordAdd(nrml[0],nrml[1]));
+        nrml[3] = nrmlzRectCoord(vecAdd(nrml[0],nrml[1]));
         plane.n = nrml[3];
         plane.pt = right[i];
         result = deterPtPlaneRel(pt,plane);
@@ -210,7 +210,7 @@ __host__ __device__ int deterPtCubeEdgeVolRel(const rect_coord_dbl pt, const aa_
             default:
                 printf("Entered the wrong branch.\n");
         }
-        nrml[3] = nrmlzRectCoord(rectCoordAdd(nrml[0],nrml[1]));
+        nrml[3] = nrmlzRectCoord(vecAdd(nrml[0],nrml[1]));
         plane.n = nrml[3];
         plane.pt = back[i];
         result = deterPtPlaneRel(pt,plane);
@@ -239,7 +239,7 @@ __host__ __device__ int deterPtCubeEdgeVolRel(const rect_coord_dbl pt, const aa_
             default:
                 printf("Entered the wrong branch.\n");
         }
-        nrml[3] = nrmlzRectCoord(rectCoordAdd(nrml[0],nrml[1]));
+        nrml[3] = nrmlzRectCoord(vecAdd(nrml[0],nrml[1]));
         plane.n = nrml[3];
         plane.pt = front[i];
         result = deterPtPlaneRel(pt,plane);
@@ -253,10 +253,10 @@ __host__ __device__ int deterPtCubeEdgeVolRel(const rect_coord_dbl pt, const aa_
     return 1;
 }
 
-__host__ __device__ int deterPtCubeVtxVolRel(const rect_coord_dbl pt, const aa_cube_dbl cb)
+__host__ __device__ int deterPtCubeVtxVolRel(const vec3d pt, const aa_cube_dbl cb)
 {
     // declare the basis unit vectors
-    rect_coord_dbl dir_x = {1.0,0.0,0.0}, dir_y = {0.0,1.0,0.0}, dir_z = {0.0,0.0,1.0}, 
+    vec3d dir_x = {1.0,0.0,0.0}, dir_y = {0.0,1.0,0.0}, dir_z = {0.0,0.0,1.0}, 
             nrml[4], tempPt;
     plane_dbl plane;
     int result;
@@ -270,44 +270,44 @@ __host__ __device__ int deterPtCubeVtxVolRel(const rect_coord_dbl pt, const aa_c
                 nrml[2] = dir_z;
                 break;
             case 1: //the second vertex
-                tempPt = rectCoordAdd(cb.cnr,scaRectMul(cb.len,dir_x));
+                tempPt = vecAdd(cb.cnr,scaRectMul(cb.len,dir_x));
                 nrml[0] = scaRectMul(-1,dir_x);
                 nrml[1] = dir_y;
                 nrml[2] = dir_z;
                 break;
             case 2: //the third vertex
-                tempPt = rectCoordAdd(rectCoordAdd(cb.cnr,scaRectMul(cb.len,dir_x)),scaRectMul(cb.len,dir_y));
+                tempPt = vecAdd(vecAdd(cb.cnr,scaRectMul(cb.len,dir_x)),scaRectMul(cb.len,dir_y));
                 nrml[0] = scaRectMul(-1,dir_x);
                 nrml[1] = scaRectMul(-1,dir_y);
                 nrml[2] = dir_z;
                 break;
             case 3: //the fourth vertex
-                tempPt = rectCoordAdd(cb.cnr,scaRectMul(cb.len,dir_y));
+                tempPt = vecAdd(cb.cnr,scaRectMul(cb.len,dir_y));
                 nrml[0] = dir_x;
                 nrml[1] = scaRectMul(-1,dir_y);
                 nrml[2] = dir_z;
                 break;
             case 4: //the fifth vertex
-                tempPt = rectCoordAdd(cb.cnr,scaRectMul(cb.len,dir_z));
+                tempPt = vecAdd(cb.cnr,scaRectMul(cb.len,dir_z));
                 nrml[0] = dir_x;
                 nrml[1] = dir_y;
                 nrml[2] = scaRectMul(-1,dir_z);
                 break;
             case 5: //the sixth vertex
-                tempPt = rectCoordAdd(rectCoordAdd(cb.cnr,scaRectMul(cb.len,dir_z)),scaRectMul(cb.len,dir_x));
+                tempPt = vecAdd(vecAdd(cb.cnr,scaRectMul(cb.len,dir_z)),scaRectMul(cb.len,dir_x));
                 nrml[0] = scaRectMul(-1,dir_x);
                 nrml[1] = dir_y;
                 nrml[2] = scaRectMul(-1,dir_z);
                 break;
             case 6: //the seventh vertex
-                tempPt = rectCoordAdd(rectCoordAdd(rectCoordAdd(cb.cnr,scaRectMul(cb.len,dir_z)),
+                tempPt = vecAdd(vecAdd(vecAdd(cb.cnr,scaRectMul(cb.len,dir_z)),
                         scaRectMul(cb.len,dir_x)),scaRectMul(cb.len,dir_y));
                 nrml[0] = scaRectMul(-1,dir_x);
                 nrml[1] = scaRectMul(-1,dir_y);
                 nrml[2] = scaRectMul(-1,dir_z);
                 break;
             case 7: //the eighth vertex
-                tempPt = rectCoordAdd(rectCoordAdd(cb.cnr,scaRectMul(cb.len,dir_z)),scaRectMul(cb.len,dir_y));
+                tempPt = vecAdd(vecAdd(cb.cnr,scaRectMul(cb.len,dir_z)),scaRectMul(cb.len,dir_y));
                 nrml[0] = dir_x;
                 nrml[1] = scaRectMul(-1,dir_y);
                 nrml[2] = scaRectMul(-1,dir_z);
@@ -315,7 +315,7 @@ __host__ __device__ int deterPtCubeVtxVolRel(const rect_coord_dbl pt, const aa_c
             default:
                 printf("safety purpose.\n");
         }
-        nrml[3] = nrmlzRectCoord(rectCoordAdd(rectCoordAdd(nrml[0],nrml[1]),nrml[2]));
+        nrml[3] = nrmlzRectCoord(vecAdd(vecAdd(nrml[0],nrml[1]),nrml[2]));
         plane.n = nrml[3];
         plane.pt = tempPt;
         result = deterPtPlaneRel(pt,plane);
@@ -326,12 +326,12 @@ __host__ __device__ int deterPtCubeVtxVolRel(const rect_coord_dbl pt, const aa_c
     return 1;
 }
 
-__host__ __device__ int deterPtCubeRel(const rect_coord_dbl pt, const aa_cube_dbl cube)
+__host__ __device__ int deterPtCubeRel(const vec3d pt, const aa_cube_dbl cube)
 {
-    rect_coord_dbl cnr_fru = cube.cnr;
-    cnr_fru = rectCoordAdd(cnr_fru,scaRectMul(cube.len,{1,0,0}));
-    cnr_fru = rectCoordAdd(cnr_fru,scaRectMul(cube.len,{0,1,0}));
-    cnr_fru = rectCoordAdd(cnr_fru,scaRectMul(cube.len,{0,0,1}));
+    vec3d cnr_fru = cube.cnr;
+    cnr_fru = vecAdd(cnr_fru,scaRectMul(cube.len,{1,0,0}));
+    cnr_fru = vecAdd(cnr_fru,scaRectMul(cube.len,{0,1,0}));
+    cnr_fru = vecAdd(cnr_fru,scaRectMul(cube.len,{0,0,1}));
     double x_min = cube.cnr.coords[0], y_min = cube.cnr.coords[1], z_min = cube.cnr.coords[2], 
             x_max = cnr_fru.coords[0], y_max = cnr_fru.coords[1], z_max = cnr_fru.coords[2],
             x = pt.coords[0], y = pt.coords[1], z = pt.coords[2];
@@ -344,15 +344,15 @@ __host__ __device__ int deterPtCubeRel(const rect_coord_dbl pt, const aa_cube_db
 
 __host__ __device__ int deterLinePlaneRel(const line_dbl ln, const plane_dbl pln, double* t)
 {
-    if(abs(rectDotMul(ln.dir,pln.n))<EPS) {
+    if(abs(vecDotMul(ln.dir,pln.n))<EPS) {
         //line parallel to plane
-        if(abs(rectDotMul(pln.n,rectCoordSub(ln.pt,pln.pt)))<EPS) {
+        if(abs(vecDotMul(pln.n,vecSub(ln.pt,pln.pt)))<EPS) {
             return 2;
         } else {
             return 0;
         }
     } else {
-        double temp = rectDotMul(pln.n,rectCoordSub(pln.pt,ln.pt))/rectDotMul(pln.n,ln.dir);
+        double temp = vecDotMul(pln.n,vecSub(pln.pt,ln.pt))/vecDotMul(pln.n,ln.dir);
         *t = temp;
         return 1;
     }
@@ -360,28 +360,28 @@ __host__ __device__ int deterLinePlaneRel(const line_dbl ln, const plane_dbl pln
 
 __host__ __device__ double triArea(const tri_dbl s)
 {
-    rect_coord_dbl vec[2];
-    vec[0] = rectCoordSub(s.nod[1],s.nod[0]);
-    vec[1] = rectCoordSub(s.nod[2],s.nod[0]);
-    return 0.5*rectNorm(rectCrossMul(vec[0],vec[1]));
+    vec3d vec[2];
+    vec[0] = vecSub(s.nod[1],s.nod[0]);
+    vec[1] = vecSub(s.nod[2],s.nod[0]);
+    return 0.5*vecNorm(vecCrossMul(vec[0],vec[1]));
 }
 
 __host__ __device__ double quadArea(const quad_dbl s)
 {
-    rect_coord_dbl vec[2];
-    vec[0] = rectCoordSub(s.nod[1],s.nod[0]);
-    vec[1] = rectCoordSub(s.nod[2],s.nod[0]);
-    return rectNorm(rectCrossMul(vec[0],vec[1]));
+    vec3d vec[2];
+    vec[0] = vecSub(s.nod[1],s.nod[0]);
+    vec[1] = vecSub(s.nod[2],s.nod[0]);
+    return vecNorm(vecCrossMul(vec[0],vec[1]));
 }
 
 __host__ __device__ plane_dbl tri2plane(const tri_dbl tri)
 {
     plane_dbl pln;
     pln.pt = tri.nod[0];
-    rect_coord_dbl vec[2];
-    vec[0] = rectCoordSub(tri.nod[1],tri.nod[0]);
-    vec[1] = rectCoordSub(tri.nod[2],tri.nod[0]);
-    pln.n = nrmlzRectCoord(rectCrossMul(vec[0],vec[1]));
+    vec3d vec[2];
+    vec[0] = vecSub(tri.nod[1],tri.nod[0]);
+    vec[1] = vecSub(tri.nod[2],tri.nod[0]);
+    pln.n = nrmlzRectCoord(vecCrossMul(vec[0],vec[1]));
     return pln;
 }
 
@@ -390,10 +390,10 @@ __host__ __device__ plane_dbl quad2plane(const quad_dbl qd)
     /*get the plane containing a quad*/
     plane_dbl pln;
     pln.pt = qd.nod[0];
-    rect_coord_dbl vec[2];
-    vec[0] = rectCoordSub(qd.nod[1],qd.nod[0]);
-    vec[1] = rectCoordSub(qd.nod[2],qd.nod[0]);
-    pln.n = nrmlzRectCoord(rectCrossMul(vec[0],vec[1]));
+    vec3d vec[2];
+    vec[0] = vecSub(qd.nod[1],qd.nod[0]);
+    vec[1] = vecSub(qd.nod[2],qd.nod[0]);
+    pln.n = nrmlzRectCoord(vecCrossMul(vec[0],vec[1]));
     return pln;
 }
 
@@ -401,22 +401,22 @@ __host__ __device__ line_dbl lnSeg2ln(const ln_seg_dbl ls)
 {
     line_dbl l;
     l.pt = ls.nod[0];
-    l.dir = rectCoordSub(ls.nod[1],ls.nod[0]);
+    l.dir = vecSub(ls.nod[1],ls.nod[0]);
     return l;
 }
 
-__host__ __device__ int deterPtTriRel(const rect_coord_dbl pt, const tri_dbl tri)
+__host__ __device__ int deterPtTriRel(const vec3d pt, const tri_dbl tri)
 {
     /*determine the relationship between a point and a quad on the same plane
      return: 
      1: pt in tri
      0: pt outsidie tri*/
     double area = 0.0;
-    rect_coord_dbl vec[2];
+    vec3d vec[2];
     for(int i=0;i<3;i++) {
-        vec[0] = rectCoordSub(tri.nod[i%3],pt);
-        vec[1] = rectCoordSub(tri.nod[(i+1)%3],pt);
-        area += 0.5*rectNorm(rectCrossMul(vec[0],vec[1]));
+        vec[0] = vecSub(tri.nod[i%3],pt);
+        vec[1] = vecSub(tri.nod[(i+1)%3],pt);
+        area += 0.5*vecNorm(vecCrossMul(vec[0],vec[1]));
     }
     double area_tri = triArea(tri);
     if(abs(area-area_tri)<EPS) {
@@ -426,18 +426,18 @@ __host__ __device__ int deterPtTriRel(const rect_coord_dbl pt, const tri_dbl tri
     }
 }
 
-__host__ __device__ int deterPtQuadRel(const rect_coord_dbl pt, const quad_dbl qd)
+__host__ __device__ int deterPtQuadRel(const vec3d pt, const quad_dbl qd)
 {
     /*determine the relationship between a point and a quad on the same plane
      return: 
      1: pt in qd
      0: pt outside qd*/
     double area = 0.0;
-    rect_coord_dbl vec[2];
+    vec3d vec[2];
     for(int i=0;i<4;i++) {
-        vec[0] = rectCoordSub(qd.nod[i%4],pt);
-        vec[1] = rectCoordSub(qd.nod[(i+1)%4],pt);
-        area += 0.5*rectNorm(rectCrossMul(vec[0],vec[1]));
+        vec[0] = vecSub(qd.nod[i%4],pt);
+        vec[1] = vecSub(qd.nod[(i+1)%4],pt);
+        area += 0.5*vecNorm(vecCrossMul(vec[0],vec[1]));
     }
     double area_quad = quadArea(qd);
     if(abs(area-area_quad)<EPS) {
@@ -447,7 +447,7 @@ __host__ __device__ int deterPtQuadRel(const rect_coord_dbl pt, const quad_dbl q
     }
 }
 
-__host__ __device__ double rectCoordDet(const rect_coord_dbl vec[3])
+__host__ __device__ double rectCoordDet(const vec3d vec[3])
 {
     double result, v1x, v1y, v1z, v2x, v2y, v2z, v3x, v3y, v3z;
     
@@ -470,17 +470,17 @@ __host__ __device__ double rectCoordDet(const rect_coord_dbl vec[3])
 
 __host__ __device__ int deterLnLnRel(const line_dbl ln1, const line_dbl ln2, double* t1, double* t2)
 {   
-    if(abs(rectNorm(rectCrossMul(ln1.dir,ln2.dir)))<EPS) {
+    if(abs(vecNorm(vecCrossMul(ln1.dir,ln2.dir)))<EPS) {
         // the two lines are either parallel or the same line
         
         // check if a point on line 1 is on line 2
-        rect_coord_dbl vec = rectCoordSub(ln1.pt,ln2.pt);
-        if(rectNorm(vec)<EPS) {
+        vec3d vec = vecSub(ln1.pt,ln2.pt);
+        if(vecNorm(vec)<EPS) {
             //the points are the same
             return 2; 
         } 
         else {
-            if(rectNorm(rectCrossMul(vec,ln2.dir))<EPS) {
+            if(vecNorm(vecCrossMul(vec,ln2.dir))<EPS) {
                 // vec is a multiple of ln2.dir
                 return 2; 
             } 
@@ -492,11 +492,11 @@ __host__ __device__ int deterLnLnRel(const line_dbl ln1, const line_dbl ln2, dou
     } 
     else {
         //the two lines either are skew or intersect
-        rect_coord_dbl pt[4];
+        vec3d pt[4];
         pt[0] = ln1.pt;
-        pt[1] = rectCoordAdd(ln1.pt,scaRectMul(1.0,ln1.dir));
+        pt[1] = vecAdd(ln1.pt,scaRectMul(1.0,ln1.dir));
         pt[2] = ln2.pt;
-        pt[3] = rectCoordAdd(ln2.pt,scaRectMul(1.0,ln2.dir));
+        pt[3] = vecAdd(ln2.pt,scaRectMul(1.0,ln2.dir));
         //printRectCoord(pt,4);
         if(rectCoordEqual(pt[0],pt[2]) || rectCoordEqual(pt[0],pt[3]) || 
                 rectCoordEqual(pt[1],pt[2]) || rectCoordEqual(pt[1],pt[3])) {
@@ -525,10 +525,10 @@ __host__ __device__ int deterLnLnRel(const line_dbl ln1, const line_dbl ln2, dou
         } 
         else {
             //
-            rect_coord_dbl vec[3];
-            vec[0] = rectCoordSub(pt[1],pt[0]);
-            vec[1] = rectCoordSub(pt[2],pt[0]);
-            vec[2] = rectCoordSub(pt[3],pt[0]);
+            vec3d vec[3];
+            vec[0] = vecSub(pt[1],pt[0]);
+            vec[1] = vecSub(pt[2],pt[0]);
+            vec[2] = vecSub(pt[3],pt[0]);
             
             //printf("The determinant is: %f\n",rectCoordDet(vec));
             if(abs(rectCoordDet(vec))>EPS) {
@@ -569,11 +569,11 @@ __host__ __device__ int deterLnLnRel(const line_dbl ln1, const line_dbl ln2, dou
     }
 }
 
-__host__ __device__ int deterPtLnRel(const rect_coord_dbl pt, const line_dbl ln)
+__host__ __device__ int deterPtLnRel(const vec3d pt, const line_dbl ln)
 {
     /*determines the relation between a point and a line*/
-    rect_coord_dbl vec = rectCoordSub(pt,ln.pt);
-    if(rectNorm(rectCrossMul(vec,ln.dir))<EPS) {
+    vec3d vec = vecSub(pt,ln.pt);
+    if(vecNorm(vecCrossMul(vec,ln.dir))<EPS) {
         return 1;
     } 
     else {
@@ -581,7 +581,7 @@ __host__ __device__ int deterPtLnRel(const rect_coord_dbl pt, const line_dbl ln)
     }
 }
 
-__host__ __device__ int deterPtLnSegRel(const rect_coord_dbl pt, const ln_seg_dbl lnSeg)
+__host__ __device__ int deterPtLnSegRel(const vec3d pt, const ln_seg_dbl lnSeg)
 {
     /*determines the relation between a point and a line segment*/
     line_dbl ln = lnSeg2ln(lnSeg);
@@ -591,7 +591,7 @@ __host__ __device__ int deterPtLnSegRel(const rect_coord_dbl pt, const ln_seg_db
     } 
     else {
         double t;
-        rect_coord_dbl vec = rectCoordSub(pt,ln.pt);
+        vec3d vec = vecSub(pt,ln.pt);
         for(int i=0;i<3;i++) {
             if(abs(ln.dir.coords[i])>EPS) {
                 t = vec.coords[i]/ln.dir.coords[i];
@@ -645,10 +645,10 @@ __host__ __device__ int deterLnSegLnSegRel(const ln_seg_dbl seg1, const ln_seg_d
                 for(int i=0;i<2;i++) {
                     for(int j=0;j<2;j++) {
                         if(rectCoordEqual(seg1.nod[i],seg2.nod[j])) {
-                            rect_coord_dbl vec[2];
-                            vec[0] = rectCoordSub(seg1.nod[(i+1)%2],seg1.nod[i]);
-                            vec[1] = rectCoordSub(seg2.nod[(j+1)%2],seg1.nod[j]);
-                            if(rectDotMul(vec[0],vec[1])<0) {
+                            vec3d vec[2];
+                            vec[0] = vecSub(seg1.nod[(i+1)%2],seg1.nod[i]);
+                            vec[1] = vecSub(seg2.nod[(j+1)%2],seg1.nod[j]);
+                            if(vecDotMul(vec[0],vec[1])<0) {
                                 return 1;
                             }
                         }
@@ -712,7 +712,7 @@ __host__ __device__ int deterLnSegQuadRel(const ln_seg_dbl lnSeg, const quad_dbl
                 return 0;
             } 
             else {
-                rect_coord_dbl intersection = rectCoordAdd(ln.pt,scaRectMul(t,ln.dir));
+                vec3d intersection = vecAdd(ln.pt,scaRectMul(t,ln.dir));
                 if(deterPtQuadRel(intersection,qd)==1) {
                     // intersection in the quad
                     return 1;
@@ -774,7 +774,7 @@ __host__ __device__ int deterLnSegTriRel(const ln_seg_dbl lnSeg, const tri_dbl t
                 return 0;
             } 
             else {
-                rect_coord_dbl intersection = rectCoordAdd(ln.pt,scaRectMul(t,ln.dir));
+                vec3d intersection = vecAdd(ln.pt,scaRectMul(t,ln.dir));
                 if(deterPtTriRel(intersection,tri)==1) {
                     // intersection in the tri
                     return 1;
@@ -814,7 +814,7 @@ __host__ __device__ int deterTriCubeInt(const tri_dbl tri, const aa_cube_dbl cb)
     ln_seg_dbl cbDiag[4];
     
     //set up translation vectors
-    rect_coord_dbl dir_x = {1,0,0}, dir_y = {0,1,0}, dir_z = {0,0,1};
+    vec3d dir_x = {1,0,0}, dir_y = {0,1,0}, dir_z = {0,0,1};
     dir_x = scaRectMul(cb.len,dir_x);
     dir_y = scaRectMul(cb.len,dir_y);
     dir_z = scaRectMul(cb.len,dir_z);
@@ -826,49 +826,49 @@ __host__ __device__ int deterTriCubeInt(const tri_dbl tri, const aa_cube_dbl cb)
     }
     
     for(int i=0;i<6;i++) {
-        rect_coord_dbl pt;
+        vec3d pt;
         switch(i) {
             case 0: //bottom x-y plane
                 pt = cb.cnr;
                 cbFace[i].nod[0] = pt;
-                cbFace[i].nod[1] = rectCoordAdd(cbFace[i].nod[0],dir_x);
-                cbFace[i].nod[2] = rectCoordAdd(cbFace[i].nod[1],dir_y);
-                cbFace[i].nod[3] = rectCoordAdd(cbFace[i].nod[2],scaRectMul(-1,dir_x));
+                cbFace[i].nod[1] = vecAdd(cbFace[i].nod[0],dir_x);
+                cbFace[i].nod[2] = vecAdd(cbFace[i].nod[1],dir_y);
+                cbFace[i].nod[3] = vecAdd(cbFace[i].nod[2],scaRectMul(-1,dir_x));
                 break;
             case 1: //up x-y plane
-                pt = rectCoordAdd(pt,dir_z);
+                pt = vecAdd(pt,dir_z);
                 cbFace[i].nod[0] = pt;
-                cbFace[i].nod[1] = rectCoordAdd(cbFace[i].nod[0],dir_x);
-                cbFace[i].nod[2] = rectCoordAdd(cbFace[i].nod[1],dir_y);
-                cbFace[i].nod[3] = rectCoordAdd(cbFace[i].nod[2],scaRectMul(-1,dir_x));
+                cbFace[i].nod[1] = vecAdd(cbFace[i].nod[0],dir_x);
+                cbFace[i].nod[2] = vecAdd(cbFace[i].nod[1],dir_y);
+                cbFace[i].nod[3] = vecAdd(cbFace[i].nod[2],scaRectMul(-1,dir_x));
                 break;
             case 2: //left y-z plane
                 pt = cb.cnr;
                 cbFace[i].nod[0] = pt;
-                cbFace[i].nod[1] = rectCoordAdd(cbFace[i].nod[0],dir_x);
-                cbFace[i].nod[2] = rectCoordAdd(cbFace[i].nod[1],dir_z);
-                cbFace[i].nod[3] = rectCoordAdd(cbFace[i].nod[2],scaRectMul(-1,dir_x));
+                cbFace[i].nod[1] = vecAdd(cbFace[i].nod[0],dir_x);
+                cbFace[i].nod[2] = vecAdd(cbFace[i].nod[1],dir_z);
+                cbFace[i].nod[3] = vecAdd(cbFace[i].nod[2],scaRectMul(-1,dir_x));
                 break;
             case 3: //right y-z plane
-                pt = rectCoordAdd(cb.cnr,dir_y);
+                pt = vecAdd(cb.cnr,dir_y);
                 cbFace[i].nod[0] = pt;
-                cbFace[i].nod[1] = rectCoordAdd(cbFace[i].nod[0],dir_x);
-                cbFace[i].nod[2] = rectCoordAdd(cbFace[i].nod[1],dir_z);
-                cbFace[i].nod[3] = rectCoordAdd(cbFace[i].nod[2],scaRectMul(-1,dir_x));
+                cbFace[i].nod[1] = vecAdd(cbFace[i].nod[0],dir_x);
+                cbFace[i].nod[2] = vecAdd(cbFace[i].nod[1],dir_z);
+                cbFace[i].nod[3] = vecAdd(cbFace[i].nod[2],scaRectMul(-1,dir_x));
                 break;
             case 4: //back z-x plane
                 pt = cb.cnr;
                 cbFace[i].nod[0] = pt;
-                cbFace[i].nod[1] = rectCoordAdd(cbFace[i].nod[0],dir_y);
-                cbFace[i].nod[2] = rectCoordAdd(cbFace[i].nod[1],dir_z);
-                cbFace[i].nod[3] = rectCoordAdd(cbFace[i].nod[2],scaRectMul(-1,dir_y));
+                cbFace[i].nod[1] = vecAdd(cbFace[i].nod[0],dir_y);
+                cbFace[i].nod[2] = vecAdd(cbFace[i].nod[1],dir_z);
+                cbFace[i].nod[3] = vecAdd(cbFace[i].nod[2],scaRectMul(-1,dir_y));
                 break;
             case 5: //front z-x plane
-                pt = rectCoordAdd(cb.cnr,dir_x);
+                pt = vecAdd(cb.cnr,dir_x);
                 cbFace[i].nod[0] = pt;
-                cbFace[i].nod[1] = rectCoordAdd(cbFace[i].nod[0],dir_y);
-                cbFace[i].nod[2] = rectCoordAdd(cbFace[i].nod[1],dir_z);
-                cbFace[i].nod[3] = rectCoordAdd(cbFace[i].nod[2],scaRectMul(-1,dir_y));
+                cbFace[i].nod[1] = vecAdd(cbFace[i].nod[0],dir_y);
+                cbFace[i].nod[2] = vecAdd(cbFace[i].nod[1],dir_z);
+                cbFace[i].nod[3] = vecAdd(cbFace[i].nod[2],scaRectMul(-1,dir_y));
                 break;
             default:
                 printf("Should not enter this.\n");
@@ -877,19 +877,19 @@ __host__ __device__ int deterTriCubeInt(const tri_dbl tri, const aa_cube_dbl cb)
     
     // first diagnonal
     cbDiag[0].nod[0] = cb.cnr;
-    cbDiag[0].nod[1] = rectCoordAdd(rectCoordAdd(rectCoordAdd(cbDiag[0].nod[0],dir_x),dir_y),dir_z);
+    cbDiag[0].nod[1] = vecAdd(vecAdd(vecAdd(cbDiag[0].nod[0],dir_x),dir_y),dir_z);
     
     // second diagnonal
-    cbDiag[1].nod[0] = rectCoordAdd(cbDiag[0].nod[0],dir_x);
-    cbDiag[1].nod[1] = rectCoordAdd(rectCoordAdd(rectCoordAdd(cbDiag[1].nod[0],dir_y),scaRectMul(-1,dir_x)),dir_z);
+    cbDiag[1].nod[0] = vecAdd(cbDiag[0].nod[0],dir_x);
+    cbDiag[1].nod[1] = vecAdd(vecAdd(vecAdd(cbDiag[1].nod[0],dir_y),scaRectMul(-1,dir_x)),dir_z);
     
     // third diagnoal
-    cbDiag[2].nod[0] = rectCoordAdd(cbDiag[1].nod[0],dir_y);
-    cbDiag[2].nod[1] = rectCoordAdd(rectCoordAdd(rectCoordAdd(cbDiag[2].nod[0],scaRectMul(-1,dir_x)),scaRectMul(-1,dir_y)),dir_z);
+    cbDiag[2].nod[0] = vecAdd(cbDiag[1].nod[0],dir_y);
+    cbDiag[2].nod[1] = vecAdd(vecAdd(vecAdd(cbDiag[2].nod[0],scaRectMul(-1,dir_x)),scaRectMul(-1,dir_y)),dir_z);
     
     // fourth diagonal
-    cbDiag[3].nod[0] = rectCoordAdd(cbDiag[2].nod[0],scaRectMul(-1,dir_x));
-    cbDiag[3].nod[1] = rectCoordAdd(rectCoordAdd(rectCoordAdd(cbDiag[3].nod[0],scaRectMul(-1,dir_y)),dir_x),dir_z);
+    cbDiag[3].nod[0] = vecAdd(cbDiag[2].nod[0],scaRectMul(-1,dir_x));
+    cbDiag[3].nod[1] = vecAdd(vecAdd(vecAdd(cbDiag[3].nod[0],scaRectMul(-1,dir_y)),dir_x),dir_z);
     
     // determine if any of the three edges of the triangle intersects the faces;
     //printf("Entered diagonal test.\n");
@@ -1026,7 +1026,7 @@ __host__ __device__ void printTriangle(const tri_dbl tri)
             tri.nod[2].coords[0],tri.nod[2].coords[1],tri.nod[2].coords[2]);
 }
 
-__host__ int voxelSpace(const aa_cube_dbl sp, const int numEachDim, const rect_coord_dbl* pt, 
+__host__ int voxelSpace(const aa_cube_dbl sp, const int numEachDim, const vec3d* pt, 
         const tri_elem* elem, const int numElem, int* flag)
 {
     /*voxelize the a space of objects composed of triangles
@@ -1059,7 +1059,7 @@ __host__ int voxelSpace(const aa_cube_dbl sp, const int numEachDim, const rect_c
     
     aa_cube_dbl *cb = (aa_cube_dbl*)malloc(numVox*sizeof(aa_cube_dbl));
     double unitLen = sp.len/numEachDim;
-    rect_coord_dbl dir_x = {unitLen,0,0}, dir_y = {0,unitLen,0}, dir_z = {0,0,unitLen}, 
+    vec3d dir_x = {unitLen,0,0}, dir_y = {0,unitLen,0}, dir_z = {0,0,unitLen}, 
             xOffset, yOffset, zOffset;
     int idx, rel;
     for(int i=0;i<numEachDim;i++) {
@@ -1072,7 +1072,7 @@ __host__ int voxelSpace(const aa_cube_dbl sp, const int numEachDim, const rect_c
                 // x dimension
                 xOffset = scaRectMul(k,dir_x);
                 idx = i*(numEachDim*numEachDim)+j*numEachDim+k;
-                cb[idx].cnr = rectCoordAdd(rectCoordAdd(rectCoordAdd(sp.cnr,xOffset),yOffset),zOffset);
+                cb[idx].cnr = vecAdd(vecAdd(vecAdd(sp.cnr,xOffset),yOffset),zOffset);
                 cb[idx].len = unitLen;
             }
         }

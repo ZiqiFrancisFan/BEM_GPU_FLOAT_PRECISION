@@ -18,98 +18,134 @@
 
 #define IDXC0(row,column,stride) ((column)*(stride)+(row))
 
-struct tri_elem 
-{
-    int nod[3];
-    cuFloatComplex bc[3];
-};
-
-struct rect_coord_flt 
+/*rectangular coordinate of float precision*/
+struct rect_coord_flt
 {
     // x, y, z in ascending order
     float coords[3];
 };
 
-struct sph_coord_float
-{
-    // r, theta and phi in ascending order
-    float coords[3];
-};
+typedef struct rect_coord_flt vec3f;
 
-typedef struct tri_elem tri_elem;
-
-typedef struct rect_coord_flt rect_coord_flt;
-
-typedef struct sph_coord_float sph_coord_float;
-
+/*rectangular coordinate of double precision*/
 struct rect_coord_dbl
 {
     // x, y, z in ascending order
     double coords[3];
 };
 
-struct sph_coord_double
+typedef struct rect_coord_dbl vec3d;
+
+/*spherical coordinate of double precision*/
+struct sph_coord_dbl
 {
     // r, theta, phi in ascending order
     double coords[3];
 };
 
-typedef struct rect_coord_dbl rect_coord_dbl;
+typedef struct sph_coord_dbl sph3d;
 
-typedef struct sph_coord_double sph_coord_double;
+/*spherical coordinate of float precision*/
+struct sph_coord_flt
+{
+    // r, theta and phi in ascending order
+    float coords[3];
+};
 
+typedef struct sph_coord_flt sph3f;
+
+/*triangular element*/
+struct tri_elem 
+{
+    int nod[3]; // node index
+    cuFloatComplex bc[3]; // frequency dependent boundary condition
+};
+
+typedef struct tri_elem tri_elem;
+
+/*2D rectangular coordinate of double precision*/
+struct rect_coord_2D_dbl
+{
+    double coords[2];
+};
+
+typedef struct rect_coord_2D_dbl vec2d;
+
+/*2D rectangular coordinate of float precision*/
+struct rect_coord_2D_flt
+{
+    float coords[2];
+};
+
+typedef struct rect_coord_2D_flt vec2f;
+
+/*axis aligned cube of double precision*/
 struct aa_cube_dbl
 {
-    rect_coord_dbl cnr;
+    vec3d cnr;
     double len;
-};
-
-struct aa_rect_dbl
-{
-    rect_coord_dbl cnr;
-    double len[3]; //x, y, z directions
-};
-
-struct plane_dbl
-{
-    rect_coord_dbl pt;
-    rect_coord_dbl n;
-};
-
-struct line_dbl
-{
-    rect_coord_dbl pt;
-    rect_coord_dbl dir;
-};
-
-struct line_segment_dbl
-{
-    rect_coord_dbl nod[2];
-};
-
-struct tri_dbl
-{
-    rect_coord_dbl nod[3];
-};
-
-struct quad_dbl
-{
-    rect_coord_dbl nod[4];
 };
 
 typedef struct aa_cube_dbl aa_cube_dbl;
 
+/*axis aligned rectangular volume of double precision*/
+struct aa_rect_dbl
+{
+    vec3d cnr;
+    double len[3]; //x, y, z directions
+};
+
 typedef struct aa_rect_dbl aa_rect_dbl;
+
+/*plane of double precision*/
+struct plane_dbl
+{
+    vec3d pt;
+    vec3d n;
+};
 
 typedef struct plane_dbl plane_dbl;
 
+/*line of double precision*/
+struct line_dbl
+{
+    vec3d pt;
+    vec3d dir;
+};
+
 typedef struct line_dbl line_dbl;
+
+/*line segment of double precision*/
+struct line_segment_dbl
+{
+    vec3d nod[2];
+};
 
 typedef struct line_segment_dbl ln_seg_dbl;
 
-typedef struct quad_dbl quad_dbl;
+/*triangle of double precision*/
+struct tri_dbl
+{
+    vec3d nod[3];
+};
 
 typedef struct tri_dbl tri_dbl;
+
+/*quadrilateral of double precision*/
+struct quad_dbl
+{
+    vec3d nod[4];
+};
+
+typedef struct quad_dbl quad_dbl;
+
+
+struct intvl_dbl
+{
+    double end[2];
+};
+
+typedef struct intvl_dbl intvl_dbl;
 
 #endif /* DATASTRUCT_H */
 

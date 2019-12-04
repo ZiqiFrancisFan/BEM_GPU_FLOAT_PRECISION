@@ -23,23 +23,23 @@
 
 __host__ __device__ double triArea(const tri_dbl s);
 
-__host__ __device__ int deterPtPlaneRel(const rect_coord_dbl pt, const plane_dbl plane);
+__host__ __device__ int deterPtPlaneRel(const vec3d pt, const plane_dbl plane);
 
-__host__ __device__ int deterPtCubeRel(const rect_coord_dbl pt, const aa_cube_dbl cube);
+__host__ __device__ int deterPtCubeRel(const vec3d pt, const aa_cube_dbl cube);
 
-__host__ __device__ int deterPtCubeEdgeVolRel(const rect_coord_dbl pt, const aa_cube_dbl cb);
+__host__ __device__ int deterPtCubeEdgeVolRel(const vec3d pt, const aa_cube_dbl cb);
 
 __host__ __device__ int deterLinePlaneInt(const line_dbl ln, const plane_dbl pln, double* t);
 
-__host__ __device__ int deterPtCubeVtxVolRel(const rect_coord_dbl pt, const aa_cube_dbl cb);
+__host__ __device__ int deterPtCubeVtxVolRel(const vec3d pt, const aa_cube_dbl cb);
 
 __host__ __device__ int deterLinePlaneRel(const line_dbl ln, const plane_dbl pln, double* t);
 
-__host__ __device__ double rectCoordDet(const rect_coord_dbl vec[3]);
+__host__ __device__ double rectCoordDet(const vec3d vec[3]);
 
 __host__ __device__ int deterLnLnRel(const line_dbl ln1, const line_dbl ln2, double* t1, double* t2);
 
-__host__ __device__ int deterPtLnSegRel(const rect_coord_dbl pt, const ln_seg_dbl lnSeg);
+__host__ __device__ int deterPtLnSegRel(const vec3d pt, const ln_seg_dbl lnSeg);
 
 __host__ __device__ int deterLnSegLnSegRel(const ln_seg_dbl seg1, const ln_seg_dbl seg2);
 
@@ -51,7 +51,7 @@ __host__ __device__ int deterLnSegTriRel(const ln_seg_dbl lnSeg, const tri_dbl t
 
 __host__ __device__ int deterTriCubeInt(const tri_dbl tri, const aa_cube_dbl cb);
 
-__host__ int voxelSpace(const aa_cube_dbl sp, const int numEachDim, const rect_coord_dbl* pt, 
+__host__ int voxelSpace(const aa_cube_dbl sp, const int numEachDim, const vec3d* pt, 
         const tri_elem* elem, const int numElem, int* flag);
 
 __host__ int write_voxels(const int* flag, const int num, const char* file_path);

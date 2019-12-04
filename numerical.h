@@ -162,101 +162,107 @@ int cuGenGaussParams(const int n, float* pt, float* wgt);
 
 int gaussPtsToDevice(const float *evalPt, const float *wgt);
 
-__host__ __device__ rect_coord_dbl triCentroid(rect_coord_dbl nod[]);
+__host__ __device__ vec3d triCentroid(vec3d nod[]);
 
 void print_float_mat(const float *A, const int numRow, const int numCol, const int lda);
 
 void print_cuFloatComplex_mat(const cuFloatComplex *A, const int numRow, const int numCol, 
         const int lda);
 
-__host__ __device__ void printRectCoord(const rect_coord_flt* pt, const int numPt);
+__host__ __device__ void printRectCoord(const vec3f* pt, const int numPt);
 
-__host__ __device__ void printRectCoord(const rect_coord_dbl* pt, const int numPt);
+__host__ __device__ void printRectCoord(const vec3d* pt, const int numPt);
 
-__host__ __device__ sph_coord_float rect2sph(const rect_coord_flt s);
+__host__ __device__ sph3f vec2sph(const vec3f s);
 
-__host__ __device__ float rectDotMul(const rect_coord_flt u, const rect_coord_flt v);
+__host__ __device__ sph3d vec2sph(const vec3d s);
 
-__host__ __device__ double rectDotMul(const rect_coord_dbl u, const rect_coord_dbl v);
+__host__ __device__ vec3f sph2vec(const sph3f s);
 
-__host__ __device__ rect_coord_flt scaRectMul(const float lambda, const rect_coord_flt v);
+__host__ __device__ vec3d sph2vec(const sph3d s);
 
-__host__ __device__ rect_coord_dbl scaRectMul(const double lambda, const rect_coord_dbl v);
+__host__ __device__ float vecDotMul(const vec3f u, const vec3f v);
 
-__host__ __device__ rect_coord_flt rectCrossMul(const rect_coord_flt a, const rect_coord_flt b);
+__host__ __device__ double vecDotMul(const vec3d u, const vec3d v);
 
-__host__ __device__ rect_coord_dbl rectCrossMul(const rect_coord_dbl a, const rect_coord_dbl b);
+__host__ __device__ vec3f scaRectMul(const float lambda, const vec3f v);
 
-__host__ __device__ rect_coord_flt crossProd(const rect_coord_flt u, const rect_coord_flt v);
+__host__ __device__ vec3d scaRectMul(const double lambda, const vec3d v);
 
-__host__ __device__ rect_coord_flt rectCoordAdd(const rect_coord_flt u, const rect_coord_flt v);
+__host__ __device__ vec3f vecCrossMul(const vec3f a, const vec3f b);
 
-__host__ __device__ rect_coord_flt rectCoordSub(const rect_coord_flt u, const rect_coord_flt v);
+__host__ __device__ vec3d vecCrossMul(const vec3d a, const vec3d b);
 
-__host__ __device__ rect_coord_dbl rectCoordAdd(const rect_coord_dbl u, const rect_coord_dbl v);
+__host__ __device__ vec3f crossProd(const vec3f u, const vec3f v);
 
-__host__ __device__ rect_coord_dbl rectCoordSub(const rect_coord_dbl u, const rect_coord_dbl v);
+__host__ __device__ vec3f vecAdd(const vec3f u, const vec3f v);
 
-__host__ __device__ rect_coord_dbl nrmlzRectCoord(const rect_coord_dbl v);
+__host__ __device__ vec3f vecSub(const vec3f u, const vec3f v);
 
-__host__ __device__ rect_coord_flt nrmlzRectCoord(const rect_coord_flt v);
+__host__ __device__ vec3d vecAdd(const vec3d u, const vec3d v);
 
-__host__ __device__ float rectNorm(const rect_coord_flt v);
+__host__ __device__ vec3d vecSub(const vec3d u, const vec3d v);
 
-__host__ __device__ double rectNorm(const rect_coord_dbl v);
+__host__ __device__ vec3d nrmlzRectCoord(const vec3d v);
 
-__host__ __device__ int rectCoordEqual(const rect_coord_flt v1, const rect_coord_flt v2);
+__host__ __device__ vec3f nrmlzRectCoord(const vec3f v);
 
-__host__ __device__ int rectCoordEqual(const rect_coord_dbl v1, const rect_coord_dbl v2);
+__host__ __device__ float vecNorm(const vec3f v);
 
-__host__ __device__ bool ray_intersect_triangle(const rect_coord_flt O, const rect_coord_flt dir, 
-        const rect_coord_flt nod[3]);
+__host__ __device__ double vecNorm(const vec3d v);
 
-__global__ void rayTrisInt(const rect_coord_flt pt_s, const rect_coord_flt dir, const rect_coord_flt *nod, 
+__host__ __device__ int rectCoordEqual(const vec3f v1, const vec3f v2);
+
+__host__ __device__ int rectCoordEqual(const vec3d v1, const vec3d v2);
+
+__host__ __device__ bool ray_intersect_triangle(const vec3f O, const vec3f dir, 
+        const vec3f nod[3]);
+
+__global__ void rayTrisInt(const vec3f pt_s, const vec3f dir, const vec3f *nod, 
         const tri_elem *elem, const int numElem, bool *flag);
 
-int genCHIEF(const rect_coord_flt *pt, const int numPt, const tri_elem *elem, const int numElem, 
-        rect_coord_flt *pCHIEF, const int numCHIEF);
+int genCHIEF(const vec3f *pt, const int numPt, const tri_elem *elem, const int numElem, 
+        vec3f *pCHIEF, const int numCHIEF);
 
 int atomicGenSystem(const float k, const tri_elem *elem, const int numElem, 
-        const rect_coord_flt *pt, const int numNod, const rect_coord_flt *chief, const int numCHIEF, 
-        const rect_coord_flt *src, const int numSrcs, cuFloatComplex *A, const int lda, 
+        const vec3f *pt, const int numNod, const vec3f *chief, const int numCHIEF, 
+        const vec3f *src, const int numSrcs, cuFloatComplex *A, const int lda, 
         cuFloatComplex *B, const int ldb);
 
 int qrSolver(const cuFloatComplex *A, const int mA, const int nA, const int ldA, 
         cuFloatComplex *B, const int nB, const int ldB);
 
 int bemSolver_pt(const float k, const tri_elem *elem, const int numElem, 
-        const rect_coord_flt *nod, const int numNod, const rect_coord_flt *chief, const int numCHIEF, 
-        const rect_coord_flt *src, const int numSrc, cuFloatComplex *B, const int ldb);
+        const vec3f *nod, const int numNod, const vec3f *chief, const int numCHIEF, 
+        const vec3f *src, const int numSrc, cuFloatComplex *B, const int ldb);
 
 int bemSolver_dir(const float k, const tri_elem *elem, const int numElem, 
-        const rect_coord_flt *nod, const int numNod, const rect_coord_flt *chief, const int numCHIEF, 
-        const rect_coord_flt *dir, const int numSrc, cuFloatComplex *B, const int ldb);
+        const vec3f *nod, const int numNod, const vec3f *chief, const int numCHIEF, 
+        const vec3f *dir, const int numSrc, cuFloatComplex *B, const int ldb);
 
 int bemSolver_mp(const float k, const tri_elem *elem, const int numElem, 
-        const rect_coord_flt *nod, const int numNod, const rect_coord_flt *chief, const int numCHIEF, 
-        const rect_coord_flt *src, const int numSrc, cuFloatComplex *B, const int ldb);
+        const vec3f *nod, const int numNod, const vec3f *chief, const int numCHIEF, 
+        const vec3f *src, const int numSrc, cuFloatComplex *B, const int ldb);
 
 /*
-void computeRigidSphereScattering(const rect_coord_flt *pt, const int numPt, const double a, 
+void computeRigidSphereScattering(const vec3f *pt, const int numPt, const double a, 
         const double r, const double wavNum, const double strength);
 
 gsl_complex rigidSphereScattering(const double wavNum, const double strength, const double a, 
         const double r, const double theta);
 */
 
-int field_extrapolation_single_dir(const float wavNum, const rect_coord_flt* expPt, const int numExpPt, 
-        const tri_elem* elem, const int numElem, const rect_coord_flt* pt, const int numPt, 
-        const cuFloatComplex* p, const float strength, const rect_coord_flt dir, cuFloatComplex *pExp);
+int field_extrapolation_single_dir(const float wavNum, const vec3f* expPt, const int numExpPt, 
+        const tri_elem* elem, const int numElem, const vec3f* pt, const int numPt, 
+        const cuFloatComplex* p, const float strength, const vec3f dir, cuFloatComplex *pExp);
 
-int field_extrapolation_single_pt(const float wavNum, const rect_coord_flt* expPt, const int numExpPt, 
-        const tri_elem* elem, const int numElem, const rect_coord_flt* pt, const int numPt, 
-        const cuFloatComplex* p, const float strength, const rect_coord_flt dir, cuFloatComplex *pExp);
+int field_extrapolation_single_pt(const float wavNum, const vec3f* expPt, const int numExpPt, 
+        const tri_elem* elem, const int numElem, const vec3f* pt, const int numPt, 
+        const cuFloatComplex* p, const float strength, const vec3f dir, cuFloatComplex *pExp);
 
 int genFields_MultiPtSrcSglObj(const float strength, const float wavNum, 
-        const rect_coord_flt* srcs, const int numSrcs, const rect_coord_dbl* pts, const int numPts, 
-        const tri_elem* elems, const int numElems, const rect_coord_dbl cnr, const double d, 
+        const vec3f* srcs, const int numSrcs, const vec3d* pts, const int numPts, 
+        const tri_elem* elems, const int numElems, const vec3d cnr, const double d, 
         const int level, cuFloatComplex* fields);
 
 #endif /* NUMERICAL_H */

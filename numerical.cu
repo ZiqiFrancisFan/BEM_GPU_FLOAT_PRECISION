@@ -174,7 +174,7 @@ void print_cuFloatComplex_mat(const cuFloatComplex *A, const int numRow, const i
     }
 }
 
-__host__ __device__ void printRectCoord(const rect_coord_flt* pt, const int numPt)
+__host__ __device__ void printRectCoord(const vec3f* pt, const int numPt)
 {
     for(int i=0;i<numPt;i++) {
         printf("(%f,%f,%f), ",pt[i].coords[0],pt[i].coords[1],pt[i].coords[2]);
@@ -182,7 +182,7 @@ __host__ __device__ void printRectCoord(const rect_coord_flt* pt, const int numP
     printf("\n");
 }
 
-__host__ __device__ void printRectCoord(const rect_coord_dbl* pt, const int numPt)
+__host__ __device__ void printRectCoord(const vec3d* pt, const int numPt)
 {
     for(int i=0;i<numPt;i++) {
         printf("(%f,%f,%f), ",pt[i].coords[0],pt[i].coords[1],pt[i].coords[2]);
@@ -190,186 +190,186 @@ __host__ __device__ void printRectCoord(const rect_coord_dbl* pt, const int numP
     printf("\n");
 }
 
-__host__ __device__ float rectDotMul(const rect_coord_flt u, const rect_coord_flt v)
+__host__ __device__ float vecDotMul(const vec3f u, const vec3f v)
 {
     return u.coords[0]*v.coords[0]+u.coords[1]*v.coords[1]+u.coords[2]*v.coords[2];
 }
 
-__host__ __device__ double rectDotMul(const rect_coord_dbl u, const rect_coord_dbl v)
+__host__ __device__ double vecDotMul(const vec3d u, const vec3d v)
 {
     return u.coords[0]*v.coords[0]+u.coords[1]*v.coords[1]+u.coords[2]*v.coords[2];
 }
 
-__host__ __device__ float rectNorm(const rect_coord_flt v)
+__host__ __device__ float vecNorm(const vec3f v)
 {
-    return sqrtf(rectDotMul(v,v));
+    return sqrtf(vecDotMul(v,v));
 }
 
-__host__ __device__ double rectNorm(const rect_coord_dbl v)
+__host__ __device__ double vecNorm(const vec3d v)
 {
-    return sqrt(rectDotMul(v,v));
+    return sqrt(vecDotMul(v,v));
 }
 
-__host__ __device__ rect_coord_flt rectCrossMul(const rect_coord_flt a, const rect_coord_flt b)
+__host__ __device__ vec3f vecCrossMul(const vec3f a, const vec3f b)
 {
-    rect_coord_flt temp;
+    vec3f temp;
     temp.coords[0] = a.coords[1]*b.coords[2]-a.coords[2]*b.coords[1];
     temp.coords[1] = -(a.coords[0]*b.coords[2]-a.coords[2]*b.coords[0]);
     temp.coords[2] = a.coords[0]*b.coords[1]-a.coords[1]*b.coords[0];
     return temp;
 }
 
-__host__ __device__ rect_coord_dbl rectCrossMul(const rect_coord_dbl a, const rect_coord_dbl b)
+__host__ __device__ vec3d vecCrossMul(const vec3d a, const vec3d b)
 {
-    rect_coord_dbl temp;
+    vec3d temp;
     temp.coords[0] = a.coords[1]*b.coords[2]-a.coords[2]*b.coords[1];
     temp.coords[1] = -(a.coords[0]*b.coords[2]-a.coords[2]*b.coords[0]);
     temp.coords[2] = a.coords[0]*b.coords[1]-a.coords[1]*b.coords[0];
     return temp;
 }
 
-__host__ __device__ rect_coord_dbl nrmlzRectCoord(const rect_coord_dbl v)
+__host__ __device__ vec3d nrmlzRectCoord(const vec3d v)
 {
-    double nrm = sqrt(rectDotMul(v,v));
+    double nrm = sqrt(vecDotMul(v,v));
     return scaRectMul(1.0/nrm,v);
 }
 
-__host__ __device__ rect_coord_flt nrmlzRectCoord(const rect_coord_flt v)
+__host__ __device__ vec3f nrmlzRectCoord(const vec3f v)
 {
-    float nrm = sqrt(rectDotMul(v,v));
+    float nrm = sqrt(vecDotMul(v,v));
     return scaRectMul(1.0/nrm,v);
 }
 
-__host__ __device__ int rectCoordEqual(const rect_coord_flt v1, const rect_coord_flt v2)
+__host__ __device__ int rectCoordEqual(const vec3f v1, const vec3f v2)
 {
-    rect_coord_flt v = rectCoordSub(v1,v2);
-    if(rectNorm(v) < EPS) {
+    vec3f v = vecSub(v1,v2);
+    if(vecNorm(v) < EPS) {
         return 1;
     } else {
         return 0;
     }
 }
 
-__host__ __device__ int rectCoordEqual(const rect_coord_dbl v1, const rect_coord_dbl v2)
+__host__ __device__ int rectCoordEqual(const vec3d v1, const vec3d v2)
 {
-    rect_coord_dbl v = rectCoordSub(v1,v2);
-    if(rectNorm(v) < EPS) {
+    vec3d v = vecSub(v1,v2);
+    if(vecNorm(v) < EPS) {
         return 1;
     } else {
         return 0;
     }
 }
 
-__host__ __device__ rect_coord_flt crossProd(const rect_coord_flt u, const rect_coord_flt v)
+__host__ __device__ vec3f crossProd(const vec3f u, const vec3f v)
 {
-    rect_coord_flt r;
+    vec3f r;
     r.coords[0] = (u.coords[1])*(v.coords[2])-(u.coords[2])*(v.coords[1]);
     r.coords[1] = (u.coords[2])*(v.coords[0])-(u.coords[0])*(v.coords[2]);
     r.coords[2] = (u.coords[0])*(v.coords[1])-(u.coords[1])*(v.coords[0]);
     return r;
 }
 
-__host__ __device__ rect_coord_flt rectCoordAdd(const rect_coord_flt u, const rect_coord_flt v)
+__host__ __device__ vec3f vecAdd(const vec3f u, const vec3f v)
 {
-    rect_coord_flt result;
+    vec3f result;
     for(int i=0;i<3;i++) {
         result.coords[i] = u.coords[i]+v.coords[i];
     }
     return result;
 }
 
-__host__ __device__ rect_coord_flt rectCoordSub(const rect_coord_flt u, const rect_coord_flt v)
+__host__ __device__ vec3f vecSub(const vec3f u, const vec3f v)
 {
-    rect_coord_flt result;
+    vec3f result;
     for(int i=0;i<3;i++) {
         result.coords[i] = u.coords[i]-v.coords[i];
     }
     return result;
 }
 
-__host__ __device__ rect_coord_flt scaRectMul(const float lambda, const rect_coord_flt v)
+__host__ __device__ vec3f scaRectMul(const float lambda, const vec3f v)
 {
-    rect_coord_flt result;
+    vec3f result;
     for(int i=0;i<3;i++) {
         result.coords[i] = lambda*v.coords[i];
     }
     return result;
 }
 
-__host__ __device__ rect_coord_dbl scaRectMul(const double lambda, const rect_coord_dbl v)
+__host__ __device__ vec3d scaRectMul(const double lambda, const vec3d v)
 {
-    rect_coord_dbl result;
+    vec3d result;
     for(int i=0;i<3;i++) {
         result.coords[i] = lambda*v.coords[i];
     }
     return result;
 }
 
-__host__ __device__ rect_coord_dbl rectCoordAdd(const rect_coord_dbl u, const rect_coord_dbl v)
+__host__ __device__ vec3d vecAdd(const vec3d u, const vec3d v)
 {
-    rect_coord_dbl result;
+    vec3d result;
     for(int i=0;i<3;i++) {
         result.coords[i] = u.coords[i]+v.coords[i];
     }
     return result;
 }
 
-__host__ __device__ rect_coord_dbl rectCoordSub(const rect_coord_dbl u, const rect_coord_dbl v)
+__host__ __device__ vec3d vecSub(const vec3d u, const vec3d v)
 {
-    rect_coord_dbl result;
+    vec3d result;
     for(int i=0;i<3;i++) {
         result.coords[i] = u.coords[i]-v.coords[i];
     }
     return result;
 }
 
-__host__ __device__ rect_coord_dbl triCentroid(rect_coord_dbl nod[3])
+__host__ __device__ vec3d triCentroid(vec3d nod[3])
 {
-    rect_coord_dbl ctr_23 = scaRectMul(0.5,rectCoordAdd(nod[1],nod[2]));
-    rect_coord_dbl centroid = rectCoordAdd(nod[0],scaRectMul(2.0/3.0,rectCoordSub(ctr_23,nod[0])));
+    vec3d ctr_23 = scaRectMul(0.5,vecAdd(nod[1],nod[2]));
+    vec3d centroid = vecAdd(nod[0],scaRectMul(2.0/3.0,vecSub(ctr_23,nod[0])));
     return centroid;
 }
 
-__host__ __device__ bool ray_intersect_triangle(const rect_coord_flt O, const rect_coord_flt dir, 
-        const rect_coord_flt nod[3])
+__host__ __device__ bool ray_intersect_triangle(const vec3f O, const vec3f dir, 
+        const vec3f nod[3])
 {
     /*vert0 is chosen as reference point*/
-    rect_coord_flt E1, E2;
-    E1 = rectCoordSub(nod[1],nod[0]);
-    E2 = rectCoordSub(nod[2],nod[0]);
+    vec3f E1, E2;
+    E1 = vecSub(nod[1],nod[0]);
+    E2 = vecSub(nod[2],nod[0]);
     /*cross product of dir and v0 to v1*/
-    rect_coord_flt P = crossProd(dir,E2);
-    float det = rectDotMul(P,E1);
+    vec3f P = crossProd(dir,E2);
+    float det = vecDotMul(P,E1);
     if(abs(det)<EPS) {
         return false;
     }
     /*Computation of parameter u*/
-    rect_coord_flt T = rectCoordSub(O,nod[0]);
-    float u = 1.0f/det*rectDotMul(P,T);
+    vec3f T = vecSub(O,nod[0]);
+    float u = 1.0f/det*vecDotMul(P,T);
     if(u<0 || u>1) {
         return false;
     }
     /*Computation of parameter v*/
-    rect_coord_flt Q = crossProd(T,E1);
-    float v = 1.0f/det*rectDotMul(Q,dir);
+    vec3f Q = crossProd(T,E1);
+    float v = 1.0f/det*vecDotMul(Q,dir);
     if(v<0 || u+v>1) {
         return false;
     }
     /*Computation of parameter t*/
-    float t = 1.0f/det*rectDotMul(Q,E2);
+    float t = 1.0f/det*vecDotMul(Q,E2);
     if(t<EPS) {
         return false;
     }
     return true;
 }
 
-__global__ void rayTrisInt(const rect_coord_flt pt_s, const rect_coord_flt dir, const rect_coord_flt *nod, 
+__global__ void rayTrisInt(const vec3f pt_s, const vec3f dir, const vec3f *nod, 
         const tri_elem *elem, const int numElem, bool *flag)
 {
     // decides if a point pnt is in a closed surface elem
     int idx = blockDim.x*blockIdx.x+threadIdx.x;
     if(idx<numElem) {
-        rect_coord_flt pt[3];
+        vec3f pt[3];
         for(int i=0;i<3;i++) {
             pt[i].coords[0] = nod[elem[idx].nod[i]].coords[0];
             pt[i].coords[1] = nod[elem[idx].nod[i]].coords[1];
@@ -379,7 +379,7 @@ __global__ void rayTrisInt(const rect_coord_flt pt_s, const rect_coord_flt dir, 
     }
 }
 
-__global__ void distPntPnts(const rect_coord_flt pt, const rect_coord_flt *nod, const int numNod, float *dist) {
+__global__ void distPntPnts(const vec3f pt, const vec3f *nod, const int numNod, float *dist) {
     int idx = blockDim.x*blockIdx.x + threadIdx.x;
     if(idx < numNod) {
         dist[idx] = __fsqrt_rn((pt.coords[0]-nod[idx].coords[0])*(pt.coords[0]-nod[idx].coords[0])
@@ -407,20 +407,20 @@ bool inBdry(const bool *flag, const int numFlag) {
     }
 }
 
-int genCHIEF(const rect_coord_flt *pt, const int numPt, const tri_elem *elem, const int numElem, 
-        rect_coord_flt *pCHIEF, const int numCHIEF) {
+int genCHIEF(const vec3f *pt, const int numPt, const tri_elem *elem, const int numElem, 
+        vec3f *pCHIEF, const int numCHIEF) {
     int i, cnt;
     float threshold_inner = 0.0000001;
     float *dist_h = (float*)malloc(numPt*sizeof(float));
     float minDist; //minimum distance between the chief point to all surface nod
     float *dist_d;
     CUDA_CALL(cudaMalloc((void**)&dist_d, numPt*sizeof(float)));
-    rect_coord_flt dir; 
+    vec3f dir; 
     
     //transfer the point cloud to GPU
-    rect_coord_flt *pt_d;
-    CUDA_CALL(cudaMalloc((void**)&pt_d,numPt*sizeof(rect_coord_flt))); //point cloud allocated on device
-    CUDA_CALL(cudaMemcpy(pt_d,pt,numPt*sizeof(rect_coord_flt),cudaMemcpyHostToDevice)); //point cloud copied to device
+    vec3f *pt_d;
+    CUDA_CALL(cudaMalloc((void**)&pt_d,numPt*sizeof(vec3f))); //point cloud allocated on device
+    CUDA_CALL(cudaMemcpy(pt_d,pt,numPt*sizeof(vec3f),cudaMemcpyHostToDevice)); //point cloud copied to device
     
     //transfer the element cloud to GPU
     tri_elem *elem_d;
@@ -436,7 +436,7 @@ int genCHIEF(const rect_coord_flt *pt, const int numPt, const tri_elem *elem, co
     int blockWidth = 32;
     int gridWidth;
     float xrand, yrand, zrand, unifRandNum[3];
-    rect_coord_flt chief;
+    vec3f chief;
     
     //Find the bounding box
     float xb[2], yb[2], zb[2];
@@ -493,9 +493,9 @@ int genCHIEF(const rect_coord_flt *pt, const int numPt, const tri_elem *elem, co
     return EXIT_SUCCESS;
 }
 
-inline __device__ void crossNorm(const rect_coord_flt a, const rect_coord_flt b, rect_coord_flt *norm, float *length) 
+inline __device__ void crossNorm(const vec3f a, const vec3f b, vec3f *norm, float *length) 
 {
-    rect_coord_flt c;
+    vec3f c;
     c.coords[0] = a.coords[1]*b.coords[2]-a.coords[2]*b.coords[1];
     c.coords[1] = a.coords[2]*b.coords[0]-a.coords[0]*b.coords[2];
     c.coords[2] = a.coords[0]*b.coords[1]-a.coords[1]*b.coords[0];
@@ -507,7 +507,7 @@ inline __device__ void crossNorm(const rect_coord_flt a, const rect_coord_flt b,
     norm->coords[2] = c.coords[2] / *length;
 }
 
-__device__ void g_h_c_nsgl(const float k, const rect_coord_flt x, const rect_coord_flt p[3], 
+__device__ void g_h_c_nsgl(const float k, const vec3f x, const vec3f p[3], 
         cuFloatComplex gCoeff[3], cuFloatComplex hCoeff[3], float *cCoeff) {
     //Initalization of g, h and c
     //printf("(%f,%f,%f)\n",p[0].coords[0],p[0].coords[1],p[0].coords[2]);
@@ -520,7 +520,7 @@ __device__ void g_h_c_nsgl(const float k, const rect_coord_flt x, const rect_coo
     //Local variables
     float eta1, eta2, wn, wm, xi1, xi2, xi3, rho, theta, vertCrossProd, temp, 
             temp_gh[3], omega = k*speed, pPsiLpn2, radius, prpn2;
-    rect_coord_flt y, normal, rVec;
+    vec3f y, normal, rVec;
     cuFloatComplex Psi, pPsipn2;
     crossNorm(
     {
@@ -556,7 +556,7 @@ __device__ void g_h_c_nsgl(const float k, const rect_coord_flt x, const rect_coo
             };
             //printf("x: (%f,%f,%f), y: (%f,%f,%f)\n",x.coords[0],x.coords[1],x.coords[2],
             //        y.coords[0],y.coords[1],y.coords[2]);
-            rVec = rectCoordSub(y,x);
+            rVec = vecSub(y,x);
             radius = __fsqrt_rn(rVec.coords[0]*rVec.coords[0]+rVec.coords[1]*rVec.coords[1]
                     +rVec.coords[2]*rVec.coords[2]);
             //printf("radius = %f\n",radius);
@@ -588,8 +588,8 @@ __device__ void g_h_c_nsgl(const float k, const rect_coord_flt x, const rect_coo
     gCoeff[2] = make_cuFloatComplex(-prodRhoOmega*cuCimagf(gCoeff[2]),prodRhoOmega*cuCrealf(gCoeff[2]));
 }
 
-__device__ void g_h_c_sgl(const float k, const rect_coord_flt x_sgl1, const rect_coord_flt x_sgl2, 
-        const rect_coord_flt x_sgl3, const rect_coord_flt p[3], 
+__device__ void g_h_c_sgl(const float k, const vec3f x_sgl1, const vec3f x_sgl2, 
+        const vec3f x_sgl3, const vec3f p[3], 
         cuFloatComplex gCoeff_sgl1[3], cuFloatComplex hCoeff_sgl1[3], float *cCoeff_sgl1,
         cuFloatComplex gCoeff_sgl2[3], cuFloatComplex hCoeff_sgl2[3], float *cCoeff_sgl2,
         cuFloatComplex gCoeff_sgl3[3], cuFloatComplex hCoeff_sgl3[3], float *cCoeff_sgl3) 
@@ -611,7 +611,7 @@ __device__ void g_h_c_sgl(const float k, const rect_coord_flt x_sgl1, const rect
     float eta1, eta2, wn, wm, xi1_sgl1, xi2_sgl1, xi3_sgl1, xi1_sgl2, xi2_sgl2, xi3_sgl2,
             xi1_sgl3, xi2_sgl3, xi3_sgl3, rho, theta, vertCrossProd, temp, 
             temp_gh[3], omega = k*speed, pPsiLpn2, radius, prpn2;
-    rect_coord_flt y_sgl1, y_sgl2, y_sgl3, normal, rVec;
+    vec3f y_sgl1, y_sgl2, y_sgl3, normal, rVec;
     cuFloatComplex Psi, pPsipn2;
     crossNorm(
     {
@@ -671,7 +671,7 @@ __device__ void g_h_c_sgl(const float k, const rect_coord_flt x_sgl1, const rect
             };
             
             //update coefficients with singularity on node 1
-            rVec = rectCoordSub(y_sgl1,x_sgl1);
+            rVec = vecSub(y_sgl1,x_sgl1);
             radius = sqrtf(rVec.coords[0]*rVec.coords[0]+rVec.coords[1]*rVec.coords[1]+rVec.coords[2]*rVec.coords[2]);
             //printf("radius = %f\n",radius);
             prpn2 = ((y_sgl1.coords[0]-x_sgl1.coords[0])*normal.coords[0]+(y_sgl1.coords[1]-x_sgl1.coords[1])*normal.coords[1]
@@ -697,7 +697,7 @@ __device__ void g_h_c_sgl(const float k, const rect_coord_flt x_sgl1, const rect
             *cCoeff_sgl1 += temp*pPsiLpn2;
             
             //update coefficients with singularity on node 2
-            rVec = rectCoordSub(y_sgl2,x_sgl2);
+            rVec = vecSub(y_sgl2,x_sgl2);
             radius = sqrtf(rVec.coords[0]*rVec.coords[0]+rVec.coords[1]*rVec.coords[1]+rVec.coords[2]*rVec.coords[2]);
             //printf("radius = %f\n",radius);
             prpn2 = ((y_sgl1.coords[0]-x_sgl1.coords[0])*normal.coords[0]+(y_sgl1.coords[1]-x_sgl1.coords[1])*normal.coords[1]
@@ -723,7 +723,7 @@ __device__ void g_h_c_sgl(const float k, const rect_coord_flt x_sgl1, const rect
             *cCoeff_sgl2 += temp*pPsiLpn2;
             
             //update coefficients with singularity on node 3
-            rVec = rectCoordSub(y_sgl3,x_sgl3);
+            rVec = vecSub(y_sgl3,x_sgl3);
             radius = sqrtf(rVec.coords[0]*rVec.coords[0]+rVec.coords[1]*rVec.coords[1]+rVec.coords[2]*rVec.coords[2]);
             //printf("radius = %f\n",radius);
             prpn2 = ((y_sgl1.coords[0]-x_sgl1.coords[0])*normal.coords[0]+(y_sgl1.coords[1]-x_sgl1.coords[1])*normal.coords[1]
@@ -762,31 +762,31 @@ __device__ void g_h_c_sgl(const float k, const rect_coord_flt x_sgl1, const rect
     gCoeff_sgl3[2] = make_cuFloatComplex(-prodRhoOmega*cuCimagf(gCoeff_sgl3[2]),prodRhoOmega*cuCrealf(gCoeff_sgl3[2]));
 }
 
-__host__ __device__ cuFloatComplex ptSrc(const float k, const float amp, const rect_coord_flt srcLoc, const rect_coord_flt evalLoc)
+__host__ __device__ cuFloatComplex ptSrc(const float k, const float amp, const vec3f srcLoc, const vec3f evalLoc)
 {
     float fourPI = 4.0f*PI;
-    rect_coord_flt rVec = rectCoordSub(evalLoc,srcLoc);
+    vec3f rVec = vecSub(evalLoc,srcLoc);
     float radius = sqrtf(rVec.coords[0]*rVec.coords[0]+rVec.coords[1]*rVec.coords[1]+rVec.coords[2]*rVec.coords[2]);
     return make_cuFloatComplex(amp*cosf(-k*radius)/(fourPI*radius),amp*sinf(-k*radius)/(fourPI*radius));
 }
 
-__host__ __device__ cuFloatComplex mpSrc(const float k, const float qs, const rect_coord_flt src, const rect_coord_flt eval)
+__host__ __device__ cuFloatComplex mpSrc(const float k, const float qs, const vec3f src, const vec3f eval)
 {
-    rect_coord_flt vec = rectCoordSub(eval,src);
+    vec3f vec = vecSub(eval,src);
     float radius = sqrtf(vec.coords[0]*vec.coords[0]+vec.coords[1]*vec.coords[1]+vec.coords[2]*vec.coords[2]);
     cuFloatComplex result = make_cuFloatComplex(0,RHO_AIR*SPEED_SOUND*k*qs/(4*PI));
     result = cuCmulf(result,make_cuFloatComplex(cos(-k*radius)/radius,sin(-k*radius)/radius));
     return result;
 }
 
-__host__ __device__ cuFloatComplex dirSrc(const float k, const float strength, const rect_coord_flt dir, const rect_coord_flt evalLoc)
+__host__ __device__ cuFloatComplex dirSrc(const float k, const float strength, const vec3f dir, const vec3f evalLoc)
 {
-    float theta = -k*rectDotMul(dir,evalLoc);
+    float theta = -k*vecDotMul(dir,evalLoc);
     return make_cuFloatComplex(strength*cosf(theta),strength*sinf(theta));
 }
 
 // compute non-singular relationship between points and elements
-__global__ void atomicPtsElems_nsgl(const float k, const rect_coord_flt *pt, const int numNod, 
+__global__ void atomicPtsElems_nsgl(const float k, const vec3f *pt, const int numNod, 
         const int idxPntStart, const int idxPntEnd, const tri_elem *elem, const int numElem, 
         cuFloatComplex *A, const int lda, cuFloatComplex *B, const int numSrc, const int ldb) {
     int xIdx = blockIdx.x*blockDim.x+threadIdx.x; //Index for points
@@ -797,7 +797,7 @@ __global__ void atomicPtsElems_nsgl(const float k, const rect_coord_flt *pt, con
         int i, j;
         cuFloatComplex hCoeff[3], gCoeff[3], bc, pCoeffs[3], temp;
         float cCoeff;
-        rect_coord_flt triNod[3];
+        vec3f triNod[3];
         triNod[0] = pt[elem[yIdx].nod[0]];
         triNod[1] = pt[elem[yIdx].nod[1]];
         triNod[2] = pt[elem[yIdx].nod[2]];
@@ -836,7 +836,7 @@ __global__ void atomicPtsElems_nsgl(const float k, const rect_coord_flt *pt, con
     }
 }
 
-__global__ void atomicPtsElems_sgl(const float k, const rect_coord_flt *pt, const tri_elem *elem, 
+__global__ void atomicPtsElems_sgl(const float k, const vec3f *pt, const tri_elem *elem, 
         const int numElem, cuFloatComplex *A, const int lda, cuFloatComplex *B, 
         const int numSrc, const int ldb) {
     int idx = blockIdx.x*blockDim.x+threadIdx.x;
@@ -847,7 +847,7 @@ __global__ void atomicPtsElems_sgl(const float k, const rect_coord_flt *pt, cons
                 pCoeffs_sgl2[3], pCoeffs_sgl3[3], bc, temp;
         float cCoeff_sgl1, cCoeff_sgl2, cCoeff_sgl3;
         
-        rect_coord_flt nod[3];
+        vec3f nod[3];
         for(i=0;i<3;i++) {
             nod[i] = pt[elem[idx].nod[i]];
         }
@@ -924,8 +924,8 @@ __global__ void atomicPtsElems_sgl(const float k, const rect_coord_flt *pt, cons
 }
 
 int atomicGenSystem(const float k, const tri_elem *elem, const int numElem, 
-        const rect_coord_flt *nod, const int numNod, const rect_coord_flt *chief, const int numCHIEF, 
-        const rect_coord_flt *src, const int numSrc, cuFloatComplex *A, const int lda, 
+        const vec3f *nod, const int numNod, const vec3f *chief, const int numCHIEF, 
+        const vec3f *src, const int numSrc, cuFloatComplex *A, const int lda, 
         cuFloatComplex *B, const int ldb) {
     int i, j;
     cudaEvent_t start, stop;
@@ -938,7 +938,7 @@ int atomicGenSystem(const float k, const tri_elem *elem, const int numElem,
     CUDA_CALL(cudaMemcpy(elem_d,elem,numElem*sizeof(tri_elem),cudaMemcpyHostToDevice));
     
     //Move points to GPU
-    rect_coord_flt *pt_h = (rect_coord_flt*)malloc((numNod+numCHIEF)*sizeof(rect_coord_flt));
+    vec3f *pt_h = (vec3f*)malloc((numNod+numCHIEF)*sizeof(vec3f));
     for(i=0;i<numNod;i++) {
         pt_h[i] = nod[i];
     }
@@ -946,9 +946,9 @@ int atomicGenSystem(const float k, const tri_elem *elem, const int numElem,
         pt_h[numNod+i] = chief[i];
     }
     
-    rect_coord_flt *pt_d;
-    CUDA_CALL(cudaMalloc(&pt_d,(numNod+numCHIEF)*sizeof(rect_coord_flt)));
-    CUDA_CALL(cudaMemcpy(pt_d,pt_h,(numNod+numCHIEF)*sizeof(rect_coord_flt),cudaMemcpyHostToDevice));
+    vec3f *pt_d;
+    CUDA_CALL(cudaMalloc(&pt_d,(numNod+numCHIEF)*sizeof(vec3f)));
+    CUDA_CALL(cudaMemcpy(pt_d,pt_h,(numNod+numCHIEF)*sizeof(vec3f),cudaMemcpyHostToDevice));
     
     //Initialization of A
     for(i=0;i<numNod+numCHIEF;i++) {
@@ -1075,8 +1075,8 @@ int qrSolver(const cuFloatComplex *A, const int mA, const int nA, const int ldA,
 }
 
 int bemSolver_pt(const float k, const tri_elem *elem, const int numElem, 
-        const rect_coord_flt *nod, const int numNod, const rect_coord_flt *chief, const int numCHIEF, 
-        const rect_coord_flt *src, const int numSrc, cuFloatComplex *B, const int ldb)
+        const vec3f *nod, const int numNod, const vec3f *chief, const int numCHIEF, 
+        const vec3f *src, const int numSrc, cuFloatComplex *B, const int ldb)
 {
     int i, j;
     cudaEvent_t start, stop;
@@ -1089,7 +1089,7 @@ int bemSolver_pt(const float k, const tri_elem *elem, const int numElem,
     CUDA_CALL(cudaMemcpy(elem_d,elem,numElem*sizeof(tri_elem),cudaMemcpyHostToDevice));
     
     //Move points to GPU
-    // rect_coord_flt *pt_h = (rect_coord_flt*)malloc((numNod+numCHIEF)*sizeof(rect_coord_flt));
+    // vec3f *pt_h = (vec3f*)malloc((numNod+numCHIEF)*sizeof(vec3f));
     // for(i=0;i<numNod;i++) {
     //     pt_h[i] = nod[i];
     // }
@@ -1097,10 +1097,10 @@ int bemSolver_pt(const float k, const tri_elem *elem, const int numElem,
     //     pt_h[numNod+i] = chief[i];
     // }
     
-    rect_coord_flt *pt_d;
-    CUDA_CALL(cudaMalloc(&pt_d, (numNod + numCHIEF) * sizeof(rect_coord_flt)));
-    CUDA_CALL(cudaMemcpy(pt_d, nod, numNod * sizeof(rect_coord_flt),cudaMemcpyHostToDevice));
-    CUDA_CALL(cudaMemcpy(pt_d + numNod, chief, numCHIEF * sizeof(rect_coord_flt),cudaMemcpyHostToDevice));
+    vec3f *pt_d;
+    CUDA_CALL(cudaMalloc(&pt_d, (numNod + numCHIEF) * sizeof(vec3f)));
+    CUDA_CALL(cudaMemcpy(pt_d, nod, numNod * sizeof(vec3f),cudaMemcpyHostToDevice));
+    CUDA_CALL(cudaMemcpy(pt_d + numNod, chief, numCHIEF * sizeof(vec3f),cudaMemcpyHostToDevice));
     
     CUDA_CALL(cudaEventRecord(start));
     //Generate the system
@@ -1204,8 +1204,8 @@ int bemSolver_pt(const float k, const tri_elem *elem, const int numElem,
 }
 
 int bemSolver_mp(const float k, const tri_elem *elem, const int numElem, 
-        const rect_coord_flt *nod, const int numNod, const rect_coord_flt *chief, const int numCHIEF, 
-        const rect_coord_flt *src, const int numSrc, cuFloatComplex *B, const int ldb)
+        const vec3f *nod, const int numNod, const vec3f *chief, const int numCHIEF, 
+        const vec3f *src, const int numSrc, cuFloatComplex *B, const int ldb)
 {
     int i, j;
     cudaEvent_t start, stop;
@@ -1218,7 +1218,7 @@ int bemSolver_mp(const float k, const tri_elem *elem, const int numElem,
     CUDA_CALL(cudaMemcpy(elem_d,elem,numElem*sizeof(tri_elem),cudaMemcpyHostToDevice));
     
     //Move points to GPU
-    // rect_coord_flt *pt_h = (rect_coord_flt*)malloc((numNod+numCHIEF)*sizeof(rect_coord_flt));
+    // vec3f *pt_h = (vec3f*)malloc((numNod+numCHIEF)*sizeof(vec3f));
     // for(i=0;i<numNod;i++) {
     //     pt_h[i] = nod[i];
     // }
@@ -1226,10 +1226,10 @@ int bemSolver_mp(const float k, const tri_elem *elem, const int numElem,
     //     pt_h[numNod+i] = chief[i];
     // }
     
-    rect_coord_flt *pt_d;
-    CUDA_CALL(cudaMalloc(&pt_d, (numNod + numCHIEF) * sizeof(rect_coord_flt)));
-    CUDA_CALL(cudaMemcpy(pt_d, nod, numNod * sizeof(rect_coord_flt),cudaMemcpyHostToDevice));
-    CUDA_CALL(cudaMemcpy(pt_d + numNod, chief, numCHIEF * sizeof(rect_coord_flt),cudaMemcpyHostToDevice));
+    vec3f *pt_d;
+    CUDA_CALL(cudaMalloc(&pt_d, (numNod + numCHIEF) * sizeof(vec3f)));
+    CUDA_CALL(cudaMemcpy(pt_d, nod, numNod * sizeof(vec3f),cudaMemcpyHostToDevice));
+    CUDA_CALL(cudaMemcpy(pt_d + numNod, chief, numCHIEF * sizeof(vec3f),cudaMemcpyHostToDevice));
     
     CUDA_CALL(cudaEventRecord(start));
     //Generate the system
@@ -1334,8 +1334,8 @@ int bemSolver_mp(const float k, const tri_elem *elem, const int numElem,
 }
 
 int bemSolver_dir(const float k, const tri_elem *elem, const int numElem, 
-        const rect_coord_flt *nod, const int numNod, const rect_coord_flt *chief, const int numCHIEF, 
-        const rect_coord_flt *dir, const int numSrc, cuFloatComplex *B, const int ldb)
+        const vec3f *nod, const int numNod, const vec3f *chief, const int numCHIEF, 
+        const vec3f *dir, const int numSrc, cuFloatComplex *B, const int ldb)
 {
     int i, j;
     cudaEvent_t start, stop;
@@ -1348,7 +1348,7 @@ int bemSolver_dir(const float k, const tri_elem *elem, const int numElem,
     CUDA_CALL(cudaMemcpy(elem_d,elem,numElem*sizeof(tri_elem),cudaMemcpyHostToDevice));
     
     //Move points to GPU
-    // rect_coord_flt *pt_h = (rect_coord_flt*)malloc((numNod+numCHIEF)*sizeof(rect_coord_flt));
+    // vec3f *pt_h = (vec3f*)malloc((numNod+numCHIEF)*sizeof(vec3f));
     // for(i=0;i<numNod;i++) {
     //     pt_h[i] = nod[i];
     // }
@@ -1356,10 +1356,10 @@ int bemSolver_dir(const float k, const tri_elem *elem, const int numElem,
     //     pt_h[numNod+i] = chief[i];
     // }
     
-    rect_coord_flt *pt_d;
-    CUDA_CALL(cudaMalloc(&pt_d,(numNod+numCHIEF)*sizeof(rect_coord_flt)));
-    CUDA_CALL(cudaMemcpy(pt_d,nod,numNod*sizeof(rect_coord_flt),cudaMemcpyHostToDevice));
-    CUDA_CALL(cudaMemcpy(pt_d+numNod,chief,numCHIEF*sizeof(rect_coord_flt),cudaMemcpyHostToDevice));
+    vec3f *pt_d;
+    CUDA_CALL(cudaMalloc(&pt_d,(numNod+numCHIEF)*sizeof(vec3f)));
+    CUDA_CALL(cudaMemcpy(pt_d,nod,numNod*sizeof(vec3f),cudaMemcpyHostToDevice));
+    CUDA_CALL(cudaMemcpy(pt_d+numNod,chief,numCHIEF*sizeof(vec3f),cudaMemcpyHostToDevice));
     
     CUDA_CALL(cudaEventRecord(start));
     //Generate the system
@@ -1495,58 +1495,57 @@ gsl_complex hprime(const int n, const double r)
 }
 */
 
-__host__ __device__ sph_coord_float rect2sph(const rect_coord_flt s)
+__host__ __device__ vec3f sph2vec(const sph3f s)
 {
-    sph_coord_float temp;
+    float r = s.coords[0], theta = s.coords[1], phi = s.coords[2];
+    float x = r*sinf(theta)*cosf(phi), y = r*sinf(theta)*sinf(phi), z = r*cosf(theta);
+    vec3f result;
+    result.coords[0] = x;
+    result.coords[1] = y;
+    result.coords[2] = z;
+    return result;
+}
+
+__host__ __device__ vec3d sph2vec(const sph3d s)
+{
+    double r = s.coords[0], theta = s.coords[1], phi = s.coords[2];
+    double x = r*sin(theta)*cos(phi), y = r*sin(theta)*sin(phi), z = r*cos(theta);
+    vec3d result;
+    result.coords[0] = x;
+    result.coords[1] = y;
+    result.coords[2] = z;
+    return result;
+}
+
+__host__ __device__ sph3f vec2sph(const vec3f s)
+{
+    sph3f temp;
     temp.coords[0] = sqrtf(powf(s.coords[0],2)+powf(s.coords[1],2)+powf(s.coords[2],2));
     temp.coords[1] = acosf(s.coords[2]/(temp.coords[0]));
     temp.coords[2] = atan2f(s.coords[1],s.coords[0]);
     return temp;
 }
 
-__host__ __device__ rect_coord_flt sph2rect(const sph_coord_float s)
+__host__ __device__ sph3d vec2sph(const vec3d s)
 {
-    float r = s.coords[0], theta = s.coords[1], phi = s.coords[2];
-    float x = r*sinf(theta)*cosf(phi), y = r*sinf(theta)*sinf(phi), z = r*cosf(theta);
-    rect_coord_flt result;
-    result.coords[0] = x;
-    result.coords[1] = y;
-    result.coords[2] = z;
-    return result;
-}
-
-__host__ __device__ sph_coord_double rect2sph(const rect_coord_dbl s)
-{
-    sph_coord_double temp;
+    sph3d temp;
     temp.coords[0] = sqrt(pow(s.coords[0],2)+pow(s.coords[1],2)+pow(s.coords[2],2));
     temp.coords[1] = acos(s.coords[2]/(temp.coords[0]));
     temp.coords[2] = atan2(s.coords[1],s.coords[0]);
     return temp;
 }
-
-__host__ __device__ rect_coord_dbl sph2rect(const sph_coord_double s)
-{
-    double r = s.coords[0], theta = s.coords[1], phi = s.coords[2];
-    double x = r*sin(theta)*cos(phi), y = r*sin(theta)*sin(phi), z = r*cos(theta);
-    rect_coord_dbl result;
-    result.coords[0] = x;
-    result.coords[1] = y;
-    result.coords[2] = z;
-    return result;
-}
-
 /*
-void computeRigidSphereScattering(const rect_coord_flt *pt, const int numPt, const double a, 
+void computeRigidSphereScattering(const vec3f *pt, const int numPt, const double a, 
         const double r, const double wavNum, const double strength)
 {
     gsl_complex *p = (gsl_complex*)malloc(numPt*sizeof(gsl_complex));
-    sph_coord_float tempCoord;
+    sph3f tempCoord;
     gsl_complex result;
     //double temp;
     //const int truncNum = 30;
     for(int i=0;i<numPt;i++)
     {
-        tempCoord = rect2sph(pt[i]);
+        tempCoord = vec2sph(pt[i]);
         result = rigidSphereScattering(wavNum,strength,a,tempCoord.coords[0],tempCoord.coords[1]);
         p[i] = result;
         printf("(%.8f,%.8f)\n",GSL_REAL(p[i]),GSL_IMAG(p[i]));
@@ -1574,9 +1573,9 @@ gsl_complex rigidSphereScattering(const double wavNum, const double strength, co
 }
 */
 
-__device__ cuFloatComplex extrapolation_dir(const float wavNum, const rect_coord_flt x, 
-        const tri_elem* elem, const int numElem, const rect_coord_flt* pt, 
-        const cuFloatComplex* p, const float strength, const rect_coord_flt dir)
+__device__ cuFloatComplex extrapolation_dir(const float wavNum, const vec3f x, 
+        const tri_elem* elem, const int numElem, const vec3f* pt, 
+        const cuFloatComplex* p, const float strength, const vec3f dir)
 {
     /*field extrapolation from the surface to a single point in free space
      wavNum: wave number
@@ -1587,7 +1586,7 @@ __device__ cuFloatComplex extrapolation_dir(const float wavNum, const rect_coord
     cuFloatComplex result = dirSrc(wavNum,strength,dir,x);
     cuFloatComplex temp;
     for(int i=0;i<numElem;i++) {
-        rect_coord_flt nod[3];
+        vec3f nod[3];
         for(int j=0;j<3;j++) {
             nod[j] = pt[elem[i].nod[j]];
         }
@@ -1608,9 +1607,9 @@ __device__ cuFloatComplex extrapolation_dir(const float wavNum, const rect_coord
     return result;
 }
 
-__device__ cuFloatComplex extrapolation_pt(const float wavNum, const rect_coord_flt x, 
-        const tri_elem* elem, const int numElem, const rect_coord_flt* pt, 
-        const cuFloatComplex* p, const float strength, const rect_coord_flt src)
+__device__ cuFloatComplex extrapolation_pt(const float wavNum, const vec3f x, 
+        const tri_elem* elem, const int numElem, const vec3f* pt, 
+        const cuFloatComplex* p, const float strength, const vec3f src)
 {
     /*field extrapolation from the surface to a single point in free space
      x: the single point in free space
@@ -1622,7 +1621,7 @@ __device__ cuFloatComplex extrapolation_pt(const float wavNum, const rect_coord_
     cuFloatComplex result = ptSrc(wavNum,strength,src,x);
     cuFloatComplex temp;
     for(int i=0;i<numElem;i++) {
-        rect_coord_flt nod[3];
+        vec3f nod[3];
         for(int j=0;j<3;j++) {
             nod[j] = pt[elem[i].nod[j]];
         }
@@ -1643,9 +1642,9 @@ __device__ cuFloatComplex extrapolation_pt(const float wavNum, const rect_coord_
     return result;
 }
 
-__device__ cuFloatComplex extrapolation_mp(const float wavNum, const rect_coord_flt x, 
-        const tri_elem* elem, const int numElem, const rect_coord_flt* pt, 
-        const cuFloatComplex* p, const float strength, const rect_coord_flt src)
+__device__ cuFloatComplex extrapolation_mp(const float wavNum, const vec3f x, 
+        const tri_elem* elem, const int numElem, const vec3f* pt, 
+        const cuFloatComplex* p, const float strength, const vec3f src)
 {
     /*field extrapolation from the surface to a single monopole in free space
      x: the single point in free space
@@ -1658,7 +1657,7 @@ __device__ cuFloatComplex extrapolation_mp(const float wavNum, const rect_coord_
     cuFloatComplex result = mpSrc(wavNum,strength,src,x);
     cuFloatComplex temp;
     for(int i=0;i<numElem;i++) {
-        rect_coord_flt nod[3];
+        vec3f nod[3];
         for(int j=0;j<3;j++) {
             nod[j] = pt[elem[i].nod[j]];
         }
@@ -1679,9 +1678,9 @@ __device__ cuFloatComplex extrapolation_mp(const float wavNum, const rect_coord_
     return result;
 }
 
-__global__ void extrapolations_dir(const float wavNum, const rect_coord_flt* expPt, const int numExpPt,
-        const tri_elem* elem, const int numElem, const rect_coord_flt* pt, const cuFloatComplex* p, 
-        const float strength, const rect_coord_flt dir, cuFloatComplex *p_exp)
+__global__ void extrapolations_dir(const float wavNum, const vec3f* expPt, const int numExpPt,
+        const tri_elem* elem, const int numElem, const vec3f* pt, const cuFloatComplex* p, 
+        const float strength, const vec3f dir, cuFloatComplex *p_exp)
 {
     /*
      extrapolation from surface pressure to multiple points in free space
@@ -1697,9 +1696,9 @@ __global__ void extrapolations_dir(const float wavNum, const rect_coord_flt* exp
     }
 }
 
-__global__ void extrapolations_pt(const float wavNum, const rect_coord_flt* expPt, const int numExpPt,
-        const tri_elem* elem, const int numElem, const rect_coord_flt* pt, const cuFloatComplex* p, 
-        const float strength, const rect_coord_flt src, cuFloatComplex *p_exp)
+__global__ void extrapolations_pt(const float wavNum, const vec3f* expPt, const int numExpPt,
+        const tri_elem* elem, const int numElem, const vec3f* pt, const cuFloatComplex* p, 
+        const float strength, const vec3f src, cuFloatComplex *p_exp)
 {
     /*extrapolation from surface pressure to multiple points in free space
      wavNum: wave number
@@ -1713,9 +1712,9 @@ __global__ void extrapolations_pt(const float wavNum, const rect_coord_flt* expP
     }
 }
 
-__global__ void extrapolations_mp(const float wavNum, const rect_coord_flt* expPt, const int numExpPt,
-        const tri_elem* elem, const int numElem, const rect_coord_flt* pt, const cuFloatComplex* p, 
-        const float strength, const rect_coord_flt src, cuFloatComplex *p_exp)
+__global__ void extrapolations_mp(const float wavNum, const vec3f* expPt, const int numExpPt,
+        const tri_elem* elem, const int numElem, const vec3f* pt, const cuFloatComplex* p, 
+        const float strength, const vec3f src, cuFloatComplex *p_exp)
 {
     int idx = blockIdx.x*blockDim.x+threadIdx.x;
     if(idx < numExpPt) {
@@ -1723,9 +1722,9 @@ __global__ void extrapolations_mp(const float wavNum, const rect_coord_flt* expP
     }
 }
 
-int field_extrapolation_single_dir(const float wavNum, const rect_coord_flt* expPt, const int numExpPt, 
-        const tri_elem* elem, const int numElem, const rect_coord_flt* pt, const int numPt, 
-        const cuFloatComplex* p, const float strength, const rect_coord_flt dir, cuFloatComplex *pExp)
+int field_extrapolation_single_dir(const float wavNum, const vec3f* expPt, const int numExpPt, 
+        const tri_elem* elem, const int numElem, const vec3f* pt, const int numPt, 
+        const cuFloatComplex* p, const float strength, const vec3f dir, cuFloatComplex *pExp)
 {
     /*extrapolation of acoustic field from surface pressure
      wavNum: wave number
@@ -1739,15 +1738,15 @@ int field_extrapolation_single_dir(const float wavNum, const rect_coord_flt* exp
     int width = 16, numBlock = (numExpPt+width-1)/width;
     
     // allocate memory on GPU and copy data to GPU memory
-    rect_coord_flt *expPt_d, *pt_d;
+    vec3f *expPt_d, *pt_d;
     tri_elem *elem_d;
     cuFloatComplex *p_d, *pExp_d;
     
-    CUDA_CALL(cudaMalloc(&expPt_d,numExpPt*sizeof(rect_coord_flt)));
-    CUDA_CALL(cudaMemcpy(expPt_d,expPt,numExpPt*sizeof(rect_coord_flt),cudaMemcpyHostToDevice));
+    CUDA_CALL(cudaMalloc(&expPt_d,numExpPt*sizeof(vec3f)));
+    CUDA_CALL(cudaMemcpy(expPt_d,expPt,numExpPt*sizeof(vec3f),cudaMemcpyHostToDevice));
     
-    CUDA_CALL(cudaMalloc(&pt_d,numPt*sizeof(rect_coord_flt)));
-    CUDA_CALL(cudaMemcpy(pt_d,pt,numPt*sizeof(rect_coord_flt),cudaMemcpyHostToDevice));
+    CUDA_CALL(cudaMalloc(&pt_d,numPt*sizeof(vec3f)));
+    CUDA_CALL(cudaMemcpy(pt_d,pt,numPt*sizeof(vec3f),cudaMemcpyHostToDevice));
     
     CUDA_CALL(cudaMalloc(&elem_d,numElem*sizeof(tri_elem)));
     CUDA_CALL(cudaMemcpy(elem_d,elem,numElem*sizeof(tri_elem),cudaMemcpyHostToDevice));
@@ -1771,9 +1770,9 @@ int field_extrapolation_single_dir(const float wavNum, const rect_coord_flt* exp
     return EXIT_SUCCESS;
 }
 
-int field_extrapolation_single_pt(const float wavNum, const rect_coord_flt* expPt, const int numExpPt, 
-        const tri_elem* elem, const int numElem, const rect_coord_flt* pt, const int numPt, 
-        const cuFloatComplex* p, const float strength, const rect_coord_flt src, cuFloatComplex *pExp)
+int field_extrapolation_single_pt(const float wavNum, const vec3f* expPt, const int numExpPt, 
+        const tri_elem* elem, const int numElem, const vec3f* pt, const int numPt, 
+        const cuFloatComplex* p, const float strength, const vec3f src, cuFloatComplex *pExp)
 {
     /*Extrapolation of an acoustic field from surface pressure and a single point source
      wavNum: wave number
@@ -1787,15 +1786,15 @@ int field_extrapolation_single_pt(const float wavNum, const rect_coord_flt* expP
     int width = 16, numBlock = (numExpPt+width-1)/width;
     
     // allocate memory on GPU and copy data to GPU memory
-    rect_coord_flt *expPt_d, *pt_d;
+    vec3f *expPt_d, *pt_d;
     tri_elem *elem_d;
     cuFloatComplex *p_d, *pExp_d;
     
-    CUDA_CALL(cudaMalloc(&expPt_d,numExpPt*sizeof(rect_coord_flt)));
-    CUDA_CALL(cudaMemcpy(expPt_d,expPt,numExpPt*sizeof(rect_coord_flt),cudaMemcpyHostToDevice));
+    CUDA_CALL(cudaMalloc(&expPt_d,numExpPt*sizeof(vec3f)));
+    CUDA_CALL(cudaMemcpy(expPt_d,expPt,numExpPt*sizeof(vec3f),cudaMemcpyHostToDevice));
     
-    CUDA_CALL(cudaMalloc(&pt_d,numPt*sizeof(rect_coord_flt)));
-    CUDA_CALL(cudaMemcpy(pt_d,pt,numPt*sizeof(rect_coord_flt),cudaMemcpyHostToDevice));
+    CUDA_CALL(cudaMalloc(&pt_d,numPt*sizeof(vec3f)));
+    CUDA_CALL(cudaMemcpy(pt_d,pt,numPt*sizeof(vec3f),cudaMemcpyHostToDevice));
     
     CUDA_CALL(cudaMalloc(&elem_d,numElem*sizeof(tri_elem)));
     CUDA_CALL(cudaMemcpy(elem_d,elem,numElem*sizeof(tri_elem),cudaMemcpyHostToDevice));
@@ -1819,22 +1818,22 @@ int field_extrapolation_single_pt(const float wavNum, const rect_coord_flt* expP
     return EXIT_SUCCESS;
 }
 
-int field_extrapolation_single_mp(const float wavNum, const rect_coord_flt* expPt, const int numExpPt, 
-        const tri_elem* elem, const int numElem, const rect_coord_flt* pt, const int numPt, 
-        const cuFloatComplex* p, const float strength, const rect_coord_flt src, cuFloatComplex *pExp)
+int field_extrapolation_single_mp(const float wavNum, const vec3f* expPt, const int numExpPt, 
+        const tri_elem* elem, const int numElem, const vec3f* pt, const int numPt, 
+        const cuFloatComplex* p, const float strength, const vec3f src, cuFloatComplex *pExp)
 {
     int width = 16, numBlock = (numExpPt+width-1)/width;
     
     // allocate memory on GPU and copy data to GPU memory
-    rect_coord_flt *expPt_d, *pt_d;
+    vec3f *expPt_d, *pt_d;
     tri_elem *elem_d;
     cuFloatComplex *p_d, *pExp_d;
     
-    CUDA_CALL(cudaMalloc(&expPt_d,numExpPt*sizeof(rect_coord_flt)));
-    CUDA_CALL(cudaMemcpy(expPt_d,expPt,numExpPt*sizeof(rect_coord_flt),cudaMemcpyHostToDevice));
+    CUDA_CALL(cudaMalloc(&expPt_d,numExpPt*sizeof(vec3f)));
+    CUDA_CALL(cudaMemcpy(expPt_d,expPt,numExpPt*sizeof(vec3f),cudaMemcpyHostToDevice));
     
-    CUDA_CALL(cudaMalloc(&pt_d,numPt*sizeof(rect_coord_flt)));
-    CUDA_CALL(cudaMemcpy(pt_d,pt,numPt*sizeof(rect_coord_flt),cudaMemcpyHostToDevice));
+    CUDA_CALL(cudaMalloc(&pt_d,numPt*sizeof(vec3f)));
+    CUDA_CALL(cudaMemcpy(pt_d,pt,numPt*sizeof(vec3f),cudaMemcpyHostToDevice));
     
     CUDA_CALL(cudaMalloc(&elem_d,numElem*sizeof(tri_elem)));
     CUDA_CALL(cudaMemcpy(elem_d,elem,numElem*sizeof(tri_elem),cudaMemcpyHostToDevice));
@@ -1858,17 +1857,17 @@ int field_extrapolation_single_mp(const float wavNum, const rect_coord_flt* expP
     return EXIT_SUCCESS;
 }
 
-rect_coord_flt rectCoordDbl2rectCoordFlt(const rect_coord_dbl t)
+vec3f rectCoordDbl2rectCoordFlt(const vec3d t)
 {
-    rect_coord_flt result;
+    vec3f result;
     for(int i=0;i<3;i++) {
         result.coords[i] = t.coords[i];
     }
     return result;
 }
 
-void rectCoordDblArr2rectCoordFltArr(const rect_coord_dbl* dArr, 
-        const int num, rect_coord_flt* fArr)
+void rectCoordDblArr2rectCoordFltArr(const vec3d* dArr, 
+        const int num, vec3f* fArr)
 {
     for(int i=0;i<num;i++) {
         fArr[i] = rectCoordDbl2rectCoordFlt(dArr[i]);
@@ -1896,8 +1895,8 @@ void reorgField(cuFloatComplex* field, const int l)
 }
 
 int genFields_MultiPtSrcSglObj(const float strength, const float wavNum, 
-        const rect_coord_flt* srcs, const int numSrcs, const rect_coord_dbl* pts, const int numPts, 
-        const tri_elem* elems, const int numElems, const rect_coord_dbl cnr, const double d, 
+        const vec3f* srcs, const int numSrcs, const vec3d* pts, const int numPts, 
+        const tri_elem* elems, const int numElems, const vec3d cnr, const double d, 
         const int level, cuFloatComplex* fields)
 {
     /*generate an acoustic field with a given boundary
@@ -1905,11 +1904,11 @@ int genFields_MultiPtSrcSglObj(const float strength, const float wavNum,
      cnr: lowest corner of the bounding box
      d: side length of the bounding box
      fields: pressure array equal to the number of boxes at level l times number of sources*/
-    rect_coord_flt *pts_f = (rect_coord_flt*)malloc(numPts*sizeof(rect_coord_flt));
+    vec3f *pts_f = (vec3f*)malloc(numPts*sizeof(vec3f));
     rectCoordDblArr2rectCoordFltArr(pts,numPts,pts_f);
     
     // generate chief points
-    rect_coord_flt chief[NUMCHIEF];
+    vec3f chief[NUMCHIEF];
     genCHIEF(pts_f,numPts,elems,numElems,chief,NUMCHIEF);
     
     // allocate memory for the right-hand side of the linear system
@@ -1920,13 +1919,13 @@ int genFields_MultiPtSrcSglObj(const float strength, const float wavNum,
     // compute the extrapolation points of the field
     // note that the indices first increase in z, then in y and at last in x
     int numExpPts = (int)pow(8,level);
-    rect_coord_dbl *expPts = (rect_coord_dbl*)malloc(numExpPts*sizeof(rect_coord_dbl));
+    vec3d *expPts = (vec3d*)malloc(numExpPts*sizeof(vec3d));
     for(int i=0;i<numExpPts;i++) {
-        rect_coord_dbl pt_scaled = boxCenter(i,level);
-        rect_coord_dbl pt_descaled = descale(pt_scaled,cnr,d);
+        vec3d pt_scaled = boxCenter(i,level);
+        vec3d pt_descaled = descale(pt_scaled,cnr,d);
         expPts[i] = pt_descaled;
     }
-    rect_coord_flt *expPts_f = (rect_coord_flt*)malloc(numExpPts*sizeof(rect_coord_flt));
+    vec3f *expPts_f = (vec3f*)malloc(numExpPts*sizeof(vec3f));
     rectCoordDblArr2rectCoordFltArr(expPts,numExpPts,expPts_f);
     free(expPts);
     

@@ -28,7 +28,7 @@ void findNum(const char * filename, int *pV, int *pE)
     fclose(fp);
 }
 
-void readOBJ(const char *filename, rect_coord_flt* p, tri_elem* e) 
+void readOBJ(const char *filename, vec3f* p, tri_elem* e) 
 {
     int temp[3];
     FILE *fp = fopen(filename, "r");
@@ -59,7 +59,7 @@ void readOBJ(const char *filename, rect_coord_flt* p, tri_elem* e)
     fclose(fp);
 }
 
-void readOBJ(const char *filename, rect_coord_dbl* p, tri_elem* e)
+void readOBJ(const char *filename, vec3d* p, tri_elem* e)
 {
     int temp[3];
     FILE *fp = fopen(filename, "r");
@@ -90,7 +90,7 @@ void readOBJ(const char *filename, rect_coord_dbl* p, tri_elem* e)
     fclose(fp);
 }
 
-void printPts(const rect_coord_flt* p, const int num) 
+void printPts(const vec3f* p, const int num) 
 {
     for(int i=0;i<num;i++) {
         printf("(%f,%f,%f)\n",p[i].coords[0], p[i].coords[1], p[i].coords[2]);
@@ -106,7 +106,7 @@ void printElems(const tri_elem* elem, const int num)
 
 
 
-int findBB(const rect_coord_flt* pt, const int numPt, const float threshold, float x[2], 
+int findBB(const vec3f* pt, const int numPt, const float threshold, float x[2], 
         float y[2], float z[2])
 {
     if(numPt!=0) {
