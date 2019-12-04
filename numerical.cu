@@ -200,6 +200,16 @@ __host__ __device__ double vecDotMul(const vec3d u, const vec3d v)
     return u.coords[0]*v.coords[0]+u.coords[1]*v.coords[1]+u.coords[2]*v.coords[2];
 }
 
+__host__ __device__ float vecDotMul(const vec2f u, const vec2f v)
+{
+    return u.coords[0]*v.coords[0]+u.coords[1]+v.coords[1];
+}
+
+__host__ __device__ double vecDotMul(const vec2d u, const vec2d v)
+{
+    return u.coords[0]*v.coords[0]+u.coords[1]+v.coords[1];
+}
+
 __host__ __device__ float vecNorm(const vec3f v)
 {
     return sqrtf(vecDotMul(v,v));
@@ -260,24 +270,6 @@ __host__ __device__ int vecEqual(const vec3d v1, const vec3d v2)
     }
 }
 
-__host__ __device__ vec3f vecAdd(const vec3f u, const vec3f v)
-{
-    vec3f result;
-    for(int i=0;i<3;i++) {
-        result.coords[i] = u.coords[i]+v.coords[i];
-    }
-    return result;
-}
-
-__host__ __device__ vec3f vecSub(const vec3f u, const vec3f v)
-{
-    vec3f result;
-    for(int i=0;i<3;i++) {
-        result.coords[i] = u.coords[i]-v.coords[i];
-    }
-    return result;
-}
-
 __host__ __device__ vec3f scaVecMul(const float lambda, const vec3f v)
 {
     vec3f result;
@@ -296,6 +288,33 @@ __host__ __device__ vec3d scaVecMul(const double lambda, const vec3d v)
     return result;
 }
 
+__host__ __device__ vec2d scaVecMul(const double lambda, const vec2d v)
+{
+    vec2d result;
+    for(int i=0;i<2;i++) {
+        result.coords[i] = lambda*v.coords[i];
+    }
+    return result;
+}
+
+__host__ __device__ vec2f scaVecMul(const float lambda, const vec2f v)
+{
+    vec2f result;
+    for(int i=0;i<2;i++) {
+        result.coords[i] = lambda*v.coords[i];
+    }
+    return result;
+}
+
+__host__ __device__ vec3f vecAdd(const vec3f u, const vec3f v)
+{
+    vec3f result;
+    for(int i=0;i<3;i++) {
+        result.coords[i] = u.coords[i]+v.coords[i];
+    }
+    return result;
+}
+
 __host__ __device__ vec3d vecAdd(const vec3d u, const vec3d v)
 {
     vec3d result;
@@ -305,10 +324,55 @@ __host__ __device__ vec3d vecAdd(const vec3d u, const vec3d v)
     return result;
 }
 
+__host__ __device__ vec2d vecAdd(const vec2d u, const vec2d v)
+{
+    vec2d result;
+    for(int i=0;i<2;i++) {
+        result.coords[i] = u.coords[i]+v.coords[i];
+    }
+    return result;
+}
+
+__host__ __device__ vec2f vecAdd(const vec2f u, const vec2f v)
+{
+    vec2f result;
+    for(int i=0;i<2;i++) {
+        result.coords[i] = u.coords[i]+v.coords[i];
+    }
+    return result;
+}
+
 __host__ __device__ vec3d vecSub(const vec3d u, const vec3d v)
 {
     vec3d result;
     for(int i=0;i<3;i++) {
+        result.coords[i] = u.coords[i]-v.coords[i];
+    }
+    return result;
+}
+
+__host__ __device__ vec3f vecSub(const vec3f u, const vec3f v)
+{
+    vec3f result;
+    for(int i=0;i<3;i++) {
+        result.coords[i] = u.coords[i]-v.coords[i];
+    }
+    return result;
+}
+
+__host__ __device__ vec2d vecSub(const vec2d u, const vec2d v)
+{
+    vec2d result;
+    for(int i=0;i<2;i++) {
+        result.coords[i] = u.coords[i]-v.coords[i];
+    }
+    return result;
+}
+
+__host__ __device__ vec2f vecSub(const vec2f u, const vec2f v)
+{
+    vec2f result;
+    for(int i=0;i<2;i++) {
         result.coords[i] = u.coords[i]-v.coords[i];
     }
     return result;

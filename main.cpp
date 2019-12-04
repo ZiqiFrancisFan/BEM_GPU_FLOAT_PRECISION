@@ -24,11 +24,11 @@ int main(int argc, char *argv[])
     tri_elem *elem = (tri_elem*)malloc(numElem*sizeof(tri_elem));
     readOBJ("./mesh/sphere_100mm_320.obj",pt,elem);
     
-    int numEachDim = 128;
+    int numEachDim = 64;
     int *flag = (int*)malloc(numEachDim*numEachDim*numEachDim*sizeof(int));
-    aa_cube_dbl sp;
-    sp.cnr = {-0.5,-0.5,-0.5};
-    sp.len = 1;
+    aacb3d sp;
+    sp.cnr = {-0.2,-0.2,-0.2};
+    sp.len = 0.4;
     HOST_CALL(voxelSpace(sp,numEachDim,pt,elem,numElem,flag));
     write_voxels(flag,numEachDim,"./data/vox");
     

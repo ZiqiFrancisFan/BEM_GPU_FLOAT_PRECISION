@@ -8,7 +8,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-__host__ __device__ int deterPtPlaneRel(const vec3d pt, const plane_dbl plane)
+__host__ __device__ int deterPtPlaneRel(const vec3d pt, const plane3d plane)
 {
     vec3d vec = vecSub(pt,plane.pt);
     double result = vecDotMul(plane.n,vec);
@@ -20,7 +20,7 @@ __host__ __device__ int deterPtPlaneRel(const vec3d pt, const plane_dbl plane)
     }
 }
 
-__host__ __device__ int deterPtCubeEdgeVolRel(const vec3d pt, const aa_cube_dbl cb)
+__host__ __device__ int deterPtCubeEdgeVolRel(const vec3d pt, const aacb3d cb)
 {
     /*determine the relationship between a point and the volume bounded by edge faces
      of a cube*/
@@ -72,7 +72,7 @@ __host__ __device__ int deterPtCubeEdgeVolRel(const vec3d pt, const aa_cube_dbl 
     
     //declare an array nrml for determining the normal of the new plane
     vec3d nrml[3];
-    plane_dbl plane;
+    plane3d plane;
     int result;
     
     //deal with the bottom face
@@ -253,12 +253,12 @@ __host__ __device__ int deterPtCubeEdgeVolRel(const vec3d pt, const aa_cube_dbl 
     return 1;
 }
 
-__host__ __device__ int deterPtCubeVtxVolRel(const vec3d pt, const aa_cube_dbl cb)
+__host__ __device__ int deterPtCubeVtxVolRel(const vec3d pt, const aacb3d cb)
 {
     // declare the basis unit vectors
     vec3d dir_x = {1.0,0.0,0.0}, dir_y = {0.0,1.0,0.0}, dir_z = {0.0,0.0,1.0}, 
             nrml[4], tempPt;
-    plane_dbl plane;
+    plane3d plane;
     int result;
     // deal with the eight nod in order
     for(int i=0;i<8;i++) {
@@ -326,7 +326,7 @@ __host__ __device__ int deterPtCubeVtxVolRel(const vec3d pt, const aa_cube_dbl c
     return 1;
 }
 
-__host__ __device__ int deterPtCubeRel(const vec3d pt, const aa_cube_dbl cube)
+__host__ __device__ int deterPtCubeRel(const vec3d pt, const aacb3d cube)
 {
     vec3d cnr_fru = cube.cnr;
     cnr_fru = vecAdd(cnr_fru,scaVecMul(cube.len,{1,0,0}));
@@ -342,7 +342,7 @@ __host__ __device__ int deterPtCubeRel(const vec3d pt, const aa_cube_dbl cube)
     }
 }
 
-__host__ __device__ int deterLinePlaneRel(const line_dbl ln, const plane_dbl pln, double* t)
+__host__ __device__ int deterLinePlaneRel(const line_dbl ln, const plane3d pln, double* t)
 {
     if(abs(vecDotMul(ln.dir,pln.n))<EPS) {
         //line parallel to plane
@@ -374,9 +374,9 @@ __host__ __device__ double quadArea(const quad_dbl s)
     return vecNorm(vecCrossMul(vec[0],vec[1]));
 }
 
-__host__ __device__ plane_dbl tri2plane(const tri_dbl tri)
+__host__ __device__ plane3d tri2plane(const tri_dbl tri)
 {
-    plane_dbl pln;
+    plane3d pln;
     pln.pt = tri.nod[0];
     vec3d vec[2];
     vec[0] = vecSub(tri.nod[1],tri.nod[0]);
@@ -385,10 +385,10 @@ __host__ __device__ plane_dbl tri2plane(const tri_dbl tri)
     return pln;
 }
 
-__host__ __device__ plane_dbl quad2plane(const quad_dbl qd)
+__host__ __device__ plane3d quad2plane(const quad_dbl qd)
 {
     /*get the plane containing a quad*/
-    plane_dbl pln;
+    plane3d pln;
     pln.pt = qd.nod[0];
     vec3d vec[2];
     vec[0] = vecSub(qd.nod[1],qd.nod[0]);
@@ -397,7 +397,7 @@ __host__ __device__ plane_dbl quad2plane(const quad_dbl qd)
     return pln;
 }
 
-__host__ __device__ line_dbl lnSeg2ln(const ln_seg_dbl ls)
+__host__ __device__ line_dbl lnSeg2ln(const lnseg3d ls)
 {
     line_dbl l;
     l.pt = ls.nod[0];
@@ -581,7 +581,7 @@ __host__ __device__ int deterPtLnRel(const vec3d pt, const line_dbl ln)
     }
 }
 
-__host__ __device__ int deterPtLnSegRel(const vec3d pt, const ln_seg_dbl lnSeg)
+__host__ __device__ int deterPtLnSegRel(const vec3d pt, const lnseg3d lnSeg)
 {
     /*determines the relation between a point and a line segment*/
     line_dbl ln = lnSeg2ln(lnSeg);
@@ -607,7 +607,7 @@ __host__ __device__ int deterPtLnSegRel(const vec3d pt, const ln_seg_dbl lnSeg)
     }
 }
 
-__host__ __device__ int deterLnSegLnSegRel(const ln_seg_dbl seg1, const ln_seg_dbl seg2)
+__host__ __device__ int deterLnSegLnSegRel(const lnseg3d seg1, const lnseg3d seg2)
 {
     /*determines the relation between two line segments
      seg1: a line segment
@@ -660,7 +660,7 @@ __host__ __device__ int deterLnSegLnSegRel(const ln_seg_dbl seg1, const ln_seg_d
     }
 }
 
-__host__ __device__ int deterLnSegQuadRel(const ln_seg_dbl lnSeg, const quad_dbl qd)
+__host__ __device__ int deterLnSegQuadRel(const lnseg3d lnSeg, const quad_dbl qd)
 {
     /*determine if a line segment intersects a quad
      the difference between single intersection and infinitely many intersections 
@@ -673,7 +673,7 @@ __host__ __device__ int deterLnSegQuadRel(const ln_seg_dbl lnSeg, const quad_dbl
     line_dbl ln = lnSeg2ln(lnSeg);
     
     // define a plane containing the quad
-    plane_dbl pln = quad2plane(qd);
+    plane3d pln = quad2plane(qd);
     
     // determine the intersection between the line and the plane
     double t;
@@ -694,7 +694,7 @@ __host__ __device__ int deterLnSegQuadRel(const ln_seg_dbl lnSeg, const quad_dbl
             else {
                 // none of the nodes is within the quad, test if segments intersect
                 for(int i=0;i<4;i++) {
-                    ln_seg_dbl qdLnSeg;
+                    lnseg3d qdLnSeg;
                     qdLnSeg.nod[0] = qd.nod[i%4];
                     qdLnSeg.nod[1] = qd.nod[(i+1)%4];
                     if(deterLnSegLnSegRel(lnSeg,qdLnSeg)!=0) {
@@ -726,7 +726,7 @@ __host__ __device__ int deterLnSegQuadRel(const ln_seg_dbl lnSeg, const quad_dbl
     }
 }
 
-__host__ __device__ int deterLnSegTriRel(const ln_seg_dbl lnSeg, const tri_dbl tri)
+__host__ __device__ int deterLnSegTriRel(const lnseg3d lnSeg, const tri_dbl tri)
 {
     /*determine if a line segment intersects a quad
      0: no intersection
@@ -737,7 +737,7 @@ __host__ __device__ int deterLnSegTriRel(const ln_seg_dbl lnSeg, const tri_dbl t
     line_dbl ln = lnSeg2ln(lnSeg);
     
     // define a plane containing the triangle
-    plane_dbl pln = tri2plane(tri);
+    plane3d pln = tri2plane(tri);
     
     // determine the intersection between the line and the plane
     double t;
@@ -756,7 +756,7 @@ __host__ __device__ int deterLnSegTriRel(const ln_seg_dbl lnSeg, const tri_dbl t
             else {
                 // none of the nodes is within the triangle, test if segments intersect
                 for(int i=0;i<3;i++) {
-                    ln_seg_dbl triLnSeg;
+                    lnseg3d triLnSeg;
                     triLnSeg.nod[0] = tri.nod[i%3];
                     triLnSeg.nod[1] = tri.nod[(i+1)%3];
                     if(deterLnSegLnSegRel(lnSeg,triLnSeg)!=0) {
@@ -788,7 +788,7 @@ __host__ __device__ int deterLnSegTriRel(const ln_seg_dbl lnSeg, const tri_dbl t
     }
 }
 
-__host__ __device__ int deterTriCubeInt(const tri_dbl tri, const aa_cube_dbl cb)
+__host__ __device__ int deterTriCubeInt(const tri_dbl tri, const aacb3d cb)
 {
     /*this function determines if a triangle intersects with a cube
      tri: an triangle
@@ -809,9 +809,9 @@ __host__ __device__ int deterTriCubeInt(const tri_dbl tri, const aa_cube_dbl cb)
     
     //test the intersection between edges of the triangle and the six faces of the cube
     int rel = 0;
-    ln_seg_dbl triEdge[3];
+    lnseg3d triEdge[3];
     quad_dbl cbFace[6];
-    ln_seg_dbl cbDiag[4];
+    lnseg3d cbDiag[4];
     
     //set up translation vectors
     vec3d dir_x = {1,0,0}, dir_y = {0,1,0}, dir_z = {0,0,1};
@@ -912,7 +912,7 @@ __host__ __device__ int deterTriCubeInt(const tri_dbl tri, const aa_cube_dbl cb)
     return 0;
 }
 
-__global__ void testTriCbInt(const tri_dbl* tri, const int numTri, const aa_cube_dbl* cb, 
+__global__ void testTriCbInt(const tri_dbl* tri, const int numTri, const aacb3d* cb, 
         const int numCb, int* flag)
 {
     /*the global function for testing triangle-cube intersection
@@ -937,7 +937,7 @@ __global__ void testTriCbInt(const tri_dbl* tri, const int numTri, const aa_cube
     }
 }
 
-__host__ int getTriCbRel(const tri_dbl* tri, const int numTri, const aa_cube_dbl* cb, 
+__host__ int getTriCbRel(const tri_dbl* tri, const int numTri, const aacb3d* cb, 
         const int numCb, int* flag)
 {
     /*voxelize a space into occupance grids
@@ -952,9 +952,9 @@ __host__ int getTriCbRel(const tri_dbl* tri, const int numTri, const aa_cube_dbl
     CUDA_CALL(cudaMemcpy(tri_d,tri,numTri*sizeof(tri_dbl),cudaMemcpyHostToDevice));
     printf("Allocated and copied memory for triangles\n");
     
-    aa_cube_dbl *cb_d;
-    CUDA_CALL(cudaMalloc(&cb_d,numCb*sizeof(aa_cube_dbl)));
-    CUDA_CALL(cudaMemcpy(cb_d,cb,numCb*sizeof(aa_cube_dbl),cudaMemcpyHostToDevice));
+    aacb3d *cb_d;
+    CUDA_CALL(cudaMalloc(&cb_d,numCb*sizeof(aacb3d)));
+    CUDA_CALL(cudaMemcpy(cb_d,cb,numCb*sizeof(aacb3d),cudaMemcpyHostToDevice));
     printf("Allocated and copied memory for cubes\n");
     
     memset(flag,0,numCb*sizeof(int));
@@ -1012,7 +1012,7 @@ void reorgGrid_zyx2xyz(int* grid, const int l)
     free(temp);
 }
 
-__host__ __device__ void printCube(const aa_cube_dbl cb)
+__host__ __device__ void printCube(const aacb3d cb)
 {
     printf("corner: (%lf,%lf,%lf), length: %lf\n",cb.cnr.coords[0],cb.cnr.coords[1],
             cb.cnr.coords[2],cb.len);
@@ -1026,7 +1026,7 @@ __host__ __device__ void printTriangle(const tri_dbl tri)
             tri.nod[2].coords[0],tri.nod[2].coords[1],tri.nod[2].coords[2]);
 }
 
-__host__ int voxelSpace(const aa_cube_dbl sp, const int numEachDim, const vec3d* pt, 
+__host__ int voxelSpace(const aacb3d sp, const int numEachDim, const vec3d* pt, 
         const tri_elem* elem, const int numElem, int* flag)
 {
     /*voxelize the a space of objects composed of triangles
@@ -1057,7 +1057,7 @@ __host__ int voxelSpace(const aa_cube_dbl sp, const int numEachDim, const vec3d*
     int numVox = numEachDim*numEachDim*numEachDim;
     memset(flag,0,numVox*sizeof(int));
     
-    aa_cube_dbl *cb = (aa_cube_dbl*)malloc(numVox*sizeof(aa_cube_dbl));
+    aacb3d *cb = (aacb3d*)malloc(numVox*sizeof(aacb3d));
     double unitLen = sp.len/numEachDim;
     vec3d dir_x = {unitLen,0,0}, dir_y = {0,unitLen,0}, dir_z = {0,0,unitLen}, 
             xOffset, yOffset, zOffset;
@@ -1116,4 +1116,9 @@ __host__ int write_voxels(const int* flag, const int numEachDim, const char* fil
         fclose(file);
         return EXIT_SUCCESS;
     }
+}
+
+vec2d GetMin(const aarect2d rect)
+{
+    return rect.cnr;
 }

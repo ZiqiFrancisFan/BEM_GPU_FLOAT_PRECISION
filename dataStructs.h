@@ -86,7 +86,7 @@ struct aa_cube_dbl
     double len;
 };
 
-typedef struct aa_cube_dbl aa_cube_dbl;
+typedef struct aa_cube_dbl aacb3d;
 
 /*axis aligned rectangular volume of double precision*/
 struct aa_rect_dbl
@@ -95,7 +95,15 @@ struct aa_rect_dbl
     double len[3]; //x, y, z directions
 };
 
-typedef struct aa_rect_dbl aa_rect_dbl;
+typedef struct aa_rect_dbl aarect3d;
+
+struct aa_rect_2D_dbl
+{
+    vec2d cnr;
+    double len[2]; //x, y, z directions
+};
+
+typedef struct aa_rect_2D_dbl aarect2d;
 
 /*plane of double precision*/
 struct plane_dbl
@@ -104,7 +112,7 @@ struct plane_dbl
     vec3d n;
 };
 
-typedef struct plane_dbl plane_dbl;
+typedef struct plane_dbl plane3d;
 
 /*line of double precision*/
 struct line_dbl
@@ -113,7 +121,7 @@ struct line_dbl
     vec3d dir;
 };
 
-typedef struct line_dbl line_dbl;
+typedef struct line_dbl line3d;
 
 /*line segment of double precision*/
 struct line_segment_dbl
@@ -121,7 +129,7 @@ struct line_segment_dbl
     vec3d nod[2];
 };
 
-typedef struct line_segment_dbl ln_seg_dbl;
+typedef struct line_segment_dbl lnseg3d;
 
 /*triangle of double precision*/
 struct tri_dbl
@@ -129,7 +137,7 @@ struct tri_dbl
     vec3d nod[3];
 };
 
-typedef struct tri_dbl tri_dbl;
+typedef struct tri_dbl tri3d;
 
 /*quadrilateral of double precision*/
 struct quad_dbl
@@ -137,7 +145,7 @@ struct quad_dbl
     vec3d nod[4];
 };
 
-typedef struct quad_dbl quad_dbl;
+typedef struct quad_dbl quad3d;
 
 
 struct intvl_dbl
