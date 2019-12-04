@@ -2,6 +2,10 @@
 
 /figure
 
+/data
+
+/doc
+
 *.pdf
 
 *.png
