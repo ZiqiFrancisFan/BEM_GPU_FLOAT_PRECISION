@@ -1892,3 +1892,70 @@ int genFields_MultiPtSrcSglObj(const float strength, const float wavNum,
     return EXIT_SUCCESS;
 }
 
+gsl_complex rigid_sphere_plane(const double wavNum, const double strength, const double a, 
+        const double r, const double theta)
+{
+    gsl_complex result = gsl_complex_rect(0,0), temp_c;
+    const int numTrunc = 70;
+    for(int n=0;n<numTrunc;n++)
+    {
+        temp_c = gsl_complex_div(gsl_complex_rect(jprime(n,wavNum*a),0),hprime(n,wavNum*a));
+        temp_c = gsl_complex_mul(temp_c,gsl_sf_bessel_hl(n,wavNum*r));
+        temp_c = gsl_complex_sub(gsl_complex_rect(gsl_sf_bessel_jl(n,wavNum*r),0),temp_c);
+        temp_c = gsl_complex_mul(gsl_complex_pow_real(gsl_complex_rect(0,1),n),temp_c);
+        temp_c = gsl_complex_mul_real(temp_c,2*n+1);
+        temp_c = gsl_complex_mul_real(temp_c,gsl_sf_legendre_Pl(n,cos(theta)));
+        result = gsl_complex_add(result,temp_c);
+    }
+    result = gsl_complex_mul_real(result,strength);
+    return result;
+}
+
+gsl_complex rigid_sphere_point(const double wavNum, const double strength, const double rs, 
+        const double a, const vec3d y)
+{
+    const int truncNum = 100;
+    const vec3d src = {0,0,rs};
+    vec3d temp_cart_coord = vecSub(y,src);
+    sph3d temp_sph_coord = vec2sph(temp_cart_coord);
+    double R = temp_sph_coord.coords[0];
+    temp_sph_coord = vec2sph(y);
+    double r = temp_sph_coord.coords[0];
+    double theta = temp_sph_coord.coords[1];
+    gsl_complex result = gsl_complex_rect(strength*cos(wavNum*R)/(4*PI*R),strength*sin(wavNum*R)/(4*PI*R));
+    for(int n=0;n<truncNum;n++) {
+        gsl_complex temp[2];
+        double t = (n+0.5)*jprime(n,wavNum*a)*wavNum*strength/(2*PI)*gsl_sf_legendre_Pl(n,cos(theta));
+        temp[0] = gsl_complex_rect(0,t);
+        temp[1] = gsl_complex_mul(gsl_sf_bessel_hl(n,wavNum*rs),gsl_sf_bessel_hl(n,wavNum*r));
+        temp[0] = gsl_complex_mul(temp[0],temp[1]);
+        temp[0] = gsl_complex_div(temp[0],hprime(n,wavNum*a));
+        result = gsl_complex_sub(result,temp[0]);
+    }
+    return result;
+}
+
+gsl_complex rigid_sphere_monopole(const double wavNum, const double strength, const double rs, 
+        const double a, const vec3d y)
+{
+    const int truncNum = 100;
+    const vec3d src = {0,0,rs};
+    vec3d temp_cart_coord = vecSub(y,src);
+    sph3d temp_sph_coord = vec2sph(temp_cart_coord);
+    double R = temp_sph_coord.coords[0];
+    temp_sph_coord = vec2sph(y);
+    double r = temp_sph_coord.coords[0];
+    double theta = temp_sph_coord.coords[1];
+    gsl_complex result = gsl_complex_rect(cos(wavNum*R)/(4*PI*R),sin(wavNum*R)/(4*PI*R));
+    result = gsl_complex_mul(result,gsl_complex_rect(0,-RHO_AIR*SPEED_SOUND*wavNum*strength));
+    for(int n=0;n<truncNum;n++) {
+        gsl_complex temp[2];
+        double t = RHO_AIR*SPEED_SOUND*strength*pow(wavNum,2)/(2*PI)*(n+0.5)*jprime(n,wavNum*a)*gsl_sf_legendre_Pl(n,cos(theta));
+        temp[0] = gsl_complex_rect(t,0);
+        temp[1] = gsl_complex_mul(gsl_sf_bessel_hl(n,wavNum*rs),gsl_sf_bessel_hl(n,wavNum*r));
+        temp[0] = gsl_complex_mul(temp[0],temp[1]);
+        temp[0] = gsl_complex_div(temp[0],hprime(n,wavNum*a));
+        result = gsl_complex_sub(result,temp[0]);
+    }
+    return result;
+}
