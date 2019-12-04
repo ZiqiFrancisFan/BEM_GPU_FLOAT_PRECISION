@@ -58,10 +58,16 @@ typedef struct rect_coord_dbl rect_coord_dbl;
 
 typedef struct sph_coord_double sph_coord_double;
 
-struct cube_dbl
+struct aa_cube_dbl
 {
     rect_coord_dbl cnr;
     double len;
+};
+
+struct aa_rect_dbl
+{
+    rect_coord_dbl cnr;
+    double len[3]; //x, y, z directions
 };
 
 struct plane_dbl
@@ -91,7 +97,9 @@ struct quad_dbl
     rect_coord_dbl nod[4];
 };
 
-typedef struct cube_dbl cube_dbl;
+typedef struct aa_cube_dbl aa_cube_dbl;
+
+typedef struct aa_rect_dbl aa_rect_dbl;
 
 typedef struct plane_dbl plane_dbl;
 

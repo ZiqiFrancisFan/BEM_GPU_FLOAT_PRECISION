@@ -18,21 +18,22 @@
 
 int main(int argc, char *argv[])
 {
-    cube_dbl cb;
-    cb.cnr = {0,0,0};
-    cb.len = 0.00001;
+    int numPt, numElem;
+    findNum("./mesh/sphere_100mm_320.obj",&numPt,&numElem);
+    rect_coord_dbl *pt = (rect_coord_dbl*)malloc(numPt*sizeof(rect_coord_dbl));
+    tri_elem *elem = (tri_elem*)malloc(numElem*sizeof(tri_elem));
+    readOBJ("./mesh/sphere_100mm_320.obj",pt,elem);
     
-    tri_dbl tri;
-    tri.nod[0] = {0.00002,0,0};
-    tri.nod[1] = {0,0.00002,0};
-    tri.nod[2] = {0,0,0.00002};
+    int numEachDim = 128;
+    int *flag = (int*)malloc(numEachDim*numEachDim*numEachDim*sizeof(int));
+    aa_cube_dbl sp;
+    sp.cnr = {-0.5,-0.5,-0.5};
+    sp.len = 1;
+    HOST_CALL(voxelSpace(sp,numEachDim,pt,elem,numElem,flag));
+    write_voxels(flag,numEachDim,"./data/vox");
     
-    int rel = deterTriCubeInt(tri,cb);
-    if(rel==1) {
-        printf("Intersection is not empty.\n");
-    }
-    else {
-        printf("Intersection is empty.\n");
-    }
+    free(flag);
+    free(elem);
+    free(pt);
     return EXIT_SUCCESS;
 }

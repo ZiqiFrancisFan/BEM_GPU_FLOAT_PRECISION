@@ -20,7 +20,7 @@ __host__ __device__ int deterPtPlaneRel(const rect_coord_dbl pt, const plane_dbl
     }
 }
 
-__host__ __device__ int deterPtCubeEdgeVolRel(const rect_coord_dbl pt, const cube_dbl cb)
+__host__ __device__ int deterPtCubeEdgeVolRel(const rect_coord_dbl pt, const aa_cube_dbl cb)
 {
     /*determine the relationship between a point and the volume bounded by edge faces
      of a cube*/
@@ -253,7 +253,7 @@ __host__ __device__ int deterPtCubeEdgeVolRel(const rect_coord_dbl pt, const cub
     return 1;
 }
 
-__host__ __device__ int deterPtCubeVtxVolRel(const rect_coord_dbl pt, const cube_dbl cb)
+__host__ __device__ int deterPtCubeVtxVolRel(const rect_coord_dbl pt, const aa_cube_dbl cb)
 {
     // declare the basis unit vectors
     rect_coord_dbl dir_x = {1.0,0.0,0.0}, dir_y = {0.0,1.0,0.0}, dir_z = {0.0,0.0,1.0}, 
@@ -326,7 +326,7 @@ __host__ __device__ int deterPtCubeVtxVolRel(const rect_coord_dbl pt, const cube
     return 1;
 }
 
-__host__ __device__ int deterPtCubeRel(const rect_coord_dbl pt, const cube_dbl cube)
+__host__ __device__ int deterPtCubeRel(const rect_coord_dbl pt, const aa_cube_dbl cube)
 {
     rect_coord_dbl cnr_fru = cube.cnr;
     cnr_fru = rectCoordAdd(cnr_fru,scaRectMul(cube.len,{1,0,0}));
@@ -788,7 +788,7 @@ __host__ __device__ int deterLnSegTriRel(const ln_seg_dbl lnSeg, const tri_dbl t
     }
 }
 
-__host__ __device__ int deterTriCubeInt(const tri_dbl tri, const cube_dbl cb)
+__host__ __device__ int deterTriCubeInt(const tri_dbl tri, const aa_cube_dbl cb)
 {
     /*this function determines if a triangle intersects with a cube
      tri: an triangle
@@ -894,7 +894,7 @@ __host__ __device__ int deterTriCubeInt(const tri_dbl tri, const cube_dbl cb)
     // determine if any of the three edges of the triangle intersects the faces;
     //printf("Entered diagonal test.\n");
     for(int i=0;i<3;i++) {
-        for(int j=0;i<6;j++) {
+        for(int j=0;j<6;j++) {
             rel = deterLnSegQuadRel(triEdge[i],cbFace[j]);
             if(rel==1) {
                 return 1;
@@ -912,7 +912,7 @@ __host__ __device__ int deterTriCubeInt(const tri_dbl tri, const cube_dbl cb)
     return 0;
 }
 
-__global__ void testTriCbInt(const tri_dbl* tri, const int numTri, const cube_dbl* cb, 
+__global__ void testTriCbInt(const tri_dbl* tri, const int numTri, const aa_cube_dbl* cb, 
         const int numCb, int* flag)
 {
     /*the global function for testing triangle-cube intersection
@@ -925,12 +925,19 @@ __global__ void testTriCbInt(const tri_dbl* tri, const int numTri, const cube_db
     int idx_y = blockIdx.y*blockDim.y+threadIdx.y; // cube index
     
     if(idx_x < numTri && idx_y < numCb) {
+        if(idx_x==0 && idx_y==0) {
+            printf("the first node. cube: (%lf,%lf,%lf),%lf\n",cb[idx_y].cnr.coords[0],
+                    cb[idx_y].cnr.coords[1],cb[idx_y].cnr.coords[2],cb[idx_y].len);
+        }
         int rel = deterTriCubeInt(tri[idx_x],cb[idx_y]);
+        if(idx_x==0 && idx_y==0) {
+            printf("Completed determination.\n");
+        }
         atomicAdd(&flag[idx_y],rel);
     }
 }
 
-__host__ int voxelSpace(const tri_dbl* tri, const int numTri, const cube_dbl* cb, 
+__host__ int getTriCbRel(const tri_dbl* tri, const int numTri, const aa_cube_dbl* cb, 
         const int numCb, int* flag)
 {
     /*voxelize a space into occupance grids
@@ -939,20 +946,26 @@ __host__ int voxelSpace(const tri_dbl* tri, const int numTri, const cube_dbl* cb
      cb: an array of cubes
      numCb: number of cubes
      flag: an array of flags for cube occupancy*/
+    printf("Entered getTriCbRel.\n");
     tri_dbl *tri_d;
     CUDA_CALL(cudaMalloc(&tri_d,numTri*sizeof(tri_dbl)));
     CUDA_CALL(cudaMemcpy(tri_d,tri,numTri*sizeof(tri_dbl),cudaMemcpyHostToDevice));
+    printf("Allocated and copied memory for triangles\n");
     
-    cube_dbl *cb_d;
-    CUDA_CALL(cudaMalloc(&cb_d,numCb*sizeof(cube_dbl)));
-    CUDA_CALL(cudaMemcpy(cb_d,cb,numCb*sizeof(cube_dbl),cudaMemcpyHostToDevice));
+    aa_cube_dbl *cb_d;
+    CUDA_CALL(cudaMalloc(&cb_d,numCb*sizeof(aa_cube_dbl)));
+    CUDA_CALL(cudaMemcpy(cb_d,cb,numCb*sizeof(aa_cube_dbl),cudaMemcpyHostToDevice));
+    printf("Allocated and copied memory for cubes\n");
     
-    memset(flag,0,numCb*sizeof(cube_dbl));
+    memset(flag,0,numCb*sizeof(int));
+    printf("Initialized flag\n");
     int *flag_d;
     CUDA_CALL(cudaMalloc(&flag_d,numCb*sizeof(int)));
     CUDA_CALL(cudaMemcpy(flag_d,flag,numCb*sizeof(int),cudaMemcpyHostToDevice));
     
-    int xNumBlocks, xWidth = 16, yNumBlocks, yWidth = 16;
+    printf("Device memory allocated.\n");
+    
+    int xNumBlocks, xWidth = 1, yNumBlocks, yWidth = 1;
     xNumBlocks = (numTri+xWidth-1)/xWidth;
     yNumBlocks = (numCb+yWidth-1)/yWidth;
     
@@ -970,6 +983,137 @@ __host__ int voxelSpace(const tri_dbl* tri, const int numTri, const cube_dbl* cb
     CUDA_CALL(cudaFree(cb_d));
     CUDA_CALL(cudaFree(tri_d));
     
+    for(int i=0;i<numCb;i++) {
+        if(flag[i]!=0) {
+            flag[i] = 1;
+        }
+    }
+    
     return EXIT_SUCCESS;
 }
 
+void reorgGrid_zyx2xyz(int* grid, const int l)
+{
+    /*re-organize the voxel grids from the order of significance of z, y, x to x, y, z*/
+    int totalNum = pow(8,l), dimNum = pow(2,l);
+    int *temp = (int*)malloc(totalNum*sizeof(int));
+    memcpy(temp,grid,totalNum*sizeof(int));
+    
+    // reorganize
+    for(int x=0;x<dimNum;x++) {
+        for(int y=0;y<dimNum;y++) {
+            for(int z=0;z<dimNum;z++) {
+                int idx_old = x*dimNum*dimNum+y*dimNum+z;
+                int idx_new = z*dimNum*dimNum+y*dimNum+x;
+                grid[idx_new] = temp[idx_old];
+            }
+        }
+    }
+    free(temp);
+}
+
+__host__ __device__ void printCube(const aa_cube_dbl cb)
+{
+    printf("corner: (%lf,%lf,%lf), length: %lf\n",cb.cnr.coords[0],cb.cnr.coords[1],
+            cb.cnr.coords[2],cb.len);
+}
+
+__host__ __device__ void printTriangle(const tri_dbl tri)
+{
+    printf("nodes: (%lf,%lf,%lf), (%lf,%lf,%lf), (%lf,%lf,%lf)\n",
+            tri.nod[0].coords[0],tri.nod[0].coords[1],tri.nod[0].coords[2],
+            tri.nod[1].coords[0],tri.nod[1].coords[1],tri.nod[1].coords[2],
+            tri.nod[2].coords[0],tri.nod[2].coords[1],tri.nod[2].coords[2]);
+}
+
+__host__ int voxelSpace(const aa_cube_dbl sp, const int numEachDim, const rect_coord_dbl* pt, 
+        const tri_elem* elem, const int numElem, int* flag)
+{
+    /*voxelize the a space of objects composed of triangles
+     sp: a cube representing the whole space
+     pt: an array of points
+     numPt: the number of points
+     elem: an array of elements
+     numElem: the number of elements
+     flag: an array of flags
+     octLevel: the level of the octree*/
+    
+    printf("Entered voxSpace.\n");
+    // save all the triangles in a triangle array
+    tri_dbl *tri = (tri_dbl*)malloc(numElem*sizeof(tri_dbl));
+    for(int i=0;i<numElem;i++) {
+        for(int j=0;j<3;j++) {
+            tri[i].nod[j] = pt[elem[i].nod[j]];
+        }
+    }
+    printf("Initialized triangles.\n");
+    //for(int i=0;i<numElem;i++) {
+    //    printf("Current triangle: (%lf,%lf,%f), (%lf,%lf,%lf), (%lf,%lf,%f)\n",
+    //            tri[i].nod[0].coords[0],tri[i].nod[0].coords[1],tri[i].nod[0].coords[2],
+    //            tri[i].nod[1].coords[0],tri[i].nod[1].coords[1],tri[i].nod[1].coords[2],
+    //            tri[i].nod[2].coords[0],tri[i].nod[2].coords[1],tri[i].nod[2].coords[2]);
+    //}
+    // save all the unit boxes in a cube array
+    int numVox = numEachDim*numEachDim*numEachDim;
+    memset(flag,0,numVox*sizeof(int));
+    
+    aa_cube_dbl *cb = (aa_cube_dbl*)malloc(numVox*sizeof(aa_cube_dbl));
+    double unitLen = sp.len/numEachDim;
+    rect_coord_dbl dir_x = {unitLen,0,0}, dir_y = {0,unitLen,0}, dir_z = {0,0,unitLen}, 
+            xOffset, yOffset, zOffset;
+    int idx, rel;
+    for(int i=0;i<numEachDim;i++) {
+        // z dimension
+        zOffset = scaRectMul(i,dir_z);
+        for(int j=0;j<numEachDim;j++) {
+            // y dimension
+            yOffset = scaRectMul(j,dir_y);
+            for(int k=0;k<numEachDim;k++) {
+                // x dimension
+                xOffset = scaRectMul(k,dir_x);
+                idx = i*(numEachDim*numEachDim)+j*numEachDim+k;
+                cb[idx].cnr = rectCoordAdd(rectCoordAdd(rectCoordAdd(sp.cnr,xOffset),yOffset),zOffset);
+                cb[idx].len = unitLen;
+            }
+        }
+    }
+    for(int i=0;i<numVox;i++) {
+        for(int j=0;j<numElem;j++) {
+            rel = deterTriCubeInt(tri[j],cb[i]);
+            if(rel==1) {
+                flag[i] = 1;
+                break;
+            }
+        }
+    }
+    free(cb);
+    free(tri);
+    return EXIT_SUCCESS;
+}
+
+__host__ int write_voxels(const int* flag, const int numEachDim, const char* file_path)
+{
+    FILE *file = fopen(file_path,"w");
+    if(file==NULL) {
+        printf("Failed to open file.\n");
+        return EXIT_FAILURE;
+    }
+    else {
+        int status;
+        for(int i=0;i<numEachDim*numEachDim*numEachDim;i++) {
+            status = fprintf(file,"%d ",flag[i]);
+            if((i+1)%numEachDim == 0) {
+                status = fprintf(file,"\n");
+            }
+            if((i+1)%(numEachDim*numEachDim) == 0) {
+                status = fprintf(file,"\n");
+            }
+            if(status<0) {
+                printf("Failed to write the %dth line to file\n",i);
+                return EXIT_FAILURE;
+            }
+        }
+        fclose(file);
+        return EXIT_SUCCESS;
+    }
+}
