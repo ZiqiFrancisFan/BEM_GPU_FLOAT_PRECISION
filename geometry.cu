@@ -33,42 +33,42 @@ __host__ __device__ int deterPtCubeEdgeVolRel(const vec3d pt, const aa_cube_dbl 
     
     //set up btm and top nod
     btm[0] = cb.cnr;
-    btm[1] = vecAdd(btm[0],scaRectMul(cb.len,dir_x));
-    btm[2] = vecAdd(btm[1],scaRectMul(cb.len,dir_y));
-    btm[3] = vecAdd(btm[0],scaRectMul(cb.len,dir_y));
-    //printRectCoord(btm,4);
+    btm[1] = vecAdd(btm[0],scaVecMul(cb.len,dir_x));
+    btm[2] = vecAdd(btm[1],scaVecMul(cb.len,dir_y));
+    btm[3] = vecAdd(btm[0],scaVecMul(cb.len,dir_y));
+    //printVec(btm,4);
     
-    top[0] = vecAdd(btm[0],scaRectMul(cb.len,dir_z));
-    top[1] = vecAdd(top[0],scaRectMul(cb.len,dir_x));
-    top[2] = vecAdd(top[1],scaRectMul(cb.len,dir_y));
-    top[3] = vecAdd(top[0],scaRectMul(cb.len,dir_y));
-    //printRectCoord(top,4);
+    top[0] = vecAdd(btm[0],scaVecMul(cb.len,dir_z));
+    top[1] = vecAdd(top[0],scaVecMul(cb.len,dir_x));
+    top[2] = vecAdd(top[1],scaVecMul(cb.len,dir_y));
+    top[3] = vecAdd(top[0],scaVecMul(cb.len,dir_y));
+    //printVec(top,4);
     
     //set up left and right nod
     left[0] = cb.cnr;
-    left[1] = vecAdd(left[0],scaRectMul(cb.len,dir_x));
-    left[2] = vecAdd(left[1],scaRectMul(cb.len,dir_z));
-    left[3] = vecAdd(left[0],scaRectMul(cb.len,dir_z));
-    //printRectCoord(left,4);
+    left[1] = vecAdd(left[0],scaVecMul(cb.len,dir_x));
+    left[2] = vecAdd(left[1],scaVecMul(cb.len,dir_z));
+    left[3] = vecAdd(left[0],scaVecMul(cb.len,dir_z));
+    //printVec(left,4);
     
-    right[0] = vecAdd(left[0],scaRectMul(cb.len,dir_y));
-    right[1] = vecAdd(right[0],scaRectMul(cb.len,dir_x));
-    right[2] = vecAdd(right[1],scaRectMul(cb.len,dir_z));
-    right[3] = vecAdd(right[0],scaRectMul(cb.len,dir_z));
-    //printRectCoord(right,4);
+    right[0] = vecAdd(left[0],scaVecMul(cb.len,dir_y));
+    right[1] = vecAdd(right[0],scaVecMul(cb.len,dir_x));
+    right[2] = vecAdd(right[1],scaVecMul(cb.len,dir_z));
+    right[3] = vecAdd(right[0],scaVecMul(cb.len,dir_z));
+    //printVec(right,4);
     
     //set up back and front nod
     back[0] = cb.cnr;
-    back[1] = vecAdd(back[0],scaRectMul(cb.len,dir_y));
-    back[2] = vecAdd(back[1],scaRectMul(cb.len,dir_z));
-    back[3] = vecAdd(back[0],scaRectMul(cb.len,dir_z));
-    //printRectCoord(back,4);
+    back[1] = vecAdd(back[0],scaVecMul(cb.len,dir_y));
+    back[2] = vecAdd(back[1],scaVecMul(cb.len,dir_z));
+    back[3] = vecAdd(back[0],scaVecMul(cb.len,dir_z));
+    //printVec(back,4);
     
-    front[0] = vecAdd(back[0],scaRectMul(cb.len,dir_x));
-    front[1] = vecAdd(front[0],scaRectMul(cb.len,dir_y));
-    front[2] = vecAdd(front[1],scaRectMul(cb.len,dir_z));
-    front[3] = vecAdd(front[0],scaRectMul(cb.len,dir_z));
-    //printRectCoord(front,4);
+    front[0] = vecAdd(back[0],scaVecMul(cb.len,dir_x));
+    front[1] = vecAdd(front[0],scaVecMul(cb.len,dir_y));
+    front[2] = vecAdd(front[1],scaVecMul(cb.len,dir_z));
+    front[3] = vecAdd(front[0],scaVecMul(cb.len,dir_z));
+    //printVec(front,4);
     
     //declare an array nrml for determining the normal of the new plane
     vec3d nrml[3];
@@ -83,10 +83,10 @@ __host__ __device__ int deterPtCubeEdgeVolRel(const vec3d pt, const aa_cube_dbl 
                 nrml[0] = dir_y;
                 break;
             case 1: // edge determined by btm[1] and btm[2]
-                nrml[0] = scaRectMul(-1,dir_x);
+                nrml[0] = scaVecMul(-1,dir_x);
                 break;
             case 2: // edge determined by btm[2] and btm[3]
-                nrml[0] = scaRectMul(-1,dir_y);
+                nrml[0] = scaVecMul(-1,dir_y);
                 break;
             case 3: // edge determined by btm[3] and btm[0]
                 nrml[0] = dir_x;
@@ -94,7 +94,7 @@ __host__ __device__ int deterPtCubeEdgeVolRel(const vec3d pt, const aa_cube_dbl 
             default:
                 printf("Entered the wrong branch.\n");
         }
-        nrml[3] = nrmlzRectCoord(vecAdd(nrml[0],nrml[1]));
+        nrml[3] = nrmlzVec(vecAdd(nrml[0],nrml[1]));
         plane.n = nrml[3];
         plane.pt = btm[i];
         result = deterPtPlaneRel(pt,plane);
@@ -106,16 +106,16 @@ __host__ __device__ int deterPtCubeEdgeVolRel(const vec3d pt, const aa_cube_dbl 
     
     //deal with the top face
     for(int i=0;i<3;i++) {
-        nrml[1] = scaRectMul(-1,dir_z);
+        nrml[1] = scaVecMul(-1,dir_z);
         switch(i) {
             case 0: // edge determined by top[0] and top[1]
                 nrml[0] = dir_y;
                 break;
             case 1: // edge determined by top[1] and top[2]
-                nrml[0] = scaRectMul(-1,dir_x);
+                nrml[0] = scaVecMul(-1,dir_x);
                 break;
             case 2: // edge determined by top[2] and top[3]
-                nrml[0] = scaRectMul(-1,dir_y);
+                nrml[0] = scaVecMul(-1,dir_y);
                 break;
             case 3: // edge determined by top[3] and top[0]
                 nrml[0] = dir_x;
@@ -123,7 +123,7 @@ __host__ __device__ int deterPtCubeEdgeVolRel(const vec3d pt, const aa_cube_dbl 
             default:
                 printf("Entered the wrong branch.\n");
         }
-        nrml[3] = nrmlzRectCoord(vecAdd(nrml[0],nrml[1]));
+        nrml[3] = nrmlzVec(vecAdd(nrml[0],nrml[1]));
         plane.n = nrml[3];
         plane.pt = top[i];
         result = deterPtPlaneRel(pt,plane);
@@ -141,10 +141,10 @@ __host__ __device__ int deterPtCubeEdgeVolRel(const vec3d pt, const aa_cube_dbl 
                 nrml[0] = dir_z;
                 break;
             case 1: // edge determined by left[1] and left[2]
-                nrml[0] = scaRectMul(-1,dir_x);
+                nrml[0] = scaVecMul(-1,dir_x);
                 break;
             case 2: // edge determined by left[2] and left[3]
-                nrml[0] = scaRectMul(-1,dir_z);
+                nrml[0] = scaVecMul(-1,dir_z);
                 break;
             case 3: // edge determined by left[3] and left[0]
                 nrml[0] = dir_x;
@@ -152,7 +152,7 @@ __host__ __device__ int deterPtCubeEdgeVolRel(const vec3d pt, const aa_cube_dbl 
             default:
                 printf("Entered the wrong branch.\n");
         }
-        nrml[3] = nrmlzRectCoord(vecAdd(nrml[0],nrml[1]));
+        nrml[3] = nrmlzVec(vecAdd(nrml[0],nrml[1]));
         plane.n = nrml[3];
         plane.pt = left[i];
         result = deterPtPlaneRel(pt,plane);
@@ -164,16 +164,16 @@ __host__ __device__ int deterPtCubeEdgeVolRel(const vec3d pt, const aa_cube_dbl 
     
     //deal with the right face
     for(int i=0;i<3;i++) {
-        nrml[1] = scaRectMul(-1,dir_y);
+        nrml[1] = scaVecMul(-1,dir_y);
         switch(i) {
             case 0: // edge determined by right[0] and right[1]
                 nrml[0] = dir_z;
                 break;
             case 1: // edge determined by right[1] and right[2]
-                nrml[0] = scaRectMul(-1,dir_x);
+                nrml[0] = scaVecMul(-1,dir_x);
                 break;
             case 2: // edge determined by right[2] and right[3]
-                nrml[0] = scaRectMul(-1,dir_z);
+                nrml[0] = scaVecMul(-1,dir_z);
                 break;
             case 3: // edge determined by btm[3] and btm[0]
                 nrml[0] = dir_x;
@@ -181,7 +181,7 @@ __host__ __device__ int deterPtCubeEdgeVolRel(const vec3d pt, const aa_cube_dbl 
             default:
                 printf("Entered the wrong branch.\n");
         }
-        nrml[3] = nrmlzRectCoord(vecAdd(nrml[0],nrml[1]));
+        nrml[3] = nrmlzVec(vecAdd(nrml[0],nrml[1]));
         plane.n = nrml[3];
         plane.pt = right[i];
         result = deterPtPlaneRel(pt,plane);
@@ -199,10 +199,10 @@ __host__ __device__ int deterPtCubeEdgeVolRel(const vec3d pt, const aa_cube_dbl 
                 nrml[0] = dir_z;
                 break;
             case 1: // edge determined by btm[1] and btm[2]
-                nrml[0] = scaRectMul(-1,dir_y);
+                nrml[0] = scaVecMul(-1,dir_y);
                 break;
             case 2: // edge determined by btm[2] and btm[3]
-                nrml[0] = scaRectMul(-1,dir_z);
+                nrml[0] = scaVecMul(-1,dir_z);
                 break;
             case 3: // edge determined by btm[3] and btm[0]
                 nrml[0] = dir_y;
@@ -210,7 +210,7 @@ __host__ __device__ int deterPtCubeEdgeVolRel(const vec3d pt, const aa_cube_dbl 
             default:
                 printf("Entered the wrong branch.\n");
         }
-        nrml[3] = nrmlzRectCoord(vecAdd(nrml[0],nrml[1]));
+        nrml[3] = nrmlzVec(vecAdd(nrml[0],nrml[1]));
         plane.n = nrml[3];
         plane.pt = back[i];
         result = deterPtPlaneRel(pt,plane);
@@ -222,16 +222,16 @@ __host__ __device__ int deterPtCubeEdgeVolRel(const vec3d pt, const aa_cube_dbl 
     
     //deal with the front face
     for(int i=0;i<3;i++) {
-        nrml[1] = scaRectMul(-1,dir_x);
+        nrml[1] = scaVecMul(-1,dir_x);
         switch(i) {
             case 0: // edge determined by front[0] and front[1]
                 nrml[0] = dir_z;
                 break;
             case 1: // edge determined by front[1] and front[2]
-                nrml[0] = scaRectMul(-1,dir_y);
+                nrml[0] = scaVecMul(-1,dir_y);
                 break;
             case 2: // edge determined by front[2] and front[3]
-                nrml[0] = scaRectMul(-1,dir_z);
+                nrml[0] = scaVecMul(-1,dir_z);
                 break;
             case 3: // edge determined by front[3] and front[0]
                 nrml[0] = dir_y;
@@ -239,7 +239,7 @@ __host__ __device__ int deterPtCubeEdgeVolRel(const vec3d pt, const aa_cube_dbl 
             default:
                 printf("Entered the wrong branch.\n");
         }
-        nrml[3] = nrmlzRectCoord(vecAdd(nrml[0],nrml[1]));
+        nrml[3] = nrmlzVec(vecAdd(nrml[0],nrml[1]));
         plane.n = nrml[3];
         plane.pt = front[i];
         result = deterPtPlaneRel(pt,plane);
@@ -270,52 +270,52 @@ __host__ __device__ int deterPtCubeVtxVolRel(const vec3d pt, const aa_cube_dbl c
                 nrml[2] = dir_z;
                 break;
             case 1: //the second vertex
-                tempPt = vecAdd(cb.cnr,scaRectMul(cb.len,dir_x));
-                nrml[0] = scaRectMul(-1,dir_x);
+                tempPt = vecAdd(cb.cnr,scaVecMul(cb.len,dir_x));
+                nrml[0] = scaVecMul(-1,dir_x);
                 nrml[1] = dir_y;
                 nrml[2] = dir_z;
                 break;
             case 2: //the third vertex
-                tempPt = vecAdd(vecAdd(cb.cnr,scaRectMul(cb.len,dir_x)),scaRectMul(cb.len,dir_y));
-                nrml[0] = scaRectMul(-1,dir_x);
-                nrml[1] = scaRectMul(-1,dir_y);
+                tempPt = vecAdd(vecAdd(cb.cnr,scaVecMul(cb.len,dir_x)),scaVecMul(cb.len,dir_y));
+                nrml[0] = scaVecMul(-1,dir_x);
+                nrml[1] = scaVecMul(-1,dir_y);
                 nrml[2] = dir_z;
                 break;
             case 3: //the fourth vertex
-                tempPt = vecAdd(cb.cnr,scaRectMul(cb.len,dir_y));
+                tempPt = vecAdd(cb.cnr,scaVecMul(cb.len,dir_y));
                 nrml[0] = dir_x;
-                nrml[1] = scaRectMul(-1,dir_y);
+                nrml[1] = scaVecMul(-1,dir_y);
                 nrml[2] = dir_z;
                 break;
             case 4: //the fifth vertex
-                tempPt = vecAdd(cb.cnr,scaRectMul(cb.len,dir_z));
+                tempPt = vecAdd(cb.cnr,scaVecMul(cb.len,dir_z));
                 nrml[0] = dir_x;
                 nrml[1] = dir_y;
-                nrml[2] = scaRectMul(-1,dir_z);
+                nrml[2] = scaVecMul(-1,dir_z);
                 break;
             case 5: //the sixth vertex
-                tempPt = vecAdd(vecAdd(cb.cnr,scaRectMul(cb.len,dir_z)),scaRectMul(cb.len,dir_x));
-                nrml[0] = scaRectMul(-1,dir_x);
+                tempPt = vecAdd(vecAdd(cb.cnr,scaVecMul(cb.len,dir_z)),scaVecMul(cb.len,dir_x));
+                nrml[0] = scaVecMul(-1,dir_x);
                 nrml[1] = dir_y;
-                nrml[2] = scaRectMul(-1,dir_z);
+                nrml[2] = scaVecMul(-1,dir_z);
                 break;
             case 6: //the seventh vertex
-                tempPt = vecAdd(vecAdd(vecAdd(cb.cnr,scaRectMul(cb.len,dir_z)),
-                        scaRectMul(cb.len,dir_x)),scaRectMul(cb.len,dir_y));
-                nrml[0] = scaRectMul(-1,dir_x);
-                nrml[1] = scaRectMul(-1,dir_y);
-                nrml[2] = scaRectMul(-1,dir_z);
+                tempPt = vecAdd(vecAdd(vecAdd(cb.cnr,scaVecMul(cb.len,dir_z)),
+                        scaVecMul(cb.len,dir_x)),scaVecMul(cb.len,dir_y));
+                nrml[0] = scaVecMul(-1,dir_x);
+                nrml[1] = scaVecMul(-1,dir_y);
+                nrml[2] = scaVecMul(-1,dir_z);
                 break;
             case 7: //the eighth vertex
-                tempPt = vecAdd(vecAdd(cb.cnr,scaRectMul(cb.len,dir_z)),scaRectMul(cb.len,dir_y));
+                tempPt = vecAdd(vecAdd(cb.cnr,scaVecMul(cb.len,dir_z)),scaVecMul(cb.len,dir_y));
                 nrml[0] = dir_x;
-                nrml[1] = scaRectMul(-1,dir_y);
-                nrml[2] = scaRectMul(-1,dir_z);
+                nrml[1] = scaVecMul(-1,dir_y);
+                nrml[2] = scaVecMul(-1,dir_z);
                 break;
             default:
                 printf("safety purpose.\n");
         }
-        nrml[3] = nrmlzRectCoord(vecAdd(vecAdd(nrml[0],nrml[1]),nrml[2]));
+        nrml[3] = nrmlzVec(vecAdd(vecAdd(nrml[0],nrml[1]),nrml[2]));
         plane.n = nrml[3];
         plane.pt = tempPt;
         result = deterPtPlaneRel(pt,plane);
@@ -329,9 +329,9 @@ __host__ __device__ int deterPtCubeVtxVolRel(const vec3d pt, const aa_cube_dbl c
 __host__ __device__ int deterPtCubeRel(const vec3d pt, const aa_cube_dbl cube)
 {
     vec3d cnr_fru = cube.cnr;
-    cnr_fru = vecAdd(cnr_fru,scaRectMul(cube.len,{1,0,0}));
-    cnr_fru = vecAdd(cnr_fru,scaRectMul(cube.len,{0,1,0}));
-    cnr_fru = vecAdd(cnr_fru,scaRectMul(cube.len,{0,0,1}));
+    cnr_fru = vecAdd(cnr_fru,scaVecMul(cube.len,{1,0,0}));
+    cnr_fru = vecAdd(cnr_fru,scaVecMul(cube.len,{0,1,0}));
+    cnr_fru = vecAdd(cnr_fru,scaVecMul(cube.len,{0,0,1}));
     double x_min = cube.cnr.coords[0], y_min = cube.cnr.coords[1], z_min = cube.cnr.coords[2], 
             x_max = cnr_fru.coords[0], y_max = cnr_fru.coords[1], z_max = cnr_fru.coords[2],
             x = pt.coords[0], y = pt.coords[1], z = pt.coords[2];
@@ -381,7 +381,7 @@ __host__ __device__ plane_dbl tri2plane(const tri_dbl tri)
     vec3d vec[2];
     vec[0] = vecSub(tri.nod[1],tri.nod[0]);
     vec[1] = vecSub(tri.nod[2],tri.nod[0]);
-    pln.n = nrmlzRectCoord(vecCrossMul(vec[0],vec[1]));
+    pln.n = nrmlzVec(vecCrossMul(vec[0],vec[1]));
     return pln;
 }
 
@@ -393,7 +393,7 @@ __host__ __device__ plane_dbl quad2plane(const quad_dbl qd)
     vec3d vec[2];
     vec[0] = vecSub(qd.nod[1],qd.nod[0]);
     vec[1] = vecSub(qd.nod[2],qd.nod[0]);
-    pln.n = nrmlzRectCoord(vecCrossMul(vec[0],vec[1]));
+    pln.n = nrmlzVec(vecCrossMul(vec[0],vec[1]));
     return pln;
 }
 
@@ -494,24 +494,24 @@ __host__ __device__ int deterLnLnRel(const line_dbl ln1, const line_dbl ln2, dou
         //the two lines either are skew or intersect
         vec3d pt[4];
         pt[0] = ln1.pt;
-        pt[1] = vecAdd(ln1.pt,scaRectMul(1.0,ln1.dir));
+        pt[1] = vecAdd(ln1.pt,scaVecMul(1.0,ln1.dir));
         pt[2] = ln2.pt;
-        pt[3] = vecAdd(ln2.pt,scaRectMul(1.0,ln2.dir));
-        //printRectCoord(pt,4);
-        if(rectCoordEqual(pt[0],pt[2]) || rectCoordEqual(pt[0],pt[3]) || 
-                rectCoordEqual(pt[1],pt[2]) || rectCoordEqual(pt[1],pt[3])) {
+        pt[3] = vecAdd(ln2.pt,scaVecMul(1.0,ln2.dir));
+        //printVec(pt,4);
+        if(vecEqual(pt[0],pt[2]) || vecEqual(pt[0],pt[3]) || 
+                vecEqual(pt[1],pt[2]) || vecEqual(pt[1],pt[3])) {
             //the two points on the line is the same point
-            if(rectCoordEqual(pt[0],pt[2])) {
+            if(vecEqual(pt[0],pt[2])) {
                 *t1 = 0;
                 *t2 = 0;
             } 
             else {
-                if(rectCoordEqual(pt[0],pt[3])) {
+                if(vecEqual(pt[0],pt[3])) {
                     *t1 = 0;
                     *t2 = 1.0;
                 } 
                 else {
-                    if(rectCoordEqual(pt[1],pt[2])) {
+                    if(vecEqual(pt[1],pt[2])) {
                         *t1 = 1.0;
                         *t2 = 0.0;
                     } 
@@ -644,7 +644,7 @@ __host__ __device__ int deterLnSegLnSegRel(const ln_seg_dbl seg1, const ln_seg_d
                 //determine if one or infinitely many intersection points
                 for(int i=0;i<2;i++) {
                     for(int j=0;j<2;j++) {
-                        if(rectCoordEqual(seg1.nod[i],seg2.nod[j])) {
+                        if(vecEqual(seg1.nod[i],seg2.nod[j])) {
                             vec3d vec[2];
                             vec[0] = vecSub(seg1.nod[(i+1)%2],seg1.nod[i]);
                             vec[1] = vecSub(seg2.nod[(j+1)%2],seg1.nod[j]);
@@ -712,7 +712,7 @@ __host__ __device__ int deterLnSegQuadRel(const ln_seg_dbl lnSeg, const quad_dbl
                 return 0;
             } 
             else {
-                vec3d intersection = vecAdd(ln.pt,scaRectMul(t,ln.dir));
+                vec3d intersection = vecAdd(ln.pt,scaVecMul(t,ln.dir));
                 if(deterPtQuadRel(intersection,qd)==1) {
                     // intersection in the quad
                     return 1;
@@ -774,7 +774,7 @@ __host__ __device__ int deterLnSegTriRel(const ln_seg_dbl lnSeg, const tri_dbl t
                 return 0;
             } 
             else {
-                vec3d intersection = vecAdd(ln.pt,scaRectMul(t,ln.dir));
+                vec3d intersection = vecAdd(ln.pt,scaVecMul(t,ln.dir));
                 if(deterPtTriRel(intersection,tri)==1) {
                     // intersection in the tri
                     return 1;
@@ -815,9 +815,9 @@ __host__ __device__ int deterTriCubeInt(const tri_dbl tri, const aa_cube_dbl cb)
     
     //set up translation vectors
     vec3d dir_x = {1,0,0}, dir_y = {0,1,0}, dir_z = {0,0,1};
-    dir_x = scaRectMul(cb.len,dir_x);
-    dir_y = scaRectMul(cb.len,dir_y);
-    dir_z = scaRectMul(cb.len,dir_z);
+    dir_x = scaVecMul(cb.len,dir_x);
+    dir_y = scaVecMul(cb.len,dir_y);
+    dir_z = scaVecMul(cb.len,dir_z);
     
     //set the edges, faces and diagonals
     for(int i=0;i<3;i++) {
@@ -833,42 +833,42 @@ __host__ __device__ int deterTriCubeInt(const tri_dbl tri, const aa_cube_dbl cb)
                 cbFace[i].nod[0] = pt;
                 cbFace[i].nod[1] = vecAdd(cbFace[i].nod[0],dir_x);
                 cbFace[i].nod[2] = vecAdd(cbFace[i].nod[1],dir_y);
-                cbFace[i].nod[3] = vecAdd(cbFace[i].nod[2],scaRectMul(-1,dir_x));
+                cbFace[i].nod[3] = vecAdd(cbFace[i].nod[2],scaVecMul(-1,dir_x));
                 break;
             case 1: //up x-y plane
                 pt = vecAdd(pt,dir_z);
                 cbFace[i].nod[0] = pt;
                 cbFace[i].nod[1] = vecAdd(cbFace[i].nod[0],dir_x);
                 cbFace[i].nod[2] = vecAdd(cbFace[i].nod[1],dir_y);
-                cbFace[i].nod[3] = vecAdd(cbFace[i].nod[2],scaRectMul(-1,dir_x));
+                cbFace[i].nod[3] = vecAdd(cbFace[i].nod[2],scaVecMul(-1,dir_x));
                 break;
             case 2: //left y-z plane
                 pt = cb.cnr;
                 cbFace[i].nod[0] = pt;
                 cbFace[i].nod[1] = vecAdd(cbFace[i].nod[0],dir_x);
                 cbFace[i].nod[2] = vecAdd(cbFace[i].nod[1],dir_z);
-                cbFace[i].nod[3] = vecAdd(cbFace[i].nod[2],scaRectMul(-1,dir_x));
+                cbFace[i].nod[3] = vecAdd(cbFace[i].nod[2],scaVecMul(-1,dir_x));
                 break;
             case 3: //right y-z plane
                 pt = vecAdd(cb.cnr,dir_y);
                 cbFace[i].nod[0] = pt;
                 cbFace[i].nod[1] = vecAdd(cbFace[i].nod[0],dir_x);
                 cbFace[i].nod[2] = vecAdd(cbFace[i].nod[1],dir_z);
-                cbFace[i].nod[3] = vecAdd(cbFace[i].nod[2],scaRectMul(-1,dir_x));
+                cbFace[i].nod[3] = vecAdd(cbFace[i].nod[2],scaVecMul(-1,dir_x));
                 break;
             case 4: //back z-x plane
                 pt = cb.cnr;
                 cbFace[i].nod[0] = pt;
                 cbFace[i].nod[1] = vecAdd(cbFace[i].nod[0],dir_y);
                 cbFace[i].nod[2] = vecAdd(cbFace[i].nod[1],dir_z);
-                cbFace[i].nod[3] = vecAdd(cbFace[i].nod[2],scaRectMul(-1,dir_y));
+                cbFace[i].nod[3] = vecAdd(cbFace[i].nod[2],scaVecMul(-1,dir_y));
                 break;
             case 5: //front z-x plane
                 pt = vecAdd(cb.cnr,dir_x);
                 cbFace[i].nod[0] = pt;
                 cbFace[i].nod[1] = vecAdd(cbFace[i].nod[0],dir_y);
                 cbFace[i].nod[2] = vecAdd(cbFace[i].nod[1],dir_z);
-                cbFace[i].nod[3] = vecAdd(cbFace[i].nod[2],scaRectMul(-1,dir_y));
+                cbFace[i].nod[3] = vecAdd(cbFace[i].nod[2],scaVecMul(-1,dir_y));
                 break;
             default:
                 printf("Should not enter this.\n");
@@ -881,15 +881,15 @@ __host__ __device__ int deterTriCubeInt(const tri_dbl tri, const aa_cube_dbl cb)
     
     // second diagnonal
     cbDiag[1].nod[0] = vecAdd(cbDiag[0].nod[0],dir_x);
-    cbDiag[1].nod[1] = vecAdd(vecAdd(vecAdd(cbDiag[1].nod[0],dir_y),scaRectMul(-1,dir_x)),dir_z);
+    cbDiag[1].nod[1] = vecAdd(vecAdd(vecAdd(cbDiag[1].nod[0],dir_y),scaVecMul(-1,dir_x)),dir_z);
     
     // third diagnoal
     cbDiag[2].nod[0] = vecAdd(cbDiag[1].nod[0],dir_y);
-    cbDiag[2].nod[1] = vecAdd(vecAdd(vecAdd(cbDiag[2].nod[0],scaRectMul(-1,dir_x)),scaRectMul(-1,dir_y)),dir_z);
+    cbDiag[2].nod[1] = vecAdd(vecAdd(vecAdd(cbDiag[2].nod[0],scaVecMul(-1,dir_x)),scaVecMul(-1,dir_y)),dir_z);
     
     // fourth diagonal
-    cbDiag[3].nod[0] = vecAdd(cbDiag[2].nod[0],scaRectMul(-1,dir_x));
-    cbDiag[3].nod[1] = vecAdd(vecAdd(vecAdd(cbDiag[3].nod[0],scaRectMul(-1,dir_y)),dir_x),dir_z);
+    cbDiag[3].nod[0] = vecAdd(cbDiag[2].nod[0],scaVecMul(-1,dir_x));
+    cbDiag[3].nod[1] = vecAdd(vecAdd(vecAdd(cbDiag[3].nod[0],scaVecMul(-1,dir_y)),dir_x),dir_z);
     
     // determine if any of the three edges of the triangle intersects the faces;
     //printf("Entered diagonal test.\n");
@@ -1064,13 +1064,13 @@ __host__ int voxelSpace(const aa_cube_dbl sp, const int numEachDim, const vec3d*
     int idx, rel;
     for(int i=0;i<numEachDim;i++) {
         // z dimension
-        zOffset = scaRectMul(i,dir_z);
+        zOffset = scaVecMul(i,dir_z);
         for(int j=0;j<numEachDim;j++) {
             // y dimension
-            yOffset = scaRectMul(j,dir_y);
+            yOffset = scaVecMul(j,dir_y);
             for(int k=0;k<numEachDim;k++) {
                 // x dimension
-                xOffset = scaRectMul(k,dir_x);
+                xOffset = scaVecMul(k,dir_x);
                 idx = i*(numEachDim*numEachDim)+j*numEachDim+k;
                 cb[idx].cnr = vecAdd(vecAdd(vecAdd(sp.cnr,xOffset),yOffset),zOffset);
                 cb[idx].len = unitLen;

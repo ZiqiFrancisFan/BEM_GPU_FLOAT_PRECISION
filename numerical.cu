@@ -174,7 +174,7 @@ void print_cuFloatComplex_mat(const cuFloatComplex *A, const int numRow, const i
     }
 }
 
-__host__ __device__ void printRectCoord(const vec3f* pt, const int numPt)
+__host__ __device__ void printVec(const vec3f* pt, const int numPt)
 {
     for(int i=0;i<numPt;i++) {
         printf("(%f,%f,%f), ",pt[i].coords[0],pt[i].coords[1],pt[i].coords[2]);
@@ -182,7 +182,7 @@ __host__ __device__ void printRectCoord(const vec3f* pt, const int numPt)
     printf("\n");
 }
 
-__host__ __device__ void printRectCoord(const vec3d* pt, const int numPt)
+__host__ __device__ void printVec(const vec3d* pt, const int numPt)
 {
     for(int i=0;i<numPt;i++) {
         printf("(%f,%f,%f), ",pt[i].coords[0],pt[i].coords[1],pt[i].coords[2]);
@@ -228,19 +228,19 @@ __host__ __device__ vec3d vecCrossMul(const vec3d a, const vec3d b)
     return temp;
 }
 
-__host__ __device__ vec3d nrmlzRectCoord(const vec3d v)
+__host__ __device__ vec3d nrmlzVec(const vec3d v)
 {
     double nrm = sqrt(vecDotMul(v,v));
-    return scaRectMul(1.0/nrm,v);
+    return scaVecMul(1.0/nrm,v);
 }
 
-__host__ __device__ vec3f nrmlzRectCoord(const vec3f v)
+__host__ __device__ vec3f nrmlzVec(const vec3f v)
 {
     float nrm = sqrt(vecDotMul(v,v));
-    return scaRectMul(1.0/nrm,v);
+    return scaVecMul(1.0/nrm,v);
 }
 
-__host__ __device__ int rectCoordEqual(const vec3f v1, const vec3f v2)
+__host__ __device__ int vecEqual(const vec3f v1, const vec3f v2)
 {
     vec3f v = vecSub(v1,v2);
     if(vecNorm(v) < EPS) {
@@ -250,7 +250,7 @@ __host__ __device__ int rectCoordEqual(const vec3f v1, const vec3f v2)
     }
 }
 
-__host__ __device__ int rectCoordEqual(const vec3d v1, const vec3d v2)
+__host__ __device__ int vecEqual(const vec3d v1, const vec3d v2)
 {
     vec3d v = vecSub(v1,v2);
     if(vecNorm(v) < EPS) {
@@ -258,15 +258,6 @@ __host__ __device__ int rectCoordEqual(const vec3d v1, const vec3d v2)
     } else {
         return 0;
     }
-}
-
-__host__ __device__ vec3f crossProd(const vec3f u, const vec3f v)
-{
-    vec3f r;
-    r.coords[0] = (u.coords[1])*(v.coords[2])-(u.coords[2])*(v.coords[1]);
-    r.coords[1] = (u.coords[2])*(v.coords[0])-(u.coords[0])*(v.coords[2]);
-    r.coords[2] = (u.coords[0])*(v.coords[1])-(u.coords[1])*(v.coords[0]);
-    return r;
 }
 
 __host__ __device__ vec3f vecAdd(const vec3f u, const vec3f v)
@@ -287,7 +278,7 @@ __host__ __device__ vec3f vecSub(const vec3f u, const vec3f v)
     return result;
 }
 
-__host__ __device__ vec3f scaRectMul(const float lambda, const vec3f v)
+__host__ __device__ vec3f scaVecMul(const float lambda, const vec3f v)
 {
     vec3f result;
     for(int i=0;i<3;i++) {
@@ -296,7 +287,7 @@ __host__ __device__ vec3f scaRectMul(const float lambda, const vec3f v)
     return result;
 }
 
-__host__ __device__ vec3d scaRectMul(const double lambda, const vec3d v)
+__host__ __device__ vec3d scaVecMul(const double lambda, const vec3d v)
 {
     vec3d result;
     for(int i=0;i<3;i++) {
@@ -325,8 +316,8 @@ __host__ __device__ vec3d vecSub(const vec3d u, const vec3d v)
 
 __host__ __device__ vec3d triCentroid(vec3d nod[3])
 {
-    vec3d ctr_23 = scaRectMul(0.5,vecAdd(nod[1],nod[2]));
-    vec3d centroid = vecAdd(nod[0],scaRectMul(2.0/3.0,vecSub(ctr_23,nod[0])));
+    vec3d ctr_23 = scaVecMul(0.5,vecAdd(nod[1],nod[2]));
+    vec3d centroid = vecAdd(nod[0],scaVecMul(2.0/3.0,vecSub(ctr_23,nod[0])));
     return centroid;
 }
 
@@ -338,7 +329,7 @@ __host__ __device__ bool ray_intersect_triangle(const vec3f O, const vec3f dir,
     E1 = vecSub(nod[1],nod[0]);
     E2 = vecSub(nod[2],nod[0]);
     /*cross product of dir and v0 to v1*/
-    vec3f P = crossProd(dir,E2);
+    vec3f P = vecCrossMul(dir,E2);
     float det = vecDotMul(P,E1);
     if(abs(det)<EPS) {
         return false;
@@ -350,7 +341,7 @@ __host__ __device__ bool ray_intersect_triangle(const vec3f O, const vec3f dir,
         return false;
     }
     /*Computation of parameter v*/
-    vec3f Q = crossProd(T,E1);
+    vec3f Q = vecCrossMul(T,E1);
     float v = 1.0f/det*vecDotMul(Q,dir);
     if(v<0 || u+v>1) {
         return false;

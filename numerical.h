@@ -169,9 +169,9 @@ void print_float_mat(const float *A, const int numRow, const int numCol, const i
 void print_cuFloatComplex_mat(const cuFloatComplex *A, const int numRow, const int numCol, 
         const int lda);
 
-__host__ __device__ void printRectCoord(const vec3f* pt, const int numPt);
+__host__ __device__ void printVec(const vec3f* pt, const int numPt);
 
-__host__ __device__ void printRectCoord(const vec3d* pt, const int numPt);
+__host__ __device__ void printVec(const vec3d* pt, const int numPt);
 
 __host__ __device__ sph3f vec2sph(const vec3f s);
 
@@ -185,15 +185,13 @@ __host__ __device__ float vecDotMul(const vec3f u, const vec3f v);
 
 __host__ __device__ double vecDotMul(const vec3d u, const vec3d v);
 
-__host__ __device__ vec3f scaRectMul(const float lambda, const vec3f v);
+__host__ __device__ vec3f scaVecMul(const float lambda, const vec3f v);
 
-__host__ __device__ vec3d scaRectMul(const double lambda, const vec3d v);
+__host__ __device__ vec3d scaVecMul(const double lambda, const vec3d v);
 
 __host__ __device__ vec3f vecCrossMul(const vec3f a, const vec3f b);
 
 __host__ __device__ vec3d vecCrossMul(const vec3d a, const vec3d b);
-
-__host__ __device__ vec3f crossProd(const vec3f u, const vec3f v);
 
 __host__ __device__ vec3f vecAdd(const vec3f u, const vec3f v);
 
@@ -203,17 +201,17 @@ __host__ __device__ vec3d vecAdd(const vec3d u, const vec3d v);
 
 __host__ __device__ vec3d vecSub(const vec3d u, const vec3d v);
 
-__host__ __device__ vec3d nrmlzRectCoord(const vec3d v);
+__host__ __device__ vec3d nrmlzVec(const vec3d v);
 
-__host__ __device__ vec3f nrmlzRectCoord(const vec3f v);
+__host__ __device__ vec3f nrmlzVec(const vec3f v);
 
 __host__ __device__ float vecNorm(const vec3f v);
 
 __host__ __device__ double vecNorm(const vec3d v);
 
-__host__ __device__ int rectCoordEqual(const vec3f v1, const vec3f v2);
+__host__ __device__ int vecEqual(const vec3f v1, const vec3f v2);
 
-__host__ __device__ int rectCoordEqual(const vec3d v1, const vec3d v2);
+__host__ __device__ int vecEqual(const vec3d v1, const vec3d v2);
 
 __host__ __device__ bool ray_intersect_triangle(const vec3f O, const vec3f dir, 
         const vec3f nod[3]);
