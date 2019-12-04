@@ -171,7 +171,7 @@ endif
 
 LIBRARIES += -lcudart -lcublas -lcurand -lstdc++ -lpthread -lm
 LIBRARIES += -lcudart -lcublas -lcurand -lcusolver -lcufft -lcusparse 
-#LIBRARIES += -lstdc++ -lm -lgsl -lgslcblas
+LIBRARIES += -lstdc++ -lm -lgsl -lgslcblas
 
 
 ################################################################################

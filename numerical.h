@@ -27,9 +27,9 @@
 
 #include "dataStructs.h"
 
-//#include <gsl/gsl_sf.h>
-//#include <gsl/gsl_complex_math.h>
-//#include <gsl/gsl_blas.h>
+#include <gsl/gsl_sf.h>
+#include <gsl/gsl_complex_math.h>
+#include <gsl/gsl_blas.h>
 
 #ifndef max
 #define max(a,b) \
@@ -242,13 +242,11 @@ int bemSolver_mp(const float k, const tri_elem *elem, const int numElem,
         const vec3f *nod, const int numNod, const vec3f *chief, const int numCHIEF, 
         const vec3f *src, const int numSrc, cuFloatComplex *B, const int ldb);
 
-/*
 void computeRigidSphereScattering(const vec3f *pt, const int numPt, const double a, 
         const double r, const double wavNum, const double strength);
 
 gsl_complex rigidSphereScattering(const double wavNum, const double strength, const double a, 
         const double r, const double theta);
-*/
 
 int field_extrapolation_single_dir(const float wavNum, const vec3f* expPt, const int numExpPt, 
         const tri_elem* elem, const int numElem, const vec3f* pt, const int numPt, 

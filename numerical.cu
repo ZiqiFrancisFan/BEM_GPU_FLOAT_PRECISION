@@ -1454,7 +1454,6 @@ int bemSolver_dir(const float k, const tri_elem *elem, const int numElem,
     return EXIT_SUCCESS;
 }
 
-/*
 __host__ gsl_complex gsl_sf_bessel_hl(const int l, const double s)
 {
     double x = gsl_sf_bessel_jl(l,s);
@@ -1484,7 +1483,6 @@ gsl_complex hprime(const int n, const double r)
     }
     return result;
 }
-*/
 
 __host__ __device__ vec3f sph2vec(const sph3f s)
 {
@@ -1525,44 +1523,6 @@ __host__ __device__ sph3d vec2sph(const vec3d s)
     temp.coords[2] = atan2(s.coords[1],s.coords[0]);
     return temp;
 }
-/*
-void computeRigidSphereScattering(const vec3f *pt, const int numPt, const double a, 
-        const double r, const double wavNum, const double strength)
-{
-    gsl_complex *p = (gsl_complex*)malloc(numPt*sizeof(gsl_complex));
-    sph3f tempCoord;
-    gsl_complex result;
-    //double temp;
-    //const int truncNum = 30;
-    for(int i=0;i<numPt;i++)
-    {
-        tempCoord = vec2sph(pt[i]);
-        result = rigidSphereScattering(wavNum,strength,a,tempCoord.coords[0],tempCoord.coords[1]);
-        p[i] = result;
-        printf("(%.8f,%.8f)\n",GSL_REAL(p[i]),GSL_IMAG(p[i]));
-    }
-    free(p);
-}
-
-gsl_complex rigidSphereScattering(const double wavNum, const double strength, const double a, 
-        const double r, const double theta)
-{
-    gsl_complex result = gsl_complex_rect(0,0), temp_c;
-    const int numTrunc = 70;
-    for(int n=0;n<numTrunc;n++)
-    {
-        temp_c = gsl_complex_div(gsl_complex_rect(jprime(n,wavNum*a),0),hprime(n,wavNum*a));
-        temp_c = gsl_complex_mul(temp_c,gsl_sf_bessel_hl(n,wavNum*r));
-        temp_c = gsl_complex_sub(gsl_complex_rect(gsl_sf_bessel_jl(n,wavNum*r),0),temp_c);
-        temp_c = gsl_complex_mul(gsl_complex_pow_real(gsl_complex_rect(0,1),n),temp_c);
-        temp_c = gsl_complex_mul_real(temp_c,2*n+1);
-        temp_c = gsl_complex_mul_real(temp_c,gsl_sf_legendre_Pl(n,cos(theta)));
-        result = gsl_complex_add(result,temp_c);
-    }
-    result = gsl_complex_mul_real(result,strength);
-    return result;
-}
-*/
 
 __device__ cuFloatComplex extrapolation_dir(const float wavNum, const vec3f x, 
         const tri_elem* elem, const int numElem, const vec3f* pt, 
