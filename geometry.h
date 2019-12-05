@@ -33,33 +33,33 @@ __host__ __device__ void PrintVec(const vec2d* vec, const int num);
 
 __host__ __device__ double triArea(const tri_dbl& s);
 
-__host__ __device__ int deterPtPlaneRel(const vec3d& pt, const plane3d& plane);
+__host__ __device__ int DeterPtPlaneRel(const vec3d& pt, const plane3d& plane);
 
-__host__ __device__ int deterPtCubeRel(const vec3d& pt, const aacb3d& cube);
+__host__ __device__ int DeterPtCubeRel(const vec3d& pt, const aacb3d& cube);
 
-__host__ __device__ int deterPtCubeEdgeVolRel(const vec3d& pt, const aacb3d& cb);
+__host__ __device__ int DeterPtCubeEdgeVolRel(const vec3d& pt, const aacb3d& cb);
 
-__host__ __device__ int deterLinePlaneInt(const line3d& ln, const plane3d& pln, double* t);
+__host__ __device__ int DeterLinePlaneInt(const line3d& ln, const plane3d& pln, double* t);
 
-__host__ __device__ int deterPtCubeVtxVolRel(const vec3d& pt, const aacb3d& cb);
+__host__ __device__ int DeterPtCubeVtxVolRel(const vec3d& pt, const aacb3d& cb);
 
-__host__ __device__ int deterLinePlaneRel(const line3d& ln, const plane3d& pln, double* t);
+__host__ __device__ int DeterLinePlaneRel(const line3d& ln, const plane3d& pln, double* t);
 
 __host__ __device__ double rectCoordDet(const vec3d vec[3]);
 
-__host__ __device__ int deterLnLnRel(const line3d& ln1, const line3d& ln2, double* t1, double* t2);
+__host__ __device__ int DeterLnLnRel(const line3d& ln1, const line3d& ln2, double* t1, double* t2);
 
-__host__ __device__ int deterPtLnSegRel(const vec3d& pt, const lnseg3d& lnSeg);
+__host__ __device__ int DeterPtLnSegRel(const vec3d& pt, const lnseg3d& lnSeg);
 
-__host__ __device__ int deterLnSegLnSegRel(const lnseg3d& seg1, const lnseg3d& seg2);
+__host__ __device__ int DeterLnSegLnSegRel(const lnseg3d& seg1, const lnseg3d& seg2);
 
-__host__ __device__ int deterLnSegQuadRel(const lnseg3d& lnSeg, const quad_dbl& qd);
+__host__ __device__ int DeterLnSegQuadRel(const lnseg3d& lnSeg, const quad_dbl& qd);
 
-__host__ __device__ int deterLnSegQuadRel(const lnseg3d& lnSeg, const quad_dbl& qd);
+__host__ __device__ int DeterLnSegQuadRel(const lnseg3d& lnSeg, const quad_dbl& qd);
 
-__host__ __device__ int deterLnSegTriRel(const lnseg3d& lnSeg, const tri_dbl& tri);
+__host__ __device__ int DeterLnSegTriRel(const lnseg3d& lnSeg, const tri_dbl& tri);
 
-__host__ __device__ int deterTriCubeInt(const tri_dbl& tri, const aacb3d& cb);
+__host__ __device__ int DeterTriCubeInt(const tri_dbl& tri, const aacb3d& cb);
 
 __host__ int voxelSpace(const aacb3d sp, const int numEachDim, const vec3d* pt, 
         const tri_elem* elem, const int numElem, int* flag);

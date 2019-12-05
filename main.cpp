@@ -59,7 +59,7 @@ int main(int argc, char *argv[])
     tri_elem *elem = (tri_elem*)malloc(numElem*sizeof(tri_elem));
     readOBJ("./mesh/sphere_100mm_320.obj",pt,elem);
     
-    int numEachDim = 150;
+    int numEachDim = 100;
     int *flag = (int*)malloc(numEachDim*numEachDim*numEachDim*sizeof(int));
     aa_cube_dbl sp;
     sp.cnr = {-0.5,-0.5,-0.5};

@@ -47,7 +47,7 @@ __host__ void SetHostBases()
     bases[2].coords[2] = 1;
 }
 
-__host__ __device__ int deterPtPlaneRel(const vec3d& pt, const plane3d& plane)
+__host__ __device__ int DeterPtPlaneRel(const vec3d& pt, const plane3d& plane)
 {
     vec3d vec = vecSub(pt,plane.pt);
     double result = vecDotMul(plane.n,vec);
@@ -59,7 +59,7 @@ __host__ __device__ int deterPtPlaneRel(const vec3d& pt, const plane3d& plane)
     }
 }
 
-__host__ __device__ int deterPtCubeEdgeVolRel(const vec3d& pt, const aacb3d& cb)
+__host__ __device__ int DeterPtCubeEdgeVolRel(const vec3d& pt, const aacb3d& cb)
 {
     /*determine the relationship between a point and the volume bounded by edge faces
      of a cube*/
@@ -136,7 +136,7 @@ __host__ __device__ int deterPtCubeEdgeVolRel(const vec3d& pt, const aacb3d& cb)
         nrml[3] = vecNrmlz(vecAdd(nrml[0],nrml[1]));
         plane.n = nrml[3];
         plane.pt = btm[i];
-        result = deterPtPlaneRel(pt,plane);
+        result = DeterPtPlaneRel(pt,plane);
         if(result == 0) {
             //printf("bottom face: %dth node\n",i);
             return 0;
@@ -165,7 +165,7 @@ __host__ __device__ int deterPtCubeEdgeVolRel(const vec3d& pt, const aacb3d& cb)
         nrml[3] = vecNrmlz(vecAdd(nrml[0],nrml[1]));
         plane.n = nrml[3];
         plane.pt = top[i];
-        result = deterPtPlaneRel(pt,plane);
+        result = DeterPtPlaneRel(pt,plane);
         if(result==0) {
             //printf("top face: %dth node\n",i);
             return 0;
@@ -194,7 +194,7 @@ __host__ __device__ int deterPtCubeEdgeVolRel(const vec3d& pt, const aacb3d& cb)
         nrml[3] = vecNrmlz(vecAdd(nrml[0],nrml[1]));
         plane.n = nrml[3];
         plane.pt = left[i];
-        result = deterPtPlaneRel(pt,plane);
+        result = DeterPtPlaneRel(pt,plane);
         if(result==0) {
             //printf("left face: %dth node\n",i);
             return 0;
@@ -223,7 +223,7 @@ __host__ __device__ int deterPtCubeEdgeVolRel(const vec3d& pt, const aacb3d& cb)
         nrml[3] = vecNrmlz(vecAdd(nrml[0],nrml[1]));
         plane.n = nrml[3];
         plane.pt = right[i];
-        result = deterPtPlaneRel(pt,plane);
+        result = DeterPtPlaneRel(pt,plane);
         if(result==0) {
             //printf("right face: %dth node\n",i);
             return 0;
@@ -252,7 +252,7 @@ __host__ __device__ int deterPtCubeEdgeVolRel(const vec3d& pt, const aacb3d& cb)
         nrml[3] = vecNrmlz(vecAdd(nrml[0],nrml[1]));
         plane.n = nrml[3];
         plane.pt = back[i];
-        result = deterPtPlaneRel(pt,plane);
+        result = DeterPtPlaneRel(pt,plane);
         if(result==0) {
             //printf("back face: %dth node\n",i);
             return 0;
@@ -281,7 +281,7 @@ __host__ __device__ int deterPtCubeEdgeVolRel(const vec3d& pt, const aacb3d& cb)
         nrml[3] = vecNrmlz(vecAdd(nrml[0],nrml[1]));
         plane.n = nrml[3];
         plane.pt = front[i];
-        result = deterPtPlaneRel(pt,plane);
+        result = DeterPtPlaneRel(pt,plane);
         if(result==0) {
             //printf("front face: %dth node\n",i);
             return 0;
@@ -292,7 +292,7 @@ __host__ __device__ int deterPtCubeEdgeVolRel(const vec3d& pt, const aacb3d& cb)
     return 1;
 }
 
-__host__ __device__ int deterPtCubeVtxVolRel(const vec3d& pt, const aacb3d& cb)
+__host__ __device__ int DeterPtCubeVtxVolRel(const vec3d& pt, const aacb3d& cb)
 {
     // declare the basis unit vectors
     vec3d dir_x = {1.0,0.0,0.0}, dir_y = {0.0,1.0,0.0}, dir_z = {0.0,0.0,1.0}, 
@@ -357,7 +357,7 @@ __host__ __device__ int deterPtCubeVtxVolRel(const vec3d& pt, const aacb3d& cb)
         nrml[3] = vecNrmlz(vecAdd(vecAdd(nrml[0],nrml[1]),nrml[2]));
         plane.n = nrml[3];
         plane.pt = tempPt;
-        result = deterPtPlaneRel(pt,plane);
+        result = DeterPtPlaneRel(pt,plane);
         if(result == 0) {
             return 0;
         }
@@ -367,7 +367,7 @@ __host__ __device__ int deterPtCubeVtxVolRel(const vec3d& pt, const aacb3d& cb)
 
 #ifdef __CUDA_ARCH__
 
-int deterPtCubeRel(const vec3d& pt, const aacb3d& cube)
+int DeterPtCubeRel(const vec3d& pt, const aacb3d& cube)
 {
     vec3d cnr_fru = cube.cnr;
     cnr_fru = vecAdd(cnr_fru,scaVecMul(cube.len,BASES[0]));
@@ -385,7 +385,7 @@ int deterPtCubeRel(const vec3d& pt, const aacb3d& cube)
 
 #else
 
-int deterPtCubeRel(const vec3d& pt, const aacb3d& cube)
+int DeterPtCubeRel(const vec3d& pt, const aacb3d& cube)
 {
     vec3d cnr_fru = cube.cnr;
     cnr_fru = vecAdd(cnr_fru,scaVecMul(cube.len,bases[0]));
@@ -403,7 +403,7 @@ int deterPtCubeRel(const vec3d& pt, const aacb3d& cube)
 
 #endif
 
-__host__ __device__ int deterLinePlaneRel(const line3d& ln, const plane3d& pln, double* t)
+__host__ __device__ int DeterLinePlaneRel(const line3d& ln, const plane3d& pln, double* t)
 {
     /*determines the relation between a line and a plane
      ln: a 3D line
@@ -481,7 +481,7 @@ __host__ __device__ line3d lnSeg2ln(const lnseg3d ls)
     return l;
 }
 
-__host__ __device__ int deterPtTriRel(const vec3d& pt, const tri3d& tri)
+__host__ __device__ int DeterPtTriRel(const vec3d& pt, const tri3d& tri)
 {
     /*determine the relationship between a point and a quad on the same plane
      return: 
@@ -502,7 +502,7 @@ __host__ __device__ int deterPtTriRel(const vec3d& pt, const tri3d& tri)
     }
 }
 
-__host__ __device__ int deterPtQuadRel(const vec3d& pt, const quad_dbl& qd)
+__host__ __device__ int DeterPtQuadRel(const vec3d& pt, const quad_dbl& qd)
 {
     /*determine the relationship between a point and a quad on the same plane
      return: 
@@ -549,7 +549,7 @@ __host__ __device__ double rectCoordDet(const vec3d vec[3])
     return result;
 }
 
-__host__ __device__ int deterLnLnRel(const line3d& ln1, const line3d& ln2, double* t1, double* t2)
+__host__ __device__ int DeterLnLnRel(const line3d& ln1, const line3d& ln2, double* t1, double* t2)
 {   
     /*determines the relation between two 3D lines*/
     
@@ -652,7 +652,7 @@ __host__ __device__ int deterLnLnRel(const line3d& ln1, const line3d& ln2, doubl
     }
 }
 
-__host__ __device__ int deterPtLnRel(const vec3d& pt, const line3d& ln)
+__host__ __device__ int DeterPtLnRel(const vec3d& pt, const line3d& ln)
 {
     /*Determines the relation between a point and a line.
      Returns 1 if the point pt is on the line ln. Returns 0 otherwise*/
@@ -665,12 +665,12 @@ __host__ __device__ int deterPtLnRel(const vec3d& pt, const line3d& ln)
     }
 }
 
-__host__ __device__ int deterPtLnSegRel(const vec3d& pt, const lnseg3d& lnSeg)
+__host__ __device__ int DeterPtLnSegRel(const vec3d& pt, const lnseg3d& lnSeg)
 {
     /*determines the relation between a point and a line segment*/
     
     line3d ln = lnSeg2ln(lnSeg);
-    if(deterPtLnRel(pt,ln)==0) {
+    if(DeterPtLnRel(pt,ln)==0) {
         //point not on the line containing the line segment
         return 0;
     } 
@@ -692,7 +692,7 @@ __host__ __device__ int deterPtLnSegRel(const vec3d& pt, const lnseg3d& lnSeg)
     }
 }
 
-__host__ __device__ int deterLnSegLnSegRel(const lnseg3d& seg1, const lnseg3d& seg2)
+__host__ __device__ int DeterLnSegLnSegRel(const lnseg3d& seg1, const lnseg3d& seg2)
 {
     /*determines the relation between two line segments
      seg1: a line segment
@@ -703,7 +703,7 @@ __host__ __device__ int deterLnSegLnSegRel(const lnseg3d& seg1, const lnseg3d& s
      2: infinitely many intersections*/
     line3d ln1 = lnSeg2ln(seg1), ln2 = lnSeg2ln(seg2);
     double t1, t2;
-    int relLnLn = deterLnLnRel(ln1,ln2,&t1,&t2);
+    int relLnLn = DeterLnLnRel(ln1,ln2,&t1,&t2);
     if(relLnLn==0) {
         // the two lines are skew to each other
         return 0;
@@ -720,8 +720,8 @@ __host__ __device__ int deterLnSegLnSegRel(const lnseg3d& seg1, const lnseg3d& s
         }
         else {
             // the two lines are the same line
-            if(deterPtLnSegRel(seg1.nod[0],seg2)==0 
-                    && deterPtLnSegRel(seg1.nod[1],seg2)==0) {
+            if(DeterPtLnSegRel(seg1.nod[0],seg2)==0 
+                    && DeterPtLnSegRel(seg1.nod[1],seg2)==0) {
                 // no intersection
                 return 0;
             }
@@ -745,7 +745,7 @@ __host__ __device__ int deterLnSegLnSegRel(const lnseg3d& seg1, const lnseg3d& s
     }
 }
 
-__host__ __device__ int deterLnSegQuadRel(const lnseg3d& lnSeg, const quad_dbl& qd)
+__host__ __device__ int DeterLnSegQuadRel(const lnseg3d& lnSeg, const quad_dbl& qd)
 {
     /*determine if a line segment intersects a quad
      the difference between single intersection and infinitely many intersections 
@@ -762,7 +762,7 @@ __host__ __device__ int deterLnSegQuadRel(const lnseg3d& lnSeg, const quad_dbl& 
     
     // determine the intersection between the line and the plane
     double t;
-    flag = deterLinePlaneRel(ln,pln,&t);
+    flag = DeterLinePlaneRel(ln,pln,&t);
     
     // differentiate between different cases
     if(flag==0) {
@@ -772,7 +772,7 @@ __host__ __device__ int deterLnSegQuadRel(const lnseg3d& lnSeg, const quad_dbl& 
     else {
         if(flag==2) {
             // infinitely many intersections between the line and plane
-            if(deterPtQuadRel(lnSeg.nod[0],qd)==1 || deterPtQuadRel(lnSeg.nod[1],qd)==1) {
+            if(DeterPtQuadRel(lnSeg.nod[0],qd)==1 || DeterPtQuadRel(lnSeg.nod[1],qd)==1) {
                 //oen of the nodes is within the quad
                 return 1;
             } 
@@ -782,7 +782,7 @@ __host__ __device__ int deterLnSegQuadRel(const lnseg3d& lnSeg, const quad_dbl& 
                     lnseg3d qdLnSeg;
                     qdLnSeg.nod[0] = qd.nod[i%4];
                     qdLnSeg.nod[1] = qd.nod[(i+1)%4];
-                    if(deterLnSegLnSegRel(lnSeg,qdLnSeg)!=0) {
+                    if(DeterLnSegLnSegRel(lnSeg,qdLnSeg)!=0) {
                         // the line segment intersects a quad line segment
                         return 1;
                     }
@@ -798,7 +798,7 @@ __host__ __device__ int deterLnSegQuadRel(const lnseg3d& lnSeg, const quad_dbl& 
             } 
             else {
                 vec3d intersection = vecAdd(ln.pt,scaVecMul(t,ln.dir));
-                if(deterPtQuadRel(intersection,qd)==1) {
+                if(DeterPtQuadRel(intersection,qd)==1) {
                     // intersection in the quad
                     return 1;
                 }
@@ -811,7 +811,7 @@ __host__ __device__ int deterLnSegQuadRel(const lnseg3d& lnSeg, const quad_dbl& 
     }
 }
 
-__host__ __device__ int deterLnSegTriRel(const lnseg3d& lnSeg, const tri3d& tri)
+__host__ __device__ int DeterLnSegTriRel(const lnseg3d& lnSeg, const tri3d& tri)
 {
     /*determine if a line segment intersects a quad
      0: no intersection
@@ -826,7 +826,7 @@ __host__ __device__ int deterLnSegTriRel(const lnseg3d& lnSeg, const tri3d& tri)
     
     // determine the intersection between the line and the plane
     double t;
-    flag = deterLinePlaneRel(ln,pln,&t);
+    flag = DeterLinePlaneRel(ln,pln,&t);
     if(flag==0) {
         // no intersection between the line and the plane
         return 0;
@@ -834,7 +834,7 @@ __host__ __device__ int deterLnSegTriRel(const lnseg3d& lnSeg, const tri3d& tri)
     else {
         if(flag==2) {
             // infinitely many intersections between the line and plane
-            if(deterPtTriRel(lnSeg.nod[0],tri)==1 || deterPtTriRel(lnSeg.nod[1],tri)==1) {
+            if(DeterPtTriRel(lnSeg.nod[0],tri)==1 || DeterPtTriRel(lnSeg.nod[1],tri)==1) {
                 //oen of the nodes is within the quad
                 return 1;
             } 
@@ -844,7 +844,7 @@ __host__ __device__ int deterLnSegTriRel(const lnseg3d& lnSeg, const tri3d& tri)
                     lnseg3d triLnSeg;
                     triLnSeg.nod[0] = tri.nod[i%3];
                     triLnSeg.nod[1] = tri.nod[(i+1)%3];
-                    if(deterLnSegLnSegRel(lnSeg,triLnSeg)!=0) {
+                    if(DeterLnSegLnSegRel(lnSeg,triLnSeg)!=0) {
                         // the line segment intersects a trianagle line segment
                         return 1;
                     }
@@ -860,7 +860,7 @@ __host__ __device__ int deterLnSegTriRel(const lnseg3d& lnSeg, const tri3d& tri)
             } 
             else {
                 vec3d intersection = vecAdd(ln.pt,scaVecMul(t,ln.dir));
-                if(deterPtTriRel(intersection,tri)==1) {
+                if(DeterPtTriRel(intersection,tri)==1) {
                     // intersection in the tri
                     return 1;
                 }
@@ -875,7 +875,7 @@ __host__ __device__ int deterLnSegTriRel(const lnseg3d& lnSeg, const tri3d& tri)
 
 #ifdef __CUDA_ARCH__
 
-int deterTriCubeInt(const tri3d& tri, const aacb3d& cb)
+int DeterTriCubeInt(const tri3d& tri, const aacb3d& cb)
 {
     /*this function determines if a triangle intersects with a cube
      tri: an triangle
@@ -887,7 +887,7 @@ int deterTriCubeInt(const tri3d& tri, const aacb3d& cb)
     //test nodes of the triangle against the cube
     int nodRel[3];
     for(int i=0;i<3;i++) {
-        nodRel[i] = deterPtCubeRel(tri.nod[i],cb);
+        nodRel[i] = DeterPtCubeRel(tri.nod[i],cb);
         if(nodRel[i]==1) {
             // node i is in the cube, thus the cube is occupied
             return 1;
@@ -980,7 +980,7 @@ int deterTriCubeInt(const tri3d& tri, const aacb3d& cb)
     //printf("Entered diagonal test.\n");
     for(int i=0;i<3;i++) {
         for(int j=0;j<6;j++) {
-            rel = deterLnSegQuadRel(triEdge[i],cbFace[j]);
+            rel = DeterLnSegQuadRel(triEdge[i],cbFace[j]);
             if(rel==1) {
                 return 1;
             }
@@ -988,7 +988,7 @@ int deterTriCubeInt(const tri3d& tri, const aacb3d& cb)
     }
     
     for(int i=0;i<4;i++) {
-        rel = deterLnSegTriRel(cbDiag[i],tri);
+        rel = DeterLnSegTriRel(cbDiag[i],tri);
         if(rel==1) {
             return 1;
         }
@@ -999,7 +999,7 @@ int deterTriCubeInt(const tri3d& tri, const aacb3d& cb)
 
 #else
 
-int deterTriCubeInt(const tri3d& tri, const aacb3d& cb)
+int DeterTriCubeInt(const tri3d& tri, const aacb3d& cb)
 {
     /*this function determines if a triangle intersects with a cube
      tri: an triangle
@@ -1011,7 +1011,7 @@ int deterTriCubeInt(const tri3d& tri, const aacb3d& cb)
     //test nodes of the triangle against the cube
     int nodRel[3];
     for(int i=0;i<3;i++) {
-        nodRel[i] = deterPtCubeRel(tri.nod[i],cb);
+        nodRel[i] = DeterPtCubeRel(tri.nod[i],cb);
         if(nodRel[i]==1) {
             // node i is in the cube, thus the cube is occupied
             return 1;
@@ -1104,7 +1104,7 @@ int deterTriCubeInt(const tri3d& tri, const aacb3d& cb)
     //printf("Entered diagonal test.\n");
     for(int i=0;i<3;i++) {
         for(int j=0;j<6;j++) {
-            rel = deterLnSegQuadRel(triEdge[i],cbFace[j]);
+            rel = DeterLnSegQuadRel(triEdge[i],cbFace[j]);
             if(rel==1) {
                 return 1;
             }
@@ -1112,7 +1112,7 @@ int deterTriCubeInt(const tri3d& tri, const aacb3d& cb)
     }
     
     for(int i=0;i<4;i++) {
-        rel = deterLnSegTriRel(cbDiag[i],tri);
+        rel = DeterLnSegTriRel(cbDiag[i],tri);
         if(rel==1) {
             return 1;
         }
@@ -1123,7 +1123,7 @@ int deterTriCubeInt(const tri3d& tri, const aacb3d& cb)
 
 #endif
 
-__global__ void testTriCbInt(const tri3d* tri, const int numTri, const aacb3d* cb, 
+__global__ void TestTrisCbsInt(const tri3d* tri, const int numTri, const aacb3d* cb, 
         const int numCb, int* flag)
 {
     /*the global function for testing triangle-cube intersection
@@ -1139,8 +1139,24 @@ __global__ void testTriCbInt(const tri3d* tri, const int numTri, const aacb3d* c
         if(idx_x==0 && idx_y==0) {
             printf("cool.\n");
         }
-        int rel = deterTriCubeInt(tri[idx_x],cb[idx_y]);
+        int rel = DeterTriCubeInt(tri[idx_x],cb[idx_y]);
         atomicAdd(&flag[idx_y],rel);
+    }
+}
+
+__global__ void TestTrisCbInt(const tri3d* tri, const int numTri, const aacb3d cb, int* flag)
+{
+    /*the global function for testing relations between multiple triangles and a single cube
+     tri: an array of triangles
+     numTri: the number of triangles
+     cb: an array of cubes
+     numCb: the number of cubes
+     flag: an array of flags, initialized to zero, of size numCb*/
+    int idx = blockIdx.x*blockDim.x+threadIdx.x; // triangle index
+    
+    if(idx < numTri) {
+        int rel = DeterTriCubeInt(tri[idx],cb);
+        atomicAdd(flag,rel);
     }
 }
 
@@ -1183,7 +1199,7 @@ __host__ int GetTriCbRel(const tri3d* tri, const int numTri, const aacb3d* cb,
     blockLayout.x = xWidth;
     blockLayout.y = yWidth;
     
-    testTriCbInt<<<gridLayout,blockLayout>>>(tri_d,numTri,cb_d,numCb,flag_d);
+    TestTrisCbsInt<<<gridLayout,blockLayout>>>(tri_d,numTri,cb_d,numCb,flag_d);
     HOST_CALL(cudaMemcpy(flag,flag_d,numCb*sizeof(int),cudaMemcpyDeviceToHost));
     
     CUDA_CALL(cudaFree(flag_d));
@@ -1348,7 +1364,7 @@ __host__ int SpaceVoxelOnCPU(const aacb3d sp, const int numEachDim, const vec3d*
     }
     for(int i=0;i<numVox;i++) {
         for(int j=0;j<numElem;j++) {
-            rel = deterTriCubeInt(tri[j],cb[i]);
+            rel = DeterTriCubeInt(tri[j],cb[i]);
             if(rel==1) {
                 flag[i] = 1;
                 break;
