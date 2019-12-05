@@ -397,7 +397,7 @@ __host__ __device__ int deterLinePlaneRel(const line_dbl ln, const plane3d pln, 
     }
 }
 
-__host__ __device__ double triArea(const tri_dbl s)
+__host__ __device__ double triArea(const tri3d s)
 {
     vec3d vec[2];
     vec[0] = vecSub(s.nod[1],s.nod[0]);
@@ -413,7 +413,7 @@ __host__ __device__ double quadArea(const quad_dbl s)
     return vecNorm(vecCrossMul(vec[0],vec[1]));
 }
 
-__host__ __device__ plane3d tri2plane(const tri_dbl tri)
+__host__ __device__ plane3d tri2plane(const tri3d tri)
 {
     plane3d pln;
     pln.pt = tri.nod[0];
@@ -444,7 +444,7 @@ __host__ __device__ line_dbl lnSeg2ln(const lnseg3d ls)
     return l;
 }
 
-__host__ __device__ int deterPtTriRel(const vec3d pt, const tri_dbl tri)
+__host__ __device__ int deterPtTriRel(const vec3d pt, const tri3d tri)
 {
     /*determine the relationship between a point and a quad on the same plane
      return: 
@@ -765,7 +765,7 @@ __host__ __device__ int deterLnSegQuadRel(const lnseg3d lnSeg, const quad_dbl qd
     }
 }
 
-__host__ __device__ int deterLnSegTriRel(const lnseg3d lnSeg, const tri_dbl tri)
+__host__ __device__ int deterLnSegTriRel(const lnseg3d lnSeg, const tri3d tri)
 {
     /*determine if a line segment intersects a quad
      0: no intersection
@@ -827,7 +827,7 @@ __host__ __device__ int deterLnSegTriRel(const lnseg3d lnSeg, const tri_dbl tri)
     }
 }
 
-__host__ __device__ int deterTriCubeInt(const tri_dbl tri, const aacb3d cb)
+__host__ __device__ int deterTriCubeInt(const tri3d tri, const aacb3d cb)
 {
     /*this function determines if a triangle intersects with a cube
      tri: an triangle
@@ -951,7 +951,7 @@ __host__ __device__ int deterTriCubeInt(const tri_dbl tri, const aacb3d cb)
     return 0;
 }
 
-__global__ void testTriCbInt(const tri_dbl* tri, const int numTri, const aacb3d* cb, 
+__global__ void testTriCbInt(const tri3d* tri, const int numTri, const aacb3d* cb, 
         const int numCb, int* flag)
 {
     /*the global function for testing triangle-cube intersection
@@ -976,7 +976,7 @@ __global__ void testTriCbInt(const tri_dbl* tri, const int numTri, const aacb3d*
     }
 }
 
-__host__ int getTriCbRel(const tri_dbl* tri, const int numTri, const aacb3d* cb, 
+__host__ int getTriCbRel(const tri3d* tri, const int numTri, const aacb3d* cb, 
         const int numCb, int* flag)
 {
     /*voxelize a space into occupance grids
@@ -986,9 +986,9 @@ __host__ int getTriCbRel(const tri_dbl* tri, const int numTri, const aacb3d* cb,
      numCb: number of cubes
      flag: an array of flags for cube occupancy*/
     printf("Entered getTriCbRel.\n");
-    tri_dbl *tri_d;
-    CUDA_CALL(cudaMalloc(&tri_d,numTri*sizeof(tri_dbl)));
-    CUDA_CALL(cudaMemcpy(tri_d,tri,numTri*sizeof(tri_dbl),cudaMemcpyHostToDevice));
+    tri3d *tri_d;
+    CUDA_CALL(cudaMalloc(&tri_d,numTri*sizeof(tri3d)));
+    CUDA_CALL(cudaMemcpy(tri_d,tri,numTri*sizeof(tri3d),cudaMemcpyHostToDevice));
     printf("Allocated and copied memory for triangles\n");
     
     aacb3d *cb_d;
@@ -1057,7 +1057,7 @@ __host__ __device__ void printCube(const aacb3d cb)
             cb.cnr.coords[2],cb.len);
 }
 
-__host__ __device__ void printTriangle(const tri_dbl tri)
+__host__ __device__ void printTriangle(const tri3d tri)
 {
     printf("nodes: (%lf,%lf,%lf), (%lf,%lf,%lf), (%lf,%lf,%lf)\n",
             tri.nod[0].coords[0],tri.nod[0].coords[1],tri.nod[0].coords[2],
@@ -1093,7 +1093,7 @@ __host__ int voxelSpace(const aacb3d sp, const int numEachDim, const vec3d* pt,
     
     printf("Entered voxSpace.\n");
     // save all the triangles in a triangle array
-    tri_dbl *tri = (tri_dbl*)malloc(numElem*sizeof(tri_dbl));
+    tri3d *tri = (tri3d*)malloc(numElem*sizeof(tri3d));
     for(int i=0;i<numElem;i++) {
         for(int j=0;j<3;j++) {
             tri[i].nod[j] = pt[elem[i].nod[j]];
@@ -1379,3 +1379,77 @@ bool OverlapTriangleAARect(const tri3d& tri, const aarect3d& rect)
 }
 
 #endif
+
+__host__ int SpaceVoxelization(const aarect3d sp, const double voxlen, const vec3d* pt, 
+        const tri_elem* elem, const int numElem, bool* flag)
+{
+    /*
+     voxelize the a space containing objects composed of triangles into 
+     occupancy grids
+     sp: an axis-aligned rectangle representing the whole space
+     voxlen: the length of sides of an voxel
+     pt: an array of points
+     elem: an array of elements
+     numElem: the number of elements
+     flag: an array of flags representing occupancy of each voxel
+     */
+    
+    printf("Entered SpaceVoxelization.\n");
+    // save all the triangles in a triangle array
+    tri3d *tri = (tri3d*)malloc(numElem*sizeof(tri3d));
+    for(int i=0;i<numElem;i++) {
+        for(int j=0;j<3;j++) {
+            tri[i].nod[j] = pt[elem[i].nod[j]];
+        }
+    }
+    printf("Initialized triangles.\n");
+    //for(int i=0;i<numElem;i++) {
+    //    printf("Current triangle: (%lf,%lf,%f), (%lf,%lf,%lf), (%lf,%lf,%f)\n",
+    //            tri[i].nod[0].coords[0],tri[i].nod[0].coords[1],tri[i].nod[0].coords[2],
+    //            tri[i].nod[1].coords[0],tri[i].nod[1].coords[1],tri[i].nod[1].coords[2],
+    //            tri[i].nod[2].coords[0],tri[i].nod[2].coords[1],tri[i].nod[2].coords[2]);
+    //}
+    // save all the unit boxes in a cube array
+    
+    /*decide the number of voxels on each dimension*/
+    int numVox[3]; //x, y, z
+    for(int i=0;i<3;i++) {
+        numVox[i] = floor(sp.len[i]/voxlen);
+    }
+    int totNumVox = numVox[0]*numVox[1]*numVox[2];
+    
+    memset(flag,false,totNumVox*sizeof(bool));
+    
+    aarect3d *rect = (aarect3d*)malloc(totNumVox*sizeof(aarect3d));
+    int idx;
+    bool rel;
+    for(int i=0;i<numVox[2];i++) {
+        // z dimension
+        vec3d offset_z = scaVecMul(i*voxlen,bases[2]);
+        for(int j=0;j<numVox[1];j++) {
+            // y dimension
+            vec3d offset_y = scaVecMul(j*voxlen,bases[1]);
+            for(int k=0;k<numVox[0];k++) {
+                // x dimension
+                vec3d offset_x = scaVecMul(k*voxlen,bases[0]);
+                idx = i*(numVox[0]*numVox[1])+j*numVox[0]+k; // the index of the current cube
+                rect[idx].cnr = vecAdd(vecAdd(vecAdd(sp.cnr,offset_x),offset_y),offset_z);
+                rect[idx].len[0] = voxlen;
+                rect[idx].len[1] = voxlen;
+                rect[idx].len[2] = voxlen;
+            }
+        }
+    }
+    for(int i=0;i<totNumVox;i++) {
+        for(int j=0;j<numElem;j++) {
+            rel = OverlapTriangleAARect(tri[j],rect[i]);
+            if(rel) {
+                flag[i] = true;
+                break;
+            }
+        }
+    }
+    free(rect);
+    free(tri);
+    return EXIT_SUCCESS;
+}

@@ -80,5 +80,8 @@ __host__ __device__ intvl3d GetInterval(const tri3d& tri, const vec3d& ax);
 
 __host__ __device__ bool OverlapTriangleAARect(const tri3d& tri, const aarect3d& rect);
 
+__host__ int SpaceVoxelization(const aarect3d sp, const double voxlen, const vec3d* pt, 
+        const tri_elem* elem, const int numElem, bool* flag);
+
 #endif /* GEOMETRY_H */
 
