@@ -20,5 +20,5 @@ daspect(hAx,[1,1,1]);
 for i=1:dim
     imshow(grid(:,:,i));
     
-    pause(0.2);
+    pause(0.5);
 end

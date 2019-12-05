@@ -1453,3 +1453,32 @@ __host__ int SpaceVoxelization(const aarect3d sp, const double voxlen, const vec
     free(tri);
     return EXIT_SUCCESS;
 }
+
+__host__ int write_voxels(const bool* flag, const int numvox[3], const char* file_path)
+{
+    FILE *file = fopen(file_path,"w");
+    if(file==NULL) {
+        printf("Failed to open file.\n");
+        return EXIT_FAILURE;
+    }
+    else {
+        int status;
+        int t;
+        for(int i=0;i<numvox[0]*numvox[1]*numvox[2];i++) {
+            t = flag[i] ? 1 : 0;
+            status = fprintf(file,"%d ",t);
+            if((i+1)%numvox[0]==0) {
+                status = fprintf(file,"\n");
+            }
+            if((i+1)%(numvox[0]*numvox[1])==0) {
+                status = fprintf(file,"\n");
+            }
+            if(status<0) {
+                printf("Failed to write the %dth line to file\n",i);
+                return EXIT_FAILURE;
+            }
+        }
+        fclose(file);
+        return EXIT_SUCCESS;
+    }
+}

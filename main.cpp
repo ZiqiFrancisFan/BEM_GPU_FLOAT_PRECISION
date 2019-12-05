@@ -23,24 +23,31 @@ int main(int argc, char *argv[])
 {
     SetHostBases();
     HOST_CALL(CopyBasesToConstant());
-    tri3d tri;
-    tri.nod[0] = {6.001,0,0};
-    tri.nod[1] = {0,6,0};
-    tri.nod[2] = {0,0,6};
+    int numPt, numElem;
+    findNum("./mesh/sphere_100mm_5120.obj",&numPt,&numElem);
+    rect_coord_dbl *pt = (rect_coord_dbl*)malloc(numPt*sizeof(rect_coord_dbl));
+    tri_elem *elem = (tri_elem*)malloc(numElem*sizeof(tri_elem));
+    readOBJ("./mesh/sphere_100mm_5120.obj",pt,elem);
     
-    aarect3d rect;
-    rect.cnr = {0,0,0};
-    rect.len[0] = 2;
-    rect.len[1] = 2;
-    rect.len[2] = 2;
+    aarect3d sp;
+    sp.cnr = {-0.5,-0.5,-0.5};
+    sp.len[0] = 1;
+    sp.len[1] = 1;
+    sp.len[2] = 1;
+    double len = 0.01;
+    int voxNum[3];
+    for(int i=0;i<3;i++) {
+        voxNum[i] = floor(sp.len[i]/len);
+    }
+    int totNumVox = voxNum[0]*voxNum[1]*voxNum[2];
+    bool *flag = (bool*)malloc(totNumVox*sizeof(bool));
     
-    bool rel = OverlapTriangleAARect(tri,rect);
-    if(rel) {
-        printf("They overlap.\n");
-    }
-    else {
-        printf("They don't overlap.\n");
-    }
+    HOST_CALL(SpaceVoxelization(sp,len,pt,elem,numElem,flag));
+    write_voxels(flag,voxNum,"./data/vox");
+    
+    free(flag);
+    free(elem);
+    free(pt);
     CUDA_CALL(cudaDeviceReset());
     return EXIT_SUCCESS;
 }

@@ -83,5 +83,7 @@ __host__ __device__ bool OverlapTriangleAARect(const tri3d& tri, const aarect3d&
 __host__ int SpaceVoxelization(const aarect3d sp, const double voxlen, const vec3d* pt, 
         const tri_elem* elem, const int numElem, bool* flag);
 
+__host__ int write_voxels(const bool* flag, const int numvox[3], const char* file_path);
+
 #endif /* GEOMETRY_H */
 
