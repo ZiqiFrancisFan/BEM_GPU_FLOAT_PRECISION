@@ -91,5 +91,10 @@ __host__ int write_voxels(const bool* flag, const int numvox[3], const char* fil
 __host__ int SpaceVoxelOnGPU(const aacb3d sp, const int numEachDim, const vec3d* pt, 
         const tri_elem* elem, const int numElem, int* flag);
 
+__host__ int RectSpaceVoxelOnGPU(const aarect3d sp, const double len, const vec3d* pt, 
+        const tri_elem* elem, const int numElem, const char* filePath);
+
+__host__ int write_voxels(const int* flag, const int numvox[3], const char* file_path);
+
 #endif /* GEOMETRY_H */
 

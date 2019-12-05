@@ -1159,7 +1159,7 @@ __global__ void TestTrisCbInt(const tri3d* tri, const int numTri, const aacb3d c
     }
 }
 
-__host__ int GetTrisCbsRel(const tri3d* tri, const int numTri, const aacb3d* cb, 
+int GetTrisCbsRel(const tri3d* tri, const int numTri, const aacb3d* cb, 
         const int numCb, int* flag)
 {
     /*voxelize a space into occupance grids
@@ -1210,6 +1210,46 @@ __host__ int GetTrisCbsRel(const tri3d* tri, const int numTri, const aacb3d* cb,
             flag[i] = 1;
         }
     }
+    
+    return EXIT_SUCCESS;
+}
+
+int GetTrisCbRel(const tri3d* tri, const int numTri, const aacb3d cb, int* flag)
+{
+    /*voxelize a space into occupance grids
+     tri: an array of triangles
+     numTri: the number of triangles
+     cb: an array of cubes
+     numCb: number of cubes
+     flag: an array of flags for cube occupancy*/
+    //printf("Entered getTriCbRel.\n");
+    tri3d *tri_d;
+    CUDA_CALL(cudaMalloc(&tri_d,numTri*sizeof(tri3d)));
+    CUDA_CALL(cudaMemcpy(tri_d,tri,numTri*sizeof(tri3d),cudaMemcpyHostToDevice));
+    //printf("Allocated and copied memory for triangles\n");
+    
+    *flag = 0;
+    //printf("Initialized flag\n");
+    int *flag_d;
+    CUDA_CALL(cudaMalloc(&flag_d,sizeof(int)));
+    CUDA_CALL(cudaMemcpy(flag_d,flag,sizeof(int),cudaMemcpyHostToDevice));
+    
+    //printf("Device memory allocated.\n");
+    
+    int numBlocks, width = 32;
+    numBlocks = (numTri+width-1)/width;
+    
+    dim3 gridLayout, blockLayout;
+    gridLayout.x = numBlocks;
+    blockLayout.x = width;
+    
+    TestTrisCbInt<<<gridLayout,blockLayout>>>(tri_d,numTri,cb,flag_d);
+    HOST_CALL(cudaMemcpy(flag,flag_d,sizeof(int),cudaMemcpyDeviceToHost));
+    if(*flag > 0) {
+        *flag = 1;
+    }
+    CUDA_CALL(cudaFree(flag_d));
+    CUDA_CALL(cudaFree(tri_d));
     
     return EXIT_SUCCESS;
 }
@@ -1307,6 +1347,63 @@ __host__ int SpaceVoxelOnGPU(const aacb3d sp, const int numEachDim, const vec3d*
     HOST_CALL(GetTrisCbsRel(tri,numElem,cb,numEachDim*numEachDim*numEachDim,flag));
     free(cb);
     free(tri);
+    return EXIT_SUCCESS;
+}
+
+int RectSpaceVoxelOnGPU(const aarect3d sp, const double len, const vec3d* pt, 
+        const tri_elem* elem, const int numElem, const char* filePath)
+{
+    /*voxelizes a rectangular space into an occupancy grid and write it to a file
+     sp: a rectangular space
+     len: side length of the cube
+     pt: an array of points
+     elem: an array of triangular elements
+     numElem: the number of triangular elements
+     filePath: the path to the file
+     return: success or failure flag of the program
+     */
+    
+    int dimsize[3], totNumCb; //x, y, z in order
+    for(int i=0;i<3;i++) {
+        dimsize[i] = floor(sp.len[i]/len);
+    }
+    totNumCb = dimsize[0]*dimsize[1]*dimsize[2];
+    printf("The size of each dimension determined.\n");
+    
+    int *flag = (int*)malloc(totNumCb*sizeof(int)); //allocate host memory for flags
+    memset(flag,0,totNumCb*sizeof(int));
+    printf("Flags initialized.\n");
+    
+    tri3d *tris = (tri3d*)malloc(numElem*sizeof(tri3d)); //allocate memory for triangles
+    /*set up the tris array from the mesh*/
+    for(int i=0;i<numElem;i++) {
+        for(int j=0;j<3;j++) {
+            tris[i].nod[j] = pt[elem[i].nod[j]];
+        }
+    }
+    printf("Triangles set up.\n");
+    
+    int idx;
+    aacb3d cb;
+    vec3d offset[3];
+    for(int z=0;z<dimsize[2];z++) {
+        offset[2] = scaVecMul(z*len,bases[2]); // offset in the z direction
+        for(int y=0;y<dimsize[1];y++) {
+            offset[1] = scaVecMul(y*len,bases[1]); // offset in the y direction
+            for(int x=0;x<dimsize[0];x++) {
+                offset[0] = scaVecMul(x*len,bases[0]); // offset in the x direction
+                idx = z*(dimsize[0]*dimsize[1])+y*dimsize[0]+x; // index of the current cube
+                cb.cnr = vecAdd(vecAdd(vecAdd(sp.cnr,offset[0]),offset[1]),offset[2]);
+                cb.len = len;
+                HOST_CALL(GetTrisCbRel(tris,numElem,cb,&flag[idx]));
+            }
+        }
+    }
+    printf("All flags found.\n");
+    
+    HOST_CALL(write_voxels(flag,dimsize,filePath));
+    free(flag);
+    free(tris);
     return EXIT_SUCCESS;
 }
 
@@ -1813,6 +1910,35 @@ __host__ int write_voxels(const bool* flag, const int numvox[3], const char* fil
         int t;
         for(int i=0;i<numvox[0]*numvox[1]*numvox[2];i++) {
             t = flag[i] ? 1 : 0;
+            status = fprintf(file,"%d ",t);
+            if((i+1)%numvox[0]==0) {
+                status = fprintf(file,"\n");
+            }
+            if((i+1)%(numvox[0]*numvox[1])==0) {
+                status = fprintf(file,"\n");
+            }
+            if(status<0) {
+                printf("Failed to write the %dth line to file\n",i);
+                return EXIT_FAILURE;
+            }
+        }
+        fclose(file);
+        return EXIT_SUCCESS;
+    }
+}
+
+__host__ int write_voxels(const int* flag, const int numvox[3], const char* file_path)
+{
+    FILE *file = fopen(file_path,"w");
+    if(file==NULL) {
+        printf("Failed to open file.\n");
+        return EXIT_FAILURE;
+    }
+    else {
+        int status;
+        int t;
+        for(int i=0;i<numvox[0]*numvox[1]*numvox[2];i++) {
+            t = (flag[i]>0) ? 1 : 0;
             status = fprintf(file,"%d ",t);
             if((i+1)%numvox[0]==0) {
                 status = fprintf(file,"\n");

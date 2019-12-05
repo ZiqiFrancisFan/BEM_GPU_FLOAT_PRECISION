@@ -59,15 +59,14 @@ int main(int argc, char *argv[])
     tri_elem *elem = (tri_elem*)malloc(numElem*sizeof(tri_elem));
     readOBJ("./mesh/sphere_100mm_320.obj",pt,elem);
     
-    int numEachDim = 100;
-    int *flag = (int*)malloc(numEachDim*numEachDim*numEachDim*sizeof(int));
-    aa_cube_dbl sp;
+    double len = 0.1;
+    aarect3d sp;
     sp.cnr = {-0.5,-0.5,-0.5};
-    sp.len = 1;
-    HOST_CALL(SpaceVoxelOnGPU(sp,numEachDim,pt,elem,numElem,flag));
-    write_voxels(flag,numEachDim,"./data/vox");
+    sp.len[0] = 1;
+    sp.len[1] = 1;
+    sp.len[2] = 1;
+    HOST_CALL(RectSpaceVoxelOnGPU(sp,len,pt,elem,numElem,"./data/vox"));
     
-    free(flag);
     free(elem);
     free(pt);
     CUDA_CALL(cudaDeviceReset());
