@@ -1153,14 +1153,13 @@ __global__ void TestTrisCbInt(const tri3d* tri, const int numTri, const aacb3d c
      numCb: the number of cubes
      flag: an array of flags, initialized to zero, of size numCb*/
     int idx = blockIdx.x*blockDim.x+threadIdx.x; // triangle index
-    
     if(idx < numTri) {
         int rel = DeterTriCubeInt(tri[idx],cb);
         atomicAdd(flag,rel);
     }
 }
 
-__host__ int GetTriCbRel(const tri3d* tri, const int numTri, const aacb3d* cb, 
+__host__ int GetTrisCbsRel(const tri3d* tri, const int numTri, const aacb3d* cb, 
         const int numCb, int* flag)
 {
     /*voxelize a space into occupance grids
@@ -1305,7 +1304,7 @@ __host__ int SpaceVoxelOnGPU(const aacb3d sp, const int numEachDim, const vec3d*
             }
         }
     }
-    HOST_CALL(GetTriCbRel(tri,numElem,cb,numEachDim*numEachDim*numEachDim,flag));
+    HOST_CALL(GetTrisCbsRel(tri,numElem,cb,numEachDim*numEachDim*numEachDim,flag));
     free(cb);
     free(tri);
     return EXIT_SUCCESS;

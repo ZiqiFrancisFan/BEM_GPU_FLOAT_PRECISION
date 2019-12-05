@@ -1,8 +1,8 @@
 /nbproject
 
-/figure
+/figure/*.png
 
-/data
+/data/vox*
 
 /doc
 
