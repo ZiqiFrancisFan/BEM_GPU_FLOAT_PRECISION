@@ -13,7 +13,8 @@ __constant__ vec3d BASES[3];
 
 vec3d bases[3];
 
-__host__ int CopyBasesToConstant() {
+__host__ int CopyBasesToConstant()
+{
     vec3d bases[3];
     bases[0].coords[0] = 1;
     bases[0].coords[1] = 0;
@@ -31,7 +32,7 @@ __host__ int CopyBasesToConstant() {
     return EXIT_SUCCESS;
 }
 
-__host__ void setHostBases()
+__host__ void SetHostBases()
 {
     bases[0].coords[0] = 1;
     bases[0].coords[1] = 0;
@@ -1215,14 +1216,14 @@ __host__ __device__ bool AaRectAaRectOvlp(const aarect2d rect1, const aarect2d r
     }
 }
 
-__host__ __device__ vec3d GetMin(const aarect3d rect)
+__host__ __device__ vec3d GetMin(const aarect3d& rect)
 {
     return rect.cnr;
 }
 
 #ifdef __CUDA_ARCH__
 
-vec3d GetMax(const aarect3d rect)
+vec3d GetMax(const aarect3d& rect)
 {
     vec3d cnr_max = rect.cnr;
     for(int i=0;i<3;i++) {
@@ -1233,7 +1234,7 @@ vec3d GetMax(const aarect3d rect)
 
 #else
 
-vec3d GetMax(const aarect3d rect)
+vec3d GetMax(const aarect3d& rect)
 {   
     vec3d cnr_max = rect.cnr;
     for(int i=0;i<3;i++) {
@@ -1244,7 +1245,7 @@ vec3d GetMax(const aarect3d rect)
 
 #endif
 
-__host__ __device__ intvl3d GetInterval(const aarect3d rect, const vec3d axis)
+__host__ __device__ intvl3d GetInterval(const aarect3d& rect, const vec3d& axis)
 {
     vec3d cnrs[2], vertex;
     cnrs[0] = GetMin(rect);
@@ -1269,7 +1270,7 @@ __host__ __device__ intvl3d GetInterval(const aarect3d rect, const vec3d axis)
     return intvl;
 }
 
-__host__ __device__ bool IntvlIntvlOvlp(const intvl3d intvl1, const intvl3d intvl2)
+__host__ __device__ bool IntvlIntvlOvlp(const intvl3d& intvl1, const intvl3d& intvl2)
 {
     /*returns true if the two intervals overlap and false if not*/
     if(intvl1.min<=intvl2.max && intvl2.min<=intvl1.max) {
@@ -1280,11 +1281,11 @@ __host__ __device__ bool IntvlIntvlOvlp(const intvl3d intvl1, const intvl3d intv
     }
 }
 
-__host__ __device__ intvl3d GetInterval(const tri3d tri, const vec3d ax)
+__host__ __device__ intvl3d GetInterval(const tri3d& tri, const vec3d& ax)
 {
     intvl3d intvl;
-    intvl.min = -DBL_MAX;
-    intvl.max = DBL_MAX;
+    intvl.min = DBL_MAX;
+    intvl.max = -DBL_MAX;
     double projection;
     
     for(int i=0;i<3;i++) {
@@ -1295,4 +1296,17 @@ __host__ __device__ intvl3d GetInterval(const tri3d tri, const vec3d ax)
     
     return intvl;
 }
+
+__host__ __device__ bool OverlapOnAxis(const tri3d& tri, const aarect3d& rect, const vec3d& ax)
+{
+    intvl3d intvl_tri, intvl_rect;
+    intvl_tri = GetInterval(tri,ax);
+    intvl_rect = GetInterval(rect,ax);
     
+    return IntvlIntvlOvlp(intvl_tri,intvl_rect);
+}
+
+__host__ __device__ bool OverlapTriangleAARect(const tri3d& tri, const aarect3d& rect)
+{
+    return true;
+}

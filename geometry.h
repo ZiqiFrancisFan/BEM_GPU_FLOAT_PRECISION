@@ -21,7 +21,9 @@
 #include "dataStructs.h"
 #include "numerical.h"
 
-__host__ void setHostBases();
+__host__ void SetHostBases();
+
+__host__ int CopyBasesToConstant();
 
 __host__ __device__ vec2d GetMin(const aarect2d rect);
 
@@ -68,11 +70,13 @@ __host__ __device__ bool IntvlIntvlOvlp(const intvl2d intvl1, const intvl2d intv
 
 __host__ __device__ bool AaRectAaRectOvlp(const aarect2d rect1, const aarect2d rect2);
 
-__host__ __device__ vec3d GetMin(const aarect3d rect);
+__host__ __device__ vec3d GetMin(const aarect3d& rect);
 
-__host__ __device__ vec3d GetMax(const aarect3d rect);
+__host__ __device__ vec3d GetMax(const aarect3d& rect);
 
-__host__ __device__ intvl3d GetInterval(const aarect3d rect, const vec3d axis);
+__host__ __device__ intvl3d GetInterval(const aarect3d& rect, const vec3d& axis);
+
+__host__ __device__ intvl3d GetInterval(const tri3d& tri, const vec3d& ax);
 
 #endif /* GEOMETRY_H */
 
