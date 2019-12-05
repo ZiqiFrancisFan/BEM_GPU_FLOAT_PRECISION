@@ -7,6 +7,44 @@
 #include "octree.h"
 #include <stdio.h>
 #include <stdlib.h>
+#include <float.h>
+
+__constant__ vec3d BASES[3];
+
+vec3d bases[3];
+
+__host__ int CopyBasesToConstant() {
+    vec3d bases[3];
+    bases[0].coords[0] = 1;
+    bases[0].coords[1] = 0;
+    bases[0].coords[2] = 0;
+    
+    bases[1].coords[0] = 0;
+    bases[1].coords[1] = 1;
+    bases[1].coords[2] = 0;
+    
+    bases[2].coords[0] = 0;
+    bases[2].coords[1] = 0;
+    bases[2].coords[2] = 1;
+    
+    CUDA_CALL(cudaMemcpyToSymbol(BASES,bases,3*sizeof(vec3d),0,cudaMemcpyHostToDevice));
+    return EXIT_SUCCESS;
+}
+
+__host__ void setHostBases()
+{
+    bases[0].coords[0] = 1;
+    bases[0].coords[1] = 0;
+    bases[0].coords[2] = 0;
+    
+    bases[1].coords[0] = 0;
+    bases[1].coords[1] = 1;
+    bases[1].coords[2] = 0;
+    
+    bases[2].coords[0] = 0;
+    bases[2].coords[1] = 0;
+    bases[2].coords[2] = 1;
+}
 
 __host__ __device__ int deterPtPlaneRel(const vec3d pt, const plane3d plane)
 {
@@ -1175,5 +1213,59 @@ __host__ __device__ bool AaRectAaRectOvlp(const aarect2d rect1, const aarect2d r
     else {
         return false;
     }
+}
+
+__host__ __device__ vec3d GetMin(const aarect3d rect)
+{
+    return rect.cnr;
+}
+
+#ifdef __CUDA_ARCH__
+
+vec3d GetMax(const aarect3d rect)
+{
+    vec3d cnr_max = rect.cnr;
+    for(int i=0;i<3;i++) {
+        cnr_max = vecAdd(cnr_max,scaVecMul(rect.len[i],BASES[i]));
+    }
+    return cnr_max;
+}
+
+#else
+
+vec3d GetMax(const aarect3d rect)
+{   
+    vec3d cnr_max = rect.cnr;
+    for(int i=0;i<3;i++) {
+        cnr_max = vecAdd(cnr_max,scaVecMul(rect.len[i],bases[i]));
+    }
+    return cnr_max;
+}
+
+#endif
+
+__host__ __device__ intvl3d GetIntvl(const aarect3d rect, const vec3d axis)
+{
+    vec3d cnrs[2], vertex;
+    cnrs[0] = GetMin(rect);
+    cnrs[1] = GetMax(rect);
+    intvl3d intvl;
+    double projection;
+    intvl.max = -DBL_MAX;
+    intvl.min = DBL_MAX;
+    for(int i=0;i<2;i++) {
+        vertex.coords[0] = cnrs[i].coords[0];
+        for(int j=0;j<2;j++) {
+            vertex.coords[1] = cnrs[j].coords[1];
+            for(int k=0;k<2;k++) {
+                vertex.coords[2] = cnrs[k].coords[2];
+                //printVec(&vertex,1);
+                projection = vecDotMul(vertex,axis);
+                intvl.max = (projection>intvl.max) ? projection : intvl.max;
+                intvl.min = (projection<intvl.min) ? projection : intvl.min;
+            }
+        }
+    }
+    return intvl;
 }
     

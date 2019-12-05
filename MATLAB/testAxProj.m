@@ -1,0 +1,1 @@
+%% This script tests the projection of a rectangle onto an axis

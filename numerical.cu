@@ -18,7 +18,7 @@ __constant__ float speed = 343.21;
 __constant__ float INTPT[INTORDER]; 
 
 __constant__ float INTWGT[INTORDER];
-/*
+
 int genGaussParams(const int n, float* pt, float* wgt) 
 {
     int i, j;
@@ -60,7 +60,6 @@ int genGaussParams(const int n, float* pt, float* wgt)
     gsl_matrix_free(B);
     return EXIT_SUCCESS;
 }
-*/
 
 int cuGenGaussParams(const int n, float* pt, float* wgt)
 {

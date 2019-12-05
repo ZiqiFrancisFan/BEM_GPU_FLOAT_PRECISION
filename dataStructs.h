@@ -174,5 +174,13 @@ struct interval_2D_dbl
 
 typedef struct interval_2D_dbl intvl2d;
 
+struct interval_dbl
+{
+    double min;
+    double max;
+};
+
+typedef struct interval_dbl intvl3d;
+
 #endif /* DATASTRUCT_H */
 

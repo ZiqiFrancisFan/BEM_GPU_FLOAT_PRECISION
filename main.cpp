@@ -15,23 +15,20 @@
 #include "octree.h"
 #include "numerical.h"
 #include "geometry.h"
+#include <float.h>
+
+extern vec3d bases[3];
 
 int main(int argc, char *argv[])
 {
-    aarect2d rect1, rect2;
-    bool rel;
-    rect1.cnr = {0,0};
-    rect1.len[0] = 1;
-    rect1.len[1] = 1;
-    rect2.cnr = {-0.5,-0.5};
-    rect2.len[0] = 0.49;
-    rect2.len[1] = 0.49;
-    rel = AaRectAaRectOvlp(rect1,rect2);
-    if(rel) {
-        printf("The two rectangles overlap.\n");
-    }
-    else {
-        printf("The two rectangles do not overlap.\n");
-    }
+    setHostBases();
+    aarect3d rect;
+    rect.cnr = {1,1,1};
+    rect.len[0] = 1;
+    rect.len[1] = 2;
+    rect.len[2] = 1;
+    vec3d ax = nrmlzVec(vecAdd(vecAdd(vecAdd({0,0,0},bases[0]),bases[1]),bases[2]));
+    intvl3d intvl = GetIntvl(rect,ax);
+    printf("interval: [%lf,%lf]\n",intvl.min,intvl.max);
     return EXIT_SUCCESS;
 }

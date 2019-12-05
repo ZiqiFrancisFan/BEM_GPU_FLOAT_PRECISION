@@ -21,6 +21,8 @@
 #include "dataStructs.h"
 #include "numerical.h"
 
+__host__ void setHostBases();
+
 __host__ __device__ vec2d GetMin(const aarect2d rect);
 
 __host__ __device__ vec2d GetMax(const aarect2d rect);
@@ -65,6 +67,12 @@ __host__ int write_voxels(const int* flag, const int num, const char* file_path)
 __host__ __device__ bool IntvlIntvlOvlp(const intvl2d intvl1, const intvl2d intvl2);
 
 __host__ __device__ bool AaRectAaRectOvlp(const aarect2d rect1, const aarect2d rect2);
+
+__host__ __device__ vec3d GetMin(const aarect3d rect);
+
+__host__ __device__ vec3d GetMax(const aarect3d rect);
+
+__host__ __device__ intvl3d GetIntvl(const aarect3d rect, const vec3d axis);
 
 #endif /* GEOMETRY_H */
 
