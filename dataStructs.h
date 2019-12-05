@@ -97,6 +97,15 @@ struct aa_rect_dbl
 
 typedef struct aa_rect_dbl aarect3d;
 
+struct rect_dbl
+{
+    vec3d cnr;
+    double len[3]; //x, y, z directions
+    vec3d dir[3]; //three bases that have to be normalized
+};
+
+typedef struct rect_dbl rect3d;
+
 struct aa_rect_2D_dbl
 {
     vec2d cnr;
@@ -104,6 +113,15 @@ struct aa_rect_2D_dbl
 };
 
 typedef struct aa_rect_2D_dbl aarect2d;
+
+struct rect_2D_dbl
+{
+    vec2d cnr;
+    double len[2];
+    vec2d dir[2]; //the two directions both of which have to be normalized
+};
+
+typedef struct rect_2D_dbl rect2d;
 
 /*plane of double precision*/
 struct plane_dbl
@@ -148,12 +166,13 @@ struct quad_dbl
 typedef struct quad_dbl quad3d;
 
 
-struct intvl_dbl
+struct interval_2D_dbl
 {
-    double end[2];
+    double min;
+    double max;
 };
 
-typedef struct intvl_dbl intvl_dbl;
+typedef struct interval_2D_dbl intvl2d;
 
 #endif /* DATASTRUCT_H */
 

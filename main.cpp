@@ -18,22 +18,20 @@
 
 int main(int argc, char *argv[])
 {
-    int numPt, numElem;
-    findNum("./mesh/sphere_100mm_320.obj",&numPt,&numElem);
-    rect_coord_dbl *pt = (rect_coord_dbl*)malloc(numPt*sizeof(rect_coord_dbl));
-    tri_elem *elem = (tri_elem*)malloc(numElem*sizeof(tri_elem));
-    readOBJ("./mesh/sphere_100mm_320.obj",pt,elem);
-    
-    int numEachDim = 64;
-    int *flag = (int*)malloc(numEachDim*numEachDim*numEachDim*sizeof(int));
-    aacb3d sp;
-    sp.cnr = {-0.2,-0.2,-0.2};
-    sp.len = 0.4;
-    HOST_CALL(voxelSpace(sp,numEachDim,pt,elem,numElem,flag));
-    write_voxels(flag,numEachDim,"./data/vox");
-    
-    free(flag);
-    free(elem);
-    free(pt);
+    aarect2d rect1, rect2;
+    bool rel;
+    rect1.cnr = {0,0};
+    rect1.len[0] = 1;
+    rect1.len[1] = 1;
+    rect2.cnr = {-0.5,-0.5};
+    rect2.len[0] = 0.49;
+    rect2.len[1] = 0.49;
+    rel = AaRectAaRectOvlp(rect1,rect2);
+    if(rel) {
+        printf("The two rectangles overlap.\n");
+    }
+    else {
+        printf("The two rectangles do not overlap.\n");
+    }
     return EXIT_SUCCESS;
 }

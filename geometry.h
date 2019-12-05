@@ -21,6 +21,12 @@
 #include "dataStructs.h"
 #include "numerical.h"
 
+__host__ __device__ vec2d GetMin(const aarect2d rect);
+
+__host__ __device__ vec2d GetMax(const aarect2d rect);
+
+__host__ __device__ void PrintVec(const vec2d* vec, const int num);
+
 __host__ __device__ double triArea(const tri_dbl s);
 
 __host__ __device__ int deterPtPlaneRel(const vec3d pt, const plane3d plane);
@@ -55,6 +61,10 @@ __host__ int voxelSpace(const aacb3d sp, const int numEachDim, const vec3d* pt,
         const tri_elem* elem, const int numElem, int* flag);
 
 __host__ int write_voxels(const int* flag, const int num, const char* file_path);
+
+__host__ __device__ bool IntvlIntvlOvlp(const intvl2d intvl1, const intvl2d intvl2);
+
+__host__ __device__ bool AaRectAaRectOvlp(const aarect2d rect1, const aarect2d rect2);
 
 #endif /* GEOMETRY_H */
 

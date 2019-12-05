@@ -1026,6 +1026,20 @@ __host__ __device__ void printTriangle(const tri_dbl tri)
             tri.nod[2].coords[0],tri.nod[2].coords[1],tri.nod[2].coords[2]);
 }
 
+__host__ __device__ void PrintVec(const vec2d* vec, const int num)
+{
+    for(int i=0;i<num;i++) {
+        printf("(%lf,%lf)\n",vec[i].coords[0],vec[i].coords[1]);
+    }
+}
+
+__host__ __device__ void PrintVec(const vec2f* vec, const int num)
+{
+    for(int i=0;i<num;i++) {
+        printf("(%f,%f)\n",vec[i].coords[0],vec[i].coords[1]);
+    }
+}
+
 __host__ int voxelSpace(const aacb3d sp, const int numEachDim, const vec3d* pt, 
         const tri_elem* elem, const int numElem, int* flag)
 {
@@ -1118,7 +1132,48 @@ __host__ int write_voxels(const int* flag, const int numEachDim, const char* fil
     }
 }
 
-vec2d GetMin(const aarect2d rect)
+__host__ __device__ vec2d GetMin(const aarect2d rect)
 {
     return rect.cnr;
 }
+
+__host__ __device__ vec2d GetMax(const aarect2d rect)
+{
+    vec2d dir_x = {1,0}, dir_y = {0,1};
+    vec2d nod = vecAdd(vecAdd(rect.cnr,scaVecMul(rect.len[0],dir_x)),scaVecMul(rect.len[1],dir_y));
+    return nod;
+}
+
+__host__ __device__ bool IntvlIntvlOvlp(const intvl2d intvl1, const intvl2d intvl2)
+{
+    /*returns true if the two intervals overlap and false if not*/
+    if(intvl1.min<=intvl2.max && intvl2.min<=intvl1.max) {
+        return true;
+    }
+    else {
+        return false;
+    }
+}
+
+__host__ __device__ bool AaRectAaRectOvlp(const aarect2d rect1, const aarect2d rect2)
+{
+    /*determines if two axis-aligned rectangles overlap
+     rect1: the first rectangle
+     rect2: the second rectangle
+     return: 
+     true: the two rectangles overlap
+     false: the two rectangles do not overlap*/
+    // first check if the projections on the x axis overlap
+    vec2d minNod1 = GetMin(rect1), maxNod1 = GetMax(rect1), minNod2 = GetMin(rect2), 
+            maxNod2 = GetMax(rect2);
+    intvl2d intvl1x = {minNod1.coords[0],maxNod1.coords[0]}, intvl2x = {minNod2.coords[0],maxNod2.coords[0]},
+            intvl1y = {minNod1.coords[1],maxNod1.coords[1]}, intvl2y = {minNod2.coords[1],maxNod2.coords[1]};
+    
+    if(IntvlIntvlOvlp(intvl1x,intvl2x) && IntvlIntvlOvlp(intvl1y,intvl2y)) {
+        return true;
+    }
+    else {
+        return false;
+    }
+}
+    
