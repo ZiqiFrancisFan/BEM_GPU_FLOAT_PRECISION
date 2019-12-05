@@ -181,53 +181,53 @@ __host__ __device__ vec3f sph2vec(const sph3f s);
 
 __host__ __device__ vec3d sph2vec(const sph3d s);
 
-__host__ __device__ float vecDotMul(const vec3f u, const vec3f v);
+__host__ __device__ float vecDotMul(const vec3f& u, const vec3f& v);
 
-__host__ __device__ double vecDotMul(const vec3d u, const vec3d v);
+__host__ __device__ double vecDotMul(const vec3d& u, const vec3d& v);
 
-__host__ __device__ float vecDotMul(const vec2f u, const vec2f v);
+__host__ __device__ float vecDotMul(const vec2f& u, const vec2f& v);
 
-__host__ __device__ double vecDotMul(const vec2d u, const vec2d v);
+__host__ __device__ double vecDotMul(const vec2d& u, const vec2d& v);
 
-__host__ __device__ vec3f scaVecMul(const float lambda, const vec3f v);
+__host__ __device__ vec3f scaVecMul(const float& lambda, const vec3f& v);
 
-__host__ __device__ vec3d scaVecMul(const double lambda, const vec3d v);
+__host__ __device__ vec3d scaVecMul(const double& lambda, const vec3d& v);
 
-__host__ __device__ vec2d scaVecMul(const double lambda, const vec2d v);
+__host__ __device__ vec2d scaVecMul(const double& lambda, const vec2d& v);
 
-__host__ __device__ vec2f scaVecMul(const double lambda, const vec2f v);
+__host__ __device__ vec2f scaVecMul(const double& lambda, const vec2f& v);
 
-__host__ __device__ vec3f vecCrossMul(const vec3f a, const vec3f b);
+__host__ __device__ vec3f vecCrossMul(const vec3f& a, const vec3f& b);
 
-__host__ __device__ vec3d vecCrossMul(const vec3d a, const vec3d b);
+__host__ __device__ vec3d vecCrossMul(const vec3d& a, const vec3d& b);
 
-__host__ __device__ vec3f vecAdd(const vec3f u, const vec3f v);
+__host__ __device__ vec3f vecAdd(const vec3f& u, const vec3f& v);
 
-__host__ __device__ vec3d vecAdd(const vec3d u, const vec3d v);
+__host__ __device__ vec3d vecAdd(const vec3d& u, const vec3d& v);
 
-__host__ __device__ vec2d vecAdd(const vec2d u, const vec2d v);
+__host__ __device__ vec2d vecAdd(const vec2d& u, const vec2d& v);
 
-__host__ __device__ vec2f vecAdd(const vec2f u, const vec2f v);
+__host__ __device__ vec2f vecAdd(const vec2f& u, const vec2f& v);
 
-__host__ __device__ vec3f vecSub(const vec3f u, const vec3f v);
+__host__ __device__ vec3f vecSub(const vec3f& u, const vec3f& v);
 
-__host__ __device__ vec3d vecSub(const vec3d u, const vec3d v);
+__host__ __device__ vec3d vecSub(const vec3d& u, const vec3d& v);
 
-__host__ __device__ vec2d vecSub(const vec2d u, const vec2d v);
+__host__ __device__ vec2d vecSub(const vec2d& u, const vec2d& v);
 
-__host__ __device__ vec2f vecSub(const vec2f u, const vec2f v);
+__host__ __device__ vec2f vecSub(const vec2f& u, const vec2f& v);
 
-__host__ __device__ vec3d nrmlzVec(const vec3d v);
+__host__ __device__ vec3d vecNrmlz(const vec3d& v);
 
-__host__ __device__ vec3f nrmlzVec(const vec3f v);
+__host__ __device__ vec3f vecNrmlz(const vec3f& v);
 
-__host__ __device__ float vecNorm(const vec3f v);
+__host__ __device__ float vecNorm(const vec3f& v);
 
-__host__ __device__ double vecNorm(const vec3d v);
+__host__ __device__ double vecNorm(const vec3d& v);
 
-__host__ __device__ int vecEqual(const vec3f v1, const vec3f v2);
+__host__ __device__ int vecEqual(const vec3f& v1, const vec3f& v2);
 
-__host__ __device__ int vecEqual(const vec3d v1, const vec3d v2);
+__host__ __device__ int vecEqual(const vec3d& v1, const vec3d& v2);
 
 __host__ __device__ bool ray_intersect_triangle(const vec3f O, const vec3f dir, 
         const vec3f nod[3]);

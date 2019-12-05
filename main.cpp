@@ -42,7 +42,7 @@ int main(int argc, char *argv[])
     int totNumVox = voxNum[0]*voxNum[1]*voxNum[2];
     bool *flag = (bool*)malloc(totNumVox*sizeof(bool));
     
-    HOST_CALL(SpaceVoxelization(sp,len,pt,elem,numElem,flag));
+    HOST_CALL(SpaceVoxelOnGPU(sp,len,pt,elem,numElem,flag));
     write_voxels(flag,voxNum,"./data/vox");
     
     free(flag);

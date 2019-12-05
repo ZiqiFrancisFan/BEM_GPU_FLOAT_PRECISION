@@ -189,37 +189,37 @@ __host__ __device__ void printVec(const vec3d* pt, const int numPt)
     printf("\n");
 }
 
-__host__ __device__ float vecDotMul(const vec3f u, const vec3f v)
+__host__ __device__ float vecDotMul(const vec3f& u, const vec3f& v)
 {
     return u.coords[0]*v.coords[0]+u.coords[1]*v.coords[1]+u.coords[2]*v.coords[2];
 }
 
-__host__ __device__ double vecDotMul(const vec3d u, const vec3d v)
+__host__ __device__ double vecDotMul(const vec3d& u, const vec3d& v)
 {
     return u.coords[0]*v.coords[0]+u.coords[1]*v.coords[1]+u.coords[2]*v.coords[2];
 }
 
-__host__ __device__ float vecDotMul(const vec2f u, const vec2f v)
+__host__ __device__ float vecDotMul(const vec2f& u, const vec2f& v)
 {
     return u.coords[0]*v.coords[0]+u.coords[1]+v.coords[1];
 }
 
-__host__ __device__ double vecDotMul(const vec2d u, const vec2d v)
+__host__ __device__ double vecDotMul(const vec2d& u, const vec2d& v)
 {
     return u.coords[0]*v.coords[0]+u.coords[1]+v.coords[1];
 }
 
-__host__ __device__ float vecNorm(const vec3f v)
+__host__ __device__ float vecNorm(const vec3f& v)
 {
     return sqrtf(vecDotMul(v,v));
 }
 
-__host__ __device__ double vecNorm(const vec3d v)
+__host__ __device__ double vecNorm(const vec3d& v)
 {
     return sqrt(vecDotMul(v,v));
 }
 
-__host__ __device__ vec3f vecCrossMul(const vec3f a, const vec3f b)
+__host__ __device__ vec3f vecCrossMul(const vec3f& a, const vec3f& b)
 {
     vec3f temp;
     temp.coords[0] = a.coords[1]*b.coords[2]-a.coords[2]*b.coords[1];
@@ -228,7 +228,7 @@ __host__ __device__ vec3f vecCrossMul(const vec3f a, const vec3f b)
     return temp;
 }
 
-__host__ __device__ vec3d vecCrossMul(const vec3d a, const vec3d b)
+__host__ __device__ vec3d vecCrossMul(const vec3d& a, const vec3d& b)
 {
     vec3d temp;
     temp.coords[0] = a.coords[1]*b.coords[2]-a.coords[2]*b.coords[1];
@@ -237,19 +237,19 @@ __host__ __device__ vec3d vecCrossMul(const vec3d a, const vec3d b)
     return temp;
 }
 
-__host__ __device__ vec3d nrmlzVec(const vec3d v)
+__host__ __device__ vec3d vecNrmlz(const vec3d& v)
 {
     double nrm = sqrt(vecDotMul(v,v));
     return scaVecMul(1.0/nrm,v);
 }
 
-__host__ __device__ vec3f nrmlzVec(const vec3f v)
+__host__ __device__ vec3f vecNrmlz(const vec3f& v)
 {
     float nrm = sqrt(vecDotMul(v,v));
     return scaVecMul(1.0/nrm,v);
 }
 
-__host__ __device__ int vecEqual(const vec3f v1, const vec3f v2)
+__host__ __device__ int vecEqual(const vec3f& v1, const vec3f& v2)
 {
     vec3f v = vecSub(v1,v2);
     if(vecNorm(v) < EPS) {
@@ -259,7 +259,7 @@ __host__ __device__ int vecEqual(const vec3f v1, const vec3f v2)
     }
 }
 
-__host__ __device__ int vecEqual(const vec3d v1, const vec3d v2)
+__host__ __device__ int vecEqual(const vec3d& v1, const vec3d& v2)
 {
     vec3d v = vecSub(v1,v2);
     if(vecNorm(v) < EPS) {
@@ -269,7 +269,7 @@ __host__ __device__ int vecEqual(const vec3d v1, const vec3d v2)
     }
 }
 
-__host__ __device__ vec3f scaVecMul(const float lambda, const vec3f v)
+__host__ __device__ vec3f scaVecMul(const float& lambda, const vec3f& v)
 {
     vec3f result;
     for(int i=0;i<3;i++) {
@@ -278,7 +278,7 @@ __host__ __device__ vec3f scaVecMul(const float lambda, const vec3f v)
     return result;
 }
 
-__host__ __device__ vec3d scaVecMul(const double lambda, const vec3d v)
+__host__ __device__ vec3d scaVecMul(const double& lambda, const vec3d& v)
 {
     vec3d result;
     for(int i=0;i<3;i++) {
@@ -287,7 +287,7 @@ __host__ __device__ vec3d scaVecMul(const double lambda, const vec3d v)
     return result;
 }
 
-__host__ __device__ vec2d scaVecMul(const double lambda, const vec2d v)
+__host__ __device__ vec2d scaVecMul(const double& lambda, const vec2d& v)
 {
     vec2d result;
     for(int i=0;i<2;i++) {
@@ -296,7 +296,7 @@ __host__ __device__ vec2d scaVecMul(const double lambda, const vec2d v)
     return result;
 }
 
-__host__ __device__ vec2f scaVecMul(const float lambda, const vec2f v)
+__host__ __device__ vec2f scaVecMul(const float& lambda, const vec2f& v)
 {
     vec2f result;
     for(int i=0;i<2;i++) {
@@ -305,7 +305,7 @@ __host__ __device__ vec2f scaVecMul(const float lambda, const vec2f v)
     return result;
 }
 
-__host__ __device__ vec3f vecAdd(const vec3f u, const vec3f v)
+__host__ __device__ vec3f vecAdd(const vec3f& u, const vec3f& v)
 {
     vec3f result;
     for(int i=0;i<3;i++) {
@@ -314,7 +314,7 @@ __host__ __device__ vec3f vecAdd(const vec3f u, const vec3f v)
     return result;
 }
 
-__host__ __device__ vec3d vecAdd(const vec3d u, const vec3d v)
+__host__ __device__ vec3d vecAdd(const vec3d& u, const vec3d& v)
 {
     vec3d result;
     for(int i=0;i<3;i++) {
@@ -323,7 +323,7 @@ __host__ __device__ vec3d vecAdd(const vec3d u, const vec3d v)
     return result;
 }
 
-__host__ __device__ vec2d vecAdd(const vec2d u, const vec2d v)
+__host__ __device__ vec2d vecAdd(const vec2d& u, const vec2d& v)
 {
     vec2d result;
     for(int i=0;i<2;i++) {
@@ -332,7 +332,7 @@ __host__ __device__ vec2d vecAdd(const vec2d u, const vec2d v)
     return result;
 }
 
-__host__ __device__ vec2f vecAdd(const vec2f u, const vec2f v)
+__host__ __device__ vec2f vecAdd(const vec2f& u, const vec2f& v)
 {
     vec2f result;
     for(int i=0;i<2;i++) {
@@ -341,7 +341,7 @@ __host__ __device__ vec2f vecAdd(const vec2f u, const vec2f v)
     return result;
 }
 
-__host__ __device__ vec3d vecSub(const vec3d u, const vec3d v)
+__host__ __device__ vec3d vecSub(const vec3d& u, const vec3d& v)
 {
     vec3d result;
     for(int i=0;i<3;i++) {
@@ -350,7 +350,7 @@ __host__ __device__ vec3d vecSub(const vec3d u, const vec3d v)
     return result;
 }
 
-__host__ __device__ vec3f vecSub(const vec3f u, const vec3f v)
+__host__ __device__ vec3f vecSub(const vec3f& u, const vec3f& v)
 {
     vec3f result;
     for(int i=0;i<3;i++) {
@@ -359,7 +359,7 @@ __host__ __device__ vec3f vecSub(const vec3f u, const vec3f v)
     return result;
 }
 
-__host__ __device__ vec2d vecSub(const vec2d u, const vec2d v)
+__host__ __device__ vec2d vecSub(const vec2d& u, const vec2d& v)
 {
     vec2d result;
     for(int i=0;i<2;i++) {
@@ -368,7 +368,7 @@ __host__ __device__ vec2d vecSub(const vec2d u, const vec2d v)
     return result;
 }
 
-__host__ __device__ vec2f vecSub(const vec2f u, const vec2f v)
+__host__ __device__ vec2f vecSub(const vec2f& u, const vec2f& v)
 {
     vec2f result;
     for(int i=0;i<2;i++) {
