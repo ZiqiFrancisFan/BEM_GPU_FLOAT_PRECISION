@@ -1306,7 +1306,76 @@ __host__ __device__ bool OverlapOnAxis(const tri3d& tri, const aarect3d& rect, c
     return IntvlIntvlOvlp(intvl_tri,intvl_rect);
 }
 
-__host__ __device__ bool OverlapTriangleAARect(const tri3d& tri, const aarect3d& rect)
+#ifdef __CUDA_ARCH__
+
+bool OverlapTriangleAARect(const tri3d& tri, const aarect3d& rect)
 {
+    vec3d ax;
+    /*use face normals of the cube as axes*/
+    for(int i=0;i<3;i++) {
+        ax = BASES[i];
+        if(!OverlapOnAxis(tri,rect,ax)) {
+            return false;
+        }
+    }
+    
+    /*use the face normal of the triangle as the axis*/
+    vec3d vec[3];
+    vec[0] = vecSub(tri.nod[1],tri.nod[0]);
+    vec[1] = vecSub(tri.nod[2],tri.nod[0]);
+    vec[2] = vecSub(tri.nod[2],tri.nod[1]);
+    
+    ax = nrmlzVec(vecCrossMul(vec[0],vec[1]));
+    if(!OverlapOnAxis(tri,rect,ax)) {
+        return false;
+    }
+    
+    /*use the cross products of edges as axes*/
+    for(int i=0;i<3;i++) {
+        for(int j=0;j<3;j++) {
+            ax = nrmlzVec(vecCrossMul(BASES[i],vec[j]));
+            if(!OverlapOnAxis(tri,rect,ax)) {
+                return false;
+            }
+        }
+    }
     return true;
 }
+
+#else
+
+bool OverlapTriangleAARect(const tri3d& tri, const aarect3d& rect)
+{
+    vec3d ax;
+    /*use face normals of the cube as axes*/
+    for(int i=0;i<3;i++) {
+        ax = bases[i];
+        if(!OverlapOnAxis(tri,rect,ax)) {
+            return false;
+        }
+    }
+    
+    /*use the face normal of the triangle as the axis*/
+    vec3d vec[3];
+    vec[0] = vecSub(tri.nod[1],tri.nod[0]);
+    vec[1] = vecSub(tri.nod[2],tri.nod[0]);
+    vec[2] = vecSub(tri.nod[2],tri.nod[1]);
+    
+    ax = nrmlzVec(vecCrossMul(vec[0],vec[1]));
+    if(!OverlapOnAxis(tri,rect,ax)) {
+        return false;
+    }
+    
+    /*use the cross products of edges as axes*/
+    for(int i=0;i<3;i++) {
+        for(int j=0;j<3;j++) {
+            ax = nrmlzVec(vecCrossMul(bases[i],vec[j]));
+            if(!OverlapOnAxis(tri,rect,ax)) {
+                return false;
+            }
+        }
+    }
+    return true;
+}
+
+#endif

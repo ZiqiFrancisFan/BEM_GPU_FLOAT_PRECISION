@@ -78,5 +78,7 @@ __host__ __device__ intvl3d GetInterval(const aarect3d& rect, const vec3d& axis)
 
 __host__ __device__ intvl3d GetInterval(const tri3d& tri, const vec3d& ax);
 
+__host__ __device__ bool OverlapTriangleAARect(const tri3d& tri, const aarect3d& rect);
+
 #endif /* GEOMETRY_H */
 
