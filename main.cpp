@@ -21,8 +21,10 @@ extern vec3d bases[3];
 
 int main(int argc, char *argv[])
 {
+    
     SetHostBases();
     HOST_CALL(CopyBasesToConstant());
+    /*
     int numPt, numElem;
     findNum("./mesh/sphere_100mm_5120.obj",&numPt,&numElem);
     rect_coord_dbl *pt = (rect_coord_dbl*)malloc(numPt*sizeof(rect_coord_dbl));
@@ -44,6 +46,26 @@ int main(int argc, char *argv[])
     
     HOST_CALL(SpaceVoxelOnGPU(sp,len,pt,elem,numElem,flag));
     write_voxels(flag,voxNum,"./data/vox");
+    
+    free(flag);
+    free(elem);
+    free(pt);
+    CUDA_CALL(cudaDeviceReset());
+    return EXIT_SUCCESS;
+     */
+    int numPt, numElem;
+    findNum("./mesh/sphere_100mm_320.obj",&numPt,&numElem);
+    rect_coord_dbl *pt = (rect_coord_dbl*)malloc(numPt*sizeof(rect_coord_dbl));
+    tri_elem *elem = (tri_elem*)malloc(numElem*sizeof(tri_elem));
+    readOBJ("./mesh/sphere_100mm_320.obj",pt,elem);
+    
+    int numEachDim = 150;
+    int *flag = (int*)malloc(numEachDim*numEachDim*numEachDim*sizeof(int));
+    aa_cube_dbl sp;
+    sp.cnr = {-0.5,-0.5,-0.5};
+    sp.len = 1;
+    HOST_CALL(SpaceVoxelOnGPU(sp,numEachDim,pt,elem,numElem,flag));
+    write_voxels(flag,numEachDim,"./data/vox");
     
     free(flag);
     free(elem);

@@ -1136,6 +1136,9 @@ __global__ void testTriCbInt(const tri3d* tri, const int numTri, const aacb3d* c
     int idx_y = blockIdx.y*blockDim.y+threadIdx.y; // cube index
     
     if(idx_x < numTri && idx_y < numCb) {
+        if(idx_x==0 && idx_y==0) {
+            printf("cool.\n");
+        }
         int rel = deterTriCubeInt(tri[idx_x],cb[idx_y]);
         atomicAdd(&flag[idx_y],rel);
     }
