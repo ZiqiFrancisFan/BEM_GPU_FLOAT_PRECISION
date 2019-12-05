@@ -28,7 +28,7 @@ int main(int argc, char *argv[])
     rect.len[1] = 2;
     rect.len[2] = 1;
     vec3d ax = nrmlzVec(vecAdd(vecAdd(vecAdd({0,0,0},bases[0]),bases[1]),bases[2]));
-    intvl3d intvl = GetIntvl(rect,ax);
+    intvl3d intvl = GetInterval(rect,ax);
     printf("interval: [%lf,%lf]\n",intvl.min,intvl.max);
     return EXIT_SUCCESS;
 }

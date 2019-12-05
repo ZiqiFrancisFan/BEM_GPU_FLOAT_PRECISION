@@ -1244,7 +1244,7 @@ vec3d GetMax(const aarect3d rect)
 
 #endif
 
-__host__ __device__ intvl3d GetIntvl(const aarect3d rect, const vec3d axis)
+__host__ __device__ intvl3d GetInterval(const aarect3d rect, const vec3d axis)
 {
     vec3d cnrs[2], vertex;
     cnrs[0] = GetMin(rect);
@@ -1266,6 +1266,33 @@ __host__ __device__ intvl3d GetIntvl(const aarect3d rect, const vec3d axis)
             }
         }
     }
+    return intvl;
+}
+
+__host__ __device__ bool IntvlIntvlOvlp(const intvl3d intvl1, const intvl3d intvl2)
+{
+    /*returns true if the two intervals overlap and false if not*/
+    if(intvl1.min<=intvl2.max && intvl2.min<=intvl1.max) {
+        return true;
+    }
+    else {
+        return false;
+    }
+}
+
+__host__ __device__ intvl3d GetInterval(const tri3d tri, const vec3d ax)
+{
+    intvl3d intvl;
+    intvl.min = -DBL_MAX;
+    intvl.max = DBL_MAX;
+    double projection;
+    
+    for(int i=0;i<3;i++) {
+        projection = vecDotMul(tri.nod[i],ax);
+        intvl.max = (projection>intvl.max) ? projection : intvl.max;
+        intvl.min = (projection<intvl.min) ? projection : intvl.min;
+    }
+    
     return intvl;
 }
     

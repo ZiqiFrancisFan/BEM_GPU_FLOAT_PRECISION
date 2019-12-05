@@ -72,7 +72,7 @@ __host__ __device__ vec3d GetMin(const aarect3d rect);
 
 __host__ __device__ vec3d GetMax(const aarect3d rect);
 
-__host__ __device__ intvl3d GetIntvl(const aarect3d rect, const vec3d axis);
+__host__ __device__ intvl3d GetInterval(const aarect3d rect, const vec3d axis);
 
 #endif /* GEOMETRY_H */
 
