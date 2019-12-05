@@ -24,12 +24,23 @@ int main(int argc, char *argv[])
     SetHostBases();
     HOST_CALL(CopyBasesToConstant());
     tri3d tri;
-    tri.nod[0] = {3,0,0};
-    tri.nod[1] = {0,3,0};
-    tri.nod[2] = {0,0,3};
-    vec3d ax = nrmlzVec(vecAdd(vecAdd(vecAdd({0,0,0},bases[0]),bases[1]),bases[2]));
-    intvl3d intvl = GetInterval(tri,ax);
-    printf("interval: [%lf,%lf]\n",intvl.min,intvl.max);
+    tri.nod[0] = {6.001,0,0};
+    tri.nod[1] = {0,6,0};
+    tri.nod[2] = {0,0,6};
+    
+    aarect3d rect;
+    rect.cnr = {0,0,0};
+    rect.len[0] = 2;
+    rect.len[1] = 2;
+    rect.len[2] = 2;
+    
+    bool rel = OverlapTriangleAARect(tri,rect);
+    if(rel) {
+        printf("They overlap.\n");
+    }
+    else {
+        printf("They don't overlap.\n");
+    }
     CUDA_CALL(cudaDeviceReset());
     return EXIT_SUCCESS;
 }
