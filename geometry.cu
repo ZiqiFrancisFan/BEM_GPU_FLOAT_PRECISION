@@ -9,6 +9,14 @@
 #include <stdlib.h>
 #include <float.h>
 
+#ifndef NUM_TRI_PER_LAUNCH
+#define NUM_TRI_PER_LAUNCH 1000
+#endif
+
+#ifndef NUM_CB_PER_LAUNCH
+#define NUM_CB_PER_LAUNCH 1000
+#endif
+
 __constant__ vec3d BASES[3];
 
 vec3d bases[3];
@@ -1136,9 +1144,6 @@ __global__ void TestTrisCbsInt(const tri3d* tri, const int numTri, const aacb3d*
     int idx_y = blockIdx.y*blockDim.y+threadIdx.y; // cube index
     
     if(idx_x < numTri && idx_y < numCb) {
-        if(idx_x==0 && idx_y==0) {
-            printf("cool.\n");
-        }
         int rel = DeterTriCubeInt(tri[idx_x],cb[idx_y]);
         atomicAdd(&flag[idx_y],rel);
     }
@@ -1167,25 +1172,25 @@ int GetTrisCbsRel(const tri3d* tri, const int numTri, const aacb3d* cb,
      numTri: the number of triangles
      cb: an array of cubes
      numCb: number of cubes
-     flag: an array of flags for cube occupancy*/
-    printf("Entered getTriCbRel.\n");
+     flag: an array of flags for cube occupancy. Assumed to be initialized*/
+    
     tri3d *tri_d;
-    CUDA_CALL(cudaMalloc(&tri_d,numTri*sizeof(tri3d)));
-    CUDA_CALL(cudaMemcpy(tri_d,tri,numTri*sizeof(tri3d),cudaMemcpyHostToDevice));
-    printf("Allocated and copied memory for triangles\n");
+    CUDA_CALL(cudaMalloc(&tri_d,numTri*sizeof(tri3d))); // allocate memory for triangles on device
+    CUDA_CALL(cudaMemcpy(tri_d,tri,numTri*sizeof(tri3d),cudaMemcpyHostToDevice)); // copy triangles from host to device
+    //printf("Allocated and copied memory for triangles\n");
     
     aacb3d *cb_d;
-    CUDA_CALL(cudaMalloc(&cb_d,numCb*sizeof(aacb3d)));
-    CUDA_CALL(cudaMemcpy(cb_d,cb,numCb*sizeof(aacb3d),cudaMemcpyHostToDevice));
-    printf("Allocated and copied memory for cubes\n");
+    CUDA_CALL(cudaMalloc(&cb_d,numCb*sizeof(aacb3d))); // allocate memory for cubes on device
+    CUDA_CALL(cudaMemcpy(cb_d,cb,numCb*sizeof(aacb3d),cudaMemcpyHostToDevice)); // copy cubes from host to device
+    //printf("Allocated and copied memory for cubes\n");
     
-    memset(flag,0,numCb*sizeof(int));
-    printf("Initialized flag\n");
+    //memset(flag,0,numCb*sizeof(int));
+    
     int *flag_d;
     CUDA_CALL(cudaMalloc(&flag_d,numCb*sizeof(int)));
-    CUDA_CALL(cudaMemcpy(flag_d,flag,numCb*sizeof(int),cudaMemcpyHostToDevice));
+    CUDA_CALL(cudaMemcpy(flag_d,flag,numCb*sizeof(int),cudaMemcpyHostToDevice)); // copy flags to device
     
-    printf("Device memory allocated.\n");
+    //printf("Device memory allocated.\n");
     
     int xNumBlocks, xWidth = 16, yNumBlocks, yWidth = 16;
     xNumBlocks = (numTri+xWidth-1)/xWidth;
@@ -1204,12 +1209,6 @@ int GetTrisCbsRel(const tri3d* tri, const int numTri, const aacb3d* cb,
     CUDA_CALL(cudaFree(flag_d));
     CUDA_CALL(cudaFree(cb_d));
     CUDA_CALL(cudaFree(tri_d));
-    
-    for(int i=0;i<numCb;i++) {
-        if(flag[i]!=0) {
-            flag[i] = 1;
-        }
-    }
     
     return EXIT_SUCCESS;
 }
@@ -1245,9 +1244,7 @@ int GetTrisCbRel(const tri3d* tri, const int numTri, const aacb3d cb, int* flag)
     
     TestTrisCbInt<<<gridLayout,blockLayout>>>(tri_d,numTri,cb,flag_d);
     HOST_CALL(cudaMemcpy(flag,flag_d,sizeof(int),cudaMemcpyDeviceToHost));
-    if(*flag > 0) {
-        *flag = 1;
-    }
+    
     CUDA_CALL(cudaFree(flag_d));
     CUDA_CALL(cudaFree(tri_d));
     
@@ -1302,7 +1299,7 @@ __host__ __device__ void PrintVec(const vec2f* vec, const int num)
     }
 }
 
-__host__ int SpaceVoxelOnGPU(const aacb3d sp, const int numEachDim, const vec3d* pt, 
+__host__ int CubeSpaceVoxelOnGPU(const aacb3d sp, const int numEachDim, const vec3d* pt, 
         const tri_elem* elem, const int numElem, int* flag)
 {
     printf("Entered voxSpace.\n");
@@ -1383,8 +1380,9 @@ int RectSpaceVoxelOnGPU(const aarect3d sp, const double len, const vec3d* pt,
     }
     printf("Triangles set up.\n");
     
+    
     int idx;
-    aacb3d cb;
+    aacb3d *cbs = (aacb3d*)malloc(totNumCb*sizeof(aacb3d)), cb;
     vec3d offset[3];
     for(int z=0;z<dimsize[2];z++) {
         offset[2] = scaVecMul(z*len,bases[2]); // offset in the z direction
@@ -1395,19 +1393,50 @@ int RectSpaceVoxelOnGPU(const aarect3d sp, const double len, const vec3d* pt,
                 idx = z*(dimsize[0]*dimsize[1])+y*dimsize[0]+x; // index of the current cube
                 cb.cnr = vecAdd(vecAdd(vecAdd(sp.cnr,offset[0]),offset[1]),offset[2]);
                 cb.len = len;
-                HOST_CALL(GetTrisCbRel(tris,numElem,cb,&flag[idx]));
+                cbs[idx] = cb;
+                //HOST_CALL(GetTrisCbRel(tris,numElem,cb,&flag[idx]));
             }
         }
     }
-    printf("All flags found.\n");
+    //printf("Cube array set up.\n");
+    
+    int numCbGroup = (totNumCb+NUM_CB_PER_LAUNCH-1)/NUM_CB_PER_LAUNCH, 
+            numTriGroup = (numElem+NUM_TRI_PER_LAUNCH-1)/NUM_TRI_PER_LAUNCH,
+            currNumTri, currNumCb, flagArrIdx;
+    for(int i=0;i<numCbGroup;i++) {
+        //printf("%dth group of cubes\n",i);
+        flagArrIdx = i*NUM_CB_PER_LAUNCH;
+        if(i<numCbGroup-1) {
+            /*not the last cube group*/
+            currNumCb = NUM_CB_PER_LAUNCH;
+        }
+        else {
+            /*the last cube group*/
+            currNumCb = totNumCb-i*NUM_CB_PER_LAUNCH;
+        }
+        for(int j=0;j<numTriGroup;j++) {
+            //printf("%dth group of triangles\n",j);
+            if(j<numTriGroup-1) {
+                /*not the last triangle group*/
+                currNumTri = NUM_TRI_PER_LAUNCH;
+            }
+            else {
+                /*the last triangle group*/
+                currNumTri = numElem-j*NUM_TRI_PER_LAUNCH;
+            }
+            HOST_CALL(GetTrisCbsRel(tris+j*NUM_TRI_PER_LAUNCH,currNumTri,
+                    cbs+i*NUM_CB_PER_LAUNCH,currNumCb,flag+flagArrIdx));
+        }
+    }
     
     HOST_CALL(write_voxels(flag,dimsize,filePath));
     free(flag);
     free(tris);
+    free(cbs);
     return EXIT_SUCCESS;
 }
 
-__host__ int SpaceVoxelOnCPU(const aacb3d sp, const int numEachDim, const vec3d* pt, 
+int CubeSpaceVoxelOnCPU(const aacb3d sp, const int numEachDim, const vec3d* pt, 
         const tri_elem* elem, const int numElem, int* flag)
 {
     /*voxelize the a space of objects composed of triangles
@@ -1470,33 +1499,6 @@ __host__ int SpaceVoxelOnCPU(const aacb3d sp, const int numEachDim, const vec3d*
     free(cb);
     free(tri);
     return EXIT_SUCCESS;
-}
-
-__host__ int write_voxels(const int* flag, const int numEachDim, const char* file_path)
-{
-    FILE *file = fopen(file_path,"w");
-    if(file==NULL) {
-        printf("Failed to open file.\n");
-        return EXIT_FAILURE;
-    }
-    else {
-        int status;
-        for(int i=0;i<numEachDim*numEachDim*numEachDim;i++) {
-            status = fprintf(file,"%d ",flag[i]);
-            if((i+1)%numEachDim == 0) {
-                status = fprintf(file,"\n");
-            }
-            if((i+1)%(numEachDim*numEachDim) == 0) {
-                status = fprintf(file,"\n");
-            }
-            if(status<0) {
-                printf("Failed to write the %dth line to file\n",i);
-                return EXIT_FAILURE;
-            }
-        }
-        fclose(file);
-        return EXIT_SUCCESS;
-    }
 }
 
 __host__ __device__ vec2d GetMin(const aarect2d rect)
@@ -1722,11 +1724,12 @@ __global__ void OverlapTrisAARects(const tri3d* tri, const int numTri, const aar
     
     if(idx_x < numTri && idx_y < numRect) {
         bool rel = OverlapTriangleAARect(tri[idx_x],rect[idx_y]);
-        atomicAdd(&acc[idx_y],rel);
+        int inc = rel ? 1 : 0;
+        atomicAdd(&acc[idx_y],inc);
     }
 }
 
-__host__ int SpaceVoxelOnCPU(const aarect3d sp, const double voxlen, const vec3d* pt, 
+__host__ int RectSpaceVoxelSATOnCPU(const aarect3d sp, const double voxlen, const vec3d* pt, 
         const tri_elem* elem, const int numElem, bool* flag)
 {
     /*
@@ -1800,105 +1803,7 @@ __host__ int SpaceVoxelOnCPU(const aarect3d sp, const double voxlen, const vec3d
     return EXIT_SUCCESS;
 }
 
-__host__ int SpaceVoxelOnGPU(const aarect3d sp, const double voxlen, const vec3d* pt, 
-        const tri_elem* elem, const int numElem, bool* flag)
-{
-    /*
-     voxelize the a space containing objects composed of triangles into 
-     occupancy grids
-     sp: an axis-aligned rectangle representing the whole space
-     voxlen: the length of sides of an voxel
-     pt: an array of points
-     elem: an array of elements
-     numElem: the number of elements
-     flag: an array of flags representing occupancy of each voxel
-     */
-    
-    /*save all the triangles in a triangle array*/
-    tri3d *tri = (tri3d*)malloc(numElem*sizeof(tri3d));
-    for(int i=0;i<numElem;i++) {
-        for(int j=0;j<3;j++) {
-            tri[i].nod[j] = pt[elem[i].nod[j]];
-        }
-    }
-    
-    /*copy triangles to GPU*/
-    tri3d *tri_d;
-    CUDA_CALL(cudaMalloc(&tri_d,numElem*sizeof(tri3d)));
-    CUDA_CALL(cudaMemcpy(tri_d,tri,numElem*sizeof(tri3d),cudaMemcpyHostToDevice));
-    
-    /*decide the number of voxels on each dimension*/
-    int numVox[3]; // number of voxes in x, y and z directions
-    for(int i=0;i<3;i++) {
-        numVox[i] = floor(sp.len[i]/voxlen);
-    }
-    int totNumVox = numVox[0]*numVox[1]*numVox[2];
-    
-    memset(flag,false,totNumVox*sizeof(bool));
-    
-    /*set up rectangles*/
-    aarect3d *rect = (aarect3d*)malloc(totNumVox*sizeof(aarect3d));
-    int idx;
-    for(int i=0;i<numVox[2];i++) {
-        // z dimension
-        vec3d offset_z = scaVecMul(i*voxlen,bases[2]);
-        for(int j=0;j<numVox[1];j++) {
-            // y dimension
-            vec3d offset_y = scaVecMul(j*voxlen,bases[1]);
-            for(int k=0;k<numVox[0];k++) {
-                // x dimension
-                vec3d offset_x = scaVecMul(k*voxlen,bases[0]);
-                idx = i*(numVox[0]*numVox[1])+j*numVox[0]+k; // the index of the current cube
-                rect[idx].cnr = vecAdd(vecAdd(vecAdd(sp.cnr,offset_x),offset_y),offset_z);
-                rect[idx].len[0] = voxlen;
-                rect[idx].len[1] = voxlen;
-                rect[idx].len[2] = voxlen;
-            }
-        }
-    }
-    
-    /*copy rectangles to GPU*/
-    aarect3d *rect_d;
-    CUDA_CALL(cudaMalloc(&rect_d,totNumVox*sizeof(aarect3d)));
-    CUDA_CALL(cudaMemcpy(rect_d,rect,totNumVox*sizeof(aarect3d),cudaMemcpyHostToDevice));
-    
-    int xNumBlocks, xWidth = 16, yNumBlocks, yWidth = 16;
-    xNumBlocks = (numElem+xWidth-1)/xWidth;
-    yNumBlocks = (totNumVox+yWidth-1)/yWidth;
-    
-    dim3 gridLayout, blockLayout;
-    gridLayout.x = xNumBlocks;
-    gridLayout.y = yNumBlocks;
-    
-    blockLayout.x = xWidth;
-    blockLayout.y = yWidth;
-    
-    int *acc = (int*)malloc(totNumVox*sizeof(int));
-    //memset(acc,0,totNumVox*sizeof(int));
-    int *acc_d;
-    CUDA_CALL(cudaMalloc(&acc_d,totNumVox*sizeof(int)));
-    CUDA_CALL(cudaMemcpy(acc_d,acc,totNumVox*sizeof(int),cudaMemcpyHostToDevice));
-    
-    /*run the overlap test on GPU*/
-    OverlapTrisAARects<<<gridLayout,blockLayout>>>(tri_d,numElem,rect_d,totNumVox,acc_d);
-    CUDA_CALL(cudaMemcpy(acc,acc_d,totNumVox*sizeof(int),cudaMemcpyDeviceToHost));
-    
-    for(int i=0;i<totNumVox;i++) {
-        if(acc[i]>0) {
-            flag[i] = true;
-        }
-    }
-    
-    CUDA_CALL(cudaFree(tri_d));
-    CUDA_CALL(cudaFree(rect_d));
-    CUDA_CALL(cudaFree(acc_d));
-    free(rect);
-    free(tri);
-    free(acc);
-    return EXIT_SUCCESS;
-}
-
-__host__ int write_voxels(const bool* flag, const int numvox[3], const char* file_path)
+int write_voxels(const bool* flag, const int numvox[3], const char* file_path)
 {
     FILE *file = fopen(file_path,"w");
     if(file==NULL) {
@@ -1927,7 +1832,163 @@ __host__ int write_voxels(const bool* flag, const int numvox[3], const char* fil
     }
 }
 
-__host__ int write_voxels(const int* flag, const int numvox[3], const char* file_path)
+int GetTrisCbsRelSAT(const tri3d* tris, const int numTri, const aarect3d* rects, 
+        const int numRect, int* acc)
+{
+    /*voxelize a space into occupance grids
+     tris: an array of triangles
+     numTri: the number of triangles
+     rects: an array of cubes
+     numRect: number of cubes
+     acc: an array of flags for cube occupancy. Assumed to be initialized*/
+    
+    tri3d *tris_d;
+    CUDA_CALL(cudaMalloc(&tris_d,numTri*sizeof(tri3d))); // allocate memory for triangles on device
+    CUDA_CALL(cudaMemcpy(tris_d,tris,numTri*sizeof(tri3d),cudaMemcpyHostToDevice)); // copy triangles from host to device
+    
+    aarect3d *rects_d;
+    CUDA_CALL(cudaMalloc(&rects_d,numRect*sizeof(aarect3d))); // allocate memory for cubes on device
+    CUDA_CALL(cudaMemcpy(rects_d,rects,numRect*sizeof(aarect3d),cudaMemcpyHostToDevice)); // copy cubes from host to device
+    
+    //memset(flag,0,numCb*sizeof(int));
+    
+    int *acc_d;
+    CUDA_CALL(cudaMalloc(&acc_d,numRect*sizeof(int)));
+    CUDA_CALL(cudaMemcpy(acc_d,acc,numRect*sizeof(int),cudaMemcpyHostToDevice)); // copy flags to device
+    
+    int xNumBlocks, xWidth = 16, yNumBlocks, yWidth = 16;
+    xNumBlocks = (numTri+xWidth-1)/xWidth;
+    yNumBlocks = (numRect+yWidth-1)/yWidth;
+    
+    dim3 gridLayout, blockLayout;
+    gridLayout.x = xNumBlocks;
+    gridLayout.y = yNumBlocks;
+    
+    blockLayout.x = xWidth;
+    blockLayout.y = yWidth;
+    
+    OverlapTrisAARects<<<gridLayout,blockLayout>>>(tris_d,numTri,rects_d,numRect,acc_d);
+    HOST_CALL(cudaMemcpy(acc,acc_d,numRect*sizeof(int),cudaMemcpyDeviceToHost));
+    
+    CUDA_CALL(cudaFree(rects_d));
+    CUDA_CALL(cudaFree(acc_d));
+    CUDA_CALL(cudaFree(tris_d));
+    
+    return EXIT_SUCCESS;
+}
+
+int RectSpaceVoxelSATOnGPU(const aarect3d sp, const double voxlen, const vec3d* pt, 
+        const tri_elem* elem, const int numElem, const char* filename)
+{
+    /*
+     voxelize the a space containing objects composed of triangles into 
+     occupancy grids
+     sp: an axis-aligned rectangle representing the whole space
+     voxlen: the length of sides of an voxel
+     pt: an array of points
+     elem: an array of elements
+     numElem: the number of elements
+     flag: an array of flags representing occupancy of each voxel
+     */
+    
+    /*save all the triangles in a triangle array*/
+    
+    tri3d *tri = (tri3d*)malloc(numElem*sizeof(tri3d));
+    for(int i=0;i<numElem;i++) {
+        for(int j=0;j<3;j++) {
+            tri[i].nod[j] = pt[elem[i].nod[j]];
+        }
+    }
+    
+    /*decide the number of voxels on each dimension*/
+    int numVox[3]; // number of voxes in x, y and z directions
+    for(int i=0;i<3;i++) {
+        numVox[i] = floor(sp.len[i]/voxlen);
+    }
+    int totNumVox = numVox[0]*numVox[1]*numVox[2];
+    
+    bool *flag = (bool*)malloc(totNumVox*sizeof(bool));
+    memset(flag,0,totNumVox*sizeof(bool));
+    
+    int *acc = (int*)malloc(totNumVox*sizeof(int));
+    memset(acc,0,totNumVox*sizeof(int));
+    
+    /*set up rectangles*/
+    aarect3d *rect = (aarect3d*)malloc(totNumVox*sizeof(aarect3d));
+    if(rect==NULL) {
+        printf("rect not allocated.\n");
+        return EXIT_FAILURE;
+    }
+    int idx;
+    for(int i=0;i<numVox[2];i++) {
+        // z dimension
+        vec3d offset_z = scaVecMul(i*voxlen,bases[2]);
+        for(int j=0;j<numVox[1];j++) {
+            // y dimension
+            vec3d offset_y = scaVecMul(j*voxlen,bases[1]);
+            for(int k=0;k<numVox[0];k++) {
+                // x dimension
+                vec3d offset_x = scaVecMul(k*voxlen,bases[0]);
+                idx = i*(numVox[0]*numVox[1])+j*numVox[0]+k; // the index of the current cube
+                //printf("idx: %d\n",idx);
+                rect[idx].cnr = vecAdd(vecAdd(vecAdd(sp.cnr,offset_x),offset_y),offset_z);
+                rect[idx].len[0] = voxlen;
+                rect[idx].len[1] = voxlen;
+                rect[idx].len[2] = voxlen;
+                
+            }
+        }
+    }
+    
+    int numRectGroup = (totNumVox+NUM_CB_PER_LAUNCH-1)/NUM_CB_PER_LAUNCH, 
+            numTriGroup = (numElem+NUM_TRI_PER_LAUNCH-1)/NUM_TRI_PER_LAUNCH,
+            currNumTri, currNumRect, accArrIdx;
+    for(int i=0;i<numRectGroup;i++) {
+        //printf("%dth group of cubes\n",i);
+        accArrIdx = i*NUM_CB_PER_LAUNCH;
+        if(i<numRectGroup-1) {
+            /*not the last cube group*/
+            currNumRect = NUM_CB_PER_LAUNCH;
+        }
+        else {
+            /*the last cube group*/
+            currNumRect = totNumVox-i*NUM_CB_PER_LAUNCH;
+        }
+        for(int j=0;j<numTriGroup;j++) {
+            //printf("%dth group of triangles\n",j);
+            if(j<numTriGroup-1) {
+                /*not the last triangle group*/
+                currNumTri = NUM_TRI_PER_LAUNCH;
+            }
+            else {
+                /*the last triangle group*/
+                currNumTri = numElem-j*NUM_TRI_PER_LAUNCH;
+            }
+            HOST_CALL(GetTrisCbsRelSAT(tri+j*NUM_TRI_PER_LAUNCH,currNumTri,rect+i*NUM_CB_PER_LAUNCH,currNumRect,
+                    acc+accArrIdx));
+        }
+    }
+    
+    for(int i=0;i<totNumVox;i++) {
+        //printf("%d\n",acc[i]);
+        if(acc[i]>0) {
+            flag[i] = true;
+        }
+        else {
+            flag[i] = false;
+        }
+    }
+    
+    HOST_CALL(write_voxels(flag,numVox,filename));
+    free(flag);
+    free(rect);
+    free(tri);
+    free(acc);
+    return EXIT_SUCCESS;
+}
+
+
+int write_voxels(const int* flag, const int numvox[3], const char* file_path)
 {
     FILE *file = fopen(file_path,"w");
     if(file==NULL) {

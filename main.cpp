@@ -54,17 +54,17 @@ int main(int argc, char *argv[])
     return EXIT_SUCCESS;
      */
     int numPt, numElem;
-    findNum("./mesh/sphere_100mm_320.obj",&numPt,&numElem);
+    findNum("./mesh/sphere_100mm_5120.obj",&numPt,&numElem);
     rect_coord_dbl *pt = (rect_coord_dbl*)malloc(numPt*sizeof(rect_coord_dbl));
     tri_elem *elem = (tri_elem*)malloc(numElem*sizeof(tri_elem));
-    readOBJ("./mesh/sphere_100mm_320.obj",pt,elem);
+    readOBJ("./mesh/sphere_100mm_5120.obj",pt,elem);
     
-    double len = 0.1;
+    double len = 0.0025;
     aarect3d sp;
-    sp.cnr = {-0.5,-0.5,-0.5};
-    sp.len[0] = 1;
-    sp.len[1] = 1;
-    sp.len[2] = 1;
+    sp.cnr = {-0.2,-0.2,-0.2};
+    sp.len[0] = 0.4;
+    sp.len[1] = 0.4;
+    sp.len[2] = 0.4;
     HOST_CALL(RectSpaceVoxelOnGPU(sp,len,pt,elem,numElem,"./data/vox"));
     
     free(elem);

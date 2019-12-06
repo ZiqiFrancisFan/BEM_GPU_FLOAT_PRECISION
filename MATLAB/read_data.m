@@ -17,8 +17,8 @@ hFig = figure('units','normalized','outerposition',[0 0 1 1]);
 hAx = axes(hFig);
 daspect(hAx,[1,1,1]);
 daspect(hAx,[1,1,1]);
-for i=1:dim
+for i=dim/2:dim/2
     imshow(grid(:,:,i));
     
-    pause(1);
+    pause(0.2);
 end

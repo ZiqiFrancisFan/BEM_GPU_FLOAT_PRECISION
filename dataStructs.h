@@ -182,5 +182,26 @@ struct interval_dbl
 
 typedef struct interval_dbl intvl3d;
 
+struct matrix_33_dbl
+{
+    double elem[9];
+};
+
+typedef struct matrix_33_dbl mat33d;
+
+struct matrix_22_dbl
+{
+    double elem[4];
+};
+
+typedef struct matrix_2D_dbl mat22d;
+
+struct matrix_23_dbl
+{
+    double elem[6];
+};
+
+typedef struct matrix_23_dbl mat23d;
+
 #endif /* DATASTRUCT_H */
 
