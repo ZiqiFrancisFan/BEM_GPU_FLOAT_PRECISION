@@ -225,9 +225,23 @@ __host__ __device__ float vecNorm(const vec3f& v);
 
 __host__ __device__ double vecNorm(const vec3d& v);
 
+__host__ __device__ void printMat(const double* mat, const int numRow, const int numCol, 
+        const int lda);
+
+__host__ __device__ void matRowSwap(double* mat, const int numCol, const int lda, 
+        const int i, const int j);
+
+__host__ __device__ void scaRowMul(double* mat, const int numCol, const int lda, 
+        const int ridx, const double c);
+
+__host__ __device__ void subScaRowFromRow(double* mat, const int numCol, const int lda, 
+        const int i, const int j, const double c);
+
 __host__ __device__ int vecEqual(const vec3f& v1, const vec3f& v2);
 
 __host__ __device__ int vecEqual(const vec3d& v1, const vec3d& v2);
+
+__host__ __device__ void GaussElim(double* mat, const int numRow, const int numCol, const int lda);
 
 __host__ __device__ bool ray_intersect_triangle(const vec3f O, const vec3f dir, 
         const vec3f nod[3]);

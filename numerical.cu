@@ -8,6 +8,7 @@
 #include "mesh.h"
 #include <math_constants.h>
 #include <cusolverDn.h>
+#include <float.h>
 
 //air density and speed of sound
 __constant__ float density = 1.2041;
@@ -150,6 +151,87 @@ int gaussPtsToDevice(const float *evalPt, const float *wgt)
     CUDA_CALL(cudaMemcpyToSymbol(INTPT,evalPt,INTORDER*sizeof(float),0,cudaMemcpyHostToDevice));
     CUDA_CALL(cudaMemcpyToSymbol(INTWGT,wgt,INTORDER*sizeof(float),0,cudaMemcpyHostToDevice));
     return EXIT_SUCCESS;
+}
+
+void printMat(const double* mat, const int numRow, const int numCol, const int lda)
+{
+    for(int i=0;i<numRow;i++) {
+        for(int j=0;j<numCol;j++) {
+            printf("%lf ",mat[IDXC0(i,j,lda)]);
+        }
+        printf("\n");
+    }
+}
+
+void matRowSwap(double* mat, const int numCol, const int lda, const int i, const int j)
+{
+    /*switches the ith and the jth row of a matrix mat*/
+    if(i!=j) {
+        double temp;
+        for(int idx=0;idx<numCol;idx++) {
+            temp = mat[IDXC0(i,idx,lda)];
+            mat[IDXC0(i,idx,lda)] = mat[IDXC0(j,idx,lda)];
+            mat[IDXC0(j,idx,lda)] = temp;
+        }
+    }
+    
+}
+
+void scaRowMul(double* mat, const int numCol, const int lda, const int ridx, const double c)
+{
+    for(int i=0;i<numCol;i++) {
+        mat[IDXC0(ridx,i,lda)] = c*mat[IDXC0(ridx,i,lda)];
+    }
+}
+
+void subScaRowFromRow(double* mat, const int numCol, const int lda, const int i, const int j, const double c)
+{
+    /*subtract row j from row i*/
+    for(int idx=0;idx<numCol;idx++) {
+        mat[IDXC0(i,idx,lda)] = mat[IDXC0(i,idx,lda)]-c*mat[IDXC0(j,idx,lda)];
+    }
+}
+
+__host__ __device__ void findVecMaxAbs(const double* vec, const int idx_min, const int idx_max, double& val, int& idx)
+{
+    idx = idx_min;
+    val = abs(vec[idx_min]);
+    for(int i=idx_min+1;i<=idx_max;i++) {
+        if(abs(vec[i]) > val) {
+            val = abs(vec[i]);
+            idx = i;
+        }
+    }
+        
+}
+void GaussElim(double* mat, const int numRow, const int numCol, const int lda)
+{
+    double temp;
+    int pr=0, pc=0, idx; //index for pivot row and pivot column
+    while(pr<numRow && pc<numCol) {
+        findVecMaxAbs(&mat[IDXC0(0,pc,lda)],pr,numRow-1,temp,idx);
+        if(temp<EPS) { //no pivot point in the current column
+            pc++;
+        }
+        else { //idx is the row index for the row of interest
+            double coeff;
+            matRowSwap(mat,numCol,lda,pr,idx);
+            printf("Swapped rows: \n");
+            printMat(mat,numRow,numCol,lda);
+            for(int i=pr+1;i<numRow;i++) {
+                coeff = mat[IDXC0(i,pc,lda)]/mat[IDXC0(pr,pc,lda)];
+                mat[IDXC0(i,pc,lda)] = 0.0;
+                for(int j=pc+1;j<numCol;j++) {
+                    mat[IDXC0(i,j,lda)] = mat[IDXC0(i,j,lda)]-coeff*mat[IDXC0(pr,j,lda)];
+                }
+            }
+            printf("Subtracted: \n");
+            printMat(mat,numRow,numCol,lda);
+            printf("\n");
+            pr++;
+            pc++;
+        }
+    }
 }
 
 void print_float_mat(const float *A, const int numRow, const int numCol, const int lda) 
