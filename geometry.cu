@@ -2016,3 +2016,24 @@ int write_voxels(const int* flag, const int numvox[3], const char* file_path)
         return EXIT_SUCCESS;
     }
 }
+
+/*use axis-aligned cubes to save computing*/
+int DeterPtEdgePlaneRel(const vec3d& pt, const aacb3d& cb, const int i, const int a[2])
+{
+    /*determines if a point is outside a plane defined by the edge of a cube
+     pt: the point
+     cb: the cube
+     i: the index of the base in the same direction of the edge
+     a: an array describing the specific edge*/
+    double temp = 0;
+    for(int j=0;j<2;j++) {
+        temp += (1-2*a[j])*(pt.coords[(i+j+1)%3]-cb.cnr.coords[(i+j+1)%3]-cb.len*a[j]);
+    }
+    
+    if(temp<0) {
+        return 0;
+    }
+    else {
+        return 1;
+    }
+}

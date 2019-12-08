@@ -71,6 +71,9 @@ __host__ __device__ bool IntvlIntvlOvlp(const intvl2d intvl1, const intvl2d intv
 
 __host__ __device__ bool AaRectAaRectOvlp(const aarect2d rect1, const aarect2d rect2);
 
+__host__ __device__ int DeterPtEdgePlaneRel(const vec3d& pt, const aacb3d& cb, const int i, 
+        const int a[2]);
+
 /*get the minimum corner of a 3D rectangle*/
 __host__ __device__ vec3d GetMin(const aarect3d& rect);
 
