@@ -67,12 +67,32 @@ __host__ __device__ int DeterLnSegTriRel(const lnseg3d& lnSeg, const tri_dbl& tr
 /*determines the intersection between a triangle and a cube*/
 __host__ __device__ int DeterTriCubeInt(const tri_dbl& tri, const aacb3d& cb);
 
+__host__ __device__ int DeterTriAaCbRel(const tri3d& tri, const aacb3d& cb);
+
 __host__ __device__ bool IntvlIntvlOvlp(const intvl2d intvl1, const intvl2d intvl2);
 
 __host__ __device__ bool AaRectAaRectOvlp(const aarect2d rect1, const aarect2d rect2);
 
 __host__ __device__ int DeterPtEdgePlaneRel(const vec3d& pt, const aacb3d& cb, const int i, 
         const int a[2]);
+
+__host__ __device__ int DeterTriEdgePlaneRel(const tri3d& tri, const aacb3d& cb, 
+        const int i, const int a[2]);
+
+__host__ __device__ int DeterTriCubeEdgePlaneRel(const tri3d& tri, const aacb3d& cb);
+
+__host__ __device__ int DeterPtVtxPlaneRel(const vec3d& pt, const aacb3d& cb, const int a[3]);
+
+__host__ __device__ int DeterTriVtxPlaneRel(const tri3d& tri, const aacb3d& cb, const int a[3]);
+
+__host__ __device__ int DeterTriCubeVtxPlaneRel(const tri3d& tri, const aacb3d& cb);
+
+__host__ __device__ int DeterPtAaCbRel(const vec3d& pt, const aacb3d& cb);
+
+__host__ __device__ int DeterLnSetAaCbFaceRel(const lnseg3d& lsg, const aacb3d& cb, 
+        const int i, const double c);
+
+__host__ __device__ int DeterTriAaCbRel(const tri3d& tri, const aacb3d& cb);
 
 /*get the minimum corner of a 3D rectangle*/
 __host__ __device__ vec3d GetMin(const aarect3d& rect);

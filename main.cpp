@@ -24,17 +24,19 @@ int main(int argc, char *argv[])
     
     SetHostBases();
     HOST_CALL(CopyBasesToConstant());
-    vec3d pt = {0.5,-1,-1};
+    tri3d tri;
+    tri.nod[0] = {0.1,0,0};
+    tri.nod[1] = {0,-0.1,0};
+    tri.nod[2] = {0,0,-0.1};
     aacb3d cb;
     cb.cnr = {0,0,0};
     cb.len = 1.0;
-    int a[2] = {0,0};
-    int rel = DeterPtEdgePlaneRel(pt,cb,0,a);
-    if(rel==1) {
-        printf("inside\n");
+    int rel = DeterTriCubeVtxPlaneRel(tri,cb);
+    if(rel==0) {
+        printf("separated\n");
     }
     else {
-        printf("outside\n");
+        printf("not separated\n");
     }
     CUDA_CALL(cudaDeviceReset());
     return EXIT_SUCCESS;

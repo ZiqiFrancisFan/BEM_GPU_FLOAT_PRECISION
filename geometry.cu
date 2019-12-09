@@ -1144,7 +1144,7 @@ __global__ void TestTrisCbsInt(const tri3d* tri, const int numTri, const aacb3d*
     int idx_y = blockIdx.y*blockDim.y+threadIdx.y; // cube index
     
     if(idx_x < numTri && idx_y < numCb) {
-        int rel = DeterTriCubeInt(tri[idx_x],cb[idx_y]);
+        int rel = DeterTriAaCbRel(tri[idx_x],cb[idx_y]);
         atomicAdd(&flag[idx_y],rel);
     }
 }
@@ -2020,11 +2020,14 @@ int write_voxels(const int* flag, const int numvox[3], const char* file_path)
 /*use axis-aligned cubes to save computing*/
 int DeterPtEdgePlaneRel(const vec3d& pt, const aacb3d& cb, const int i, const int a[2])
 {
-    /*determines if a point is outside a plane defined by the edge of a cube
+    /*determines if a point is outside a plane defined by the edge of an axis-aligned cube
      pt: the point
      cb: the cube
      i: the index of the base in the same direction of the edge
-     a: an array describing the specific edge*/
+     a: an array describing the specific edge
+     return: 
+     1: inside
+     0: outside*/
     double temp = 0;
     for(int j=0;j<2;j++) {
         temp += (1-2*a[j])*(pt.coords[(i+j+1)%3]-cb.cnr.coords[(i+j+1)%3]-cb.len*a[j]);
@@ -2037,3 +2040,382 @@ int DeterPtEdgePlaneRel(const vec3d& pt, const aacb3d& cb, const int i, const in
         return 1;
     }
 }
+
+int DeterTriEdgePlaneRel(const tri3d& tri, const aacb3d& cb, const int i, const int a[2])
+{
+    /*determines all three points are outside an edge plane of an axis-aligned cube
+     tri: the triangle
+     cb: the axis-aligned cube
+     i: the index of the base in the same direction of the edge
+     a: an array describing the specific edge
+     return:
+     1: not all of them are outside the edge plane
+     0: all of the nodes are outside the edge plane*/
+    int rel;
+    for(int k=0;k<3;k++) {
+        rel = DeterPtEdgePlaneRel(tri.nod[k],cb,i,a);
+        if(rel==1) {
+            return 1;
+        }
+    }
+    return 0;
+}
+
+int DeterTriCubeEdgePlaneRel(const tri3d& tri, const aacb3d& cb)
+{
+    /*determines if a cube is separated by any edge plane from an axis-aligned cube
+     return:
+     1: not separated
+     0: separated*/
+    
+    int rel, a[2];
+    for(int i=0;i<3;i++) {
+        for(int j=0;j<2;j++) {
+            a[0] = j;
+            for(int k=0;k<2;k++) {
+                a[1] = k;
+                rel = DeterTriEdgePlaneRel(tri,cb,i,a);
+                if(rel==0) {
+                    return 0;
+                }
+            }
+        }
+    }
+    return 1;
+}
+
+int DeterPtVtxPlaneRel(const vec3d& pt, const aacb3d& cb, const int a[3])
+{
+    /*return:
+     0: outside
+     1: inside*/
+    double temp = 0;
+    for(int i=0;i<3;i++) {
+        temp += (1-2*a[i])*(pt.coords[i]-cb.cnr.coords[i]-cb.len*a[i]);
+    }
+    if(temp<0) {
+        return 0;
+    }
+    else {
+        return 1;
+    }
+}
+
+int DeterTriVtxPlaneRel(const tri3d& tri, const aacb3d& cb, const int a[3])
+{
+    /*return:
+     0: all three nodes are outside the plane
+     1: at least one node is inside*/
+    
+    int rel;
+    for(int i=0;i<3;i++) {
+        rel = DeterPtVtxPlaneRel(tri.nod[i],cb,a);
+        if(rel==1) {
+            return 1;
+        }
+    }
+    return 0;
+}
+
+int DeterTriCubeVtxPlaneRel(const tri3d& tri, const aacb3d& cb)
+{
+    /*return:
+     0: the triangle and the cube are well separated by a vertex plane
+     1: the triangle and the cube are not well separated by a vertex plane*/
+    
+    int rel, a[3];
+    for(int i=0;i<2;i++) {
+        a[0] = i;
+        for(int j=0;j<2;j++) {
+            a[1] = j;
+            for(int k=0;k<2;k++) {
+                a[2] = k;
+                rel = DeterTriVtxPlaneRel(tri,cb,a);
+                if(rel==0) {
+                    return 0;
+                }
+            }
+        }
+    }
+    return 1;
+}
+
+int DeterPtAaCbRel(const vec3d& pt, const aacb3d& cb)
+{
+    /*return:
+     1: in the cube
+     0: outside the cube*/
+    for(int i = 0;i<3;i++) {
+        if(pt.coords[i] < cb.cnr.coords[i] || pt.coords[i]>cb.cnr.coords[i]+cb.len) {
+            return 0;
+        }
+    }
+    return 1;
+}
+
+#ifdef __CUDA_ARCH__
+int DeterTriAaCbRel(const tri3d& tri, const aacb3d& cb)
+{
+    /*this function determines if a triangle intersects with a cube
+     tri: an triangle
+     cb: a cube
+     return: 
+     1: intersection
+     0: no intersection*/
+    
+    //test nodes of the triangle against the cube
+    int rel = 0;
+    for(int i=0;i<3;i++) {
+        rel = DeterPtAaCbRel(tri.nod[i],cb);
+        if(rel==1) {
+            // node i is in the cube, thus the cube is occupied
+            return 1;
+        }
+    }
+    
+    //test separating planes
+    rel = DeterTriCubeEdgePlaneRel(tri,cb);
+    if(rel==0) {
+        return 0;
+    }
+    
+    rel = DeterTriCubeVtxPlaneRel(tri,cb);
+    if(rel==0) {
+        return 0;
+    }
+    
+    //test the intersection between edges of the triangle and the six faces of the cube
+    lnseg3d triEdge[3];
+    quad_dbl cbFace[6];
+    lnseg3d cbDiag[4];
+    
+    //set up translation vectors
+    vec3d dir_x = scaVecMul(cb.len,BASES[0]), dir_y = scaVecMul(cb.len,BASES[1]), 
+            dir_z = scaVecMul(cb.len,BASES[2]);
+    
+    //set the edges, faces and diagonals
+    for(int i=0;i<3;i++) {
+        triEdge[i].nod[0] = tri.nod[i];
+        triEdge[i].nod[1] = tri.nod[(i+1)%3];
+    }
+    
+    for(int i=0;i<6;i++) {
+        vec3d pt;
+        switch(i) {
+            case 0: //bottom x-y plane
+                pt = cb.cnr;
+                cbFace[i].nod[0] = pt;
+                cbFace[i].nod[1] = vecAdd(cbFace[i].nod[0],dir_x);
+                cbFace[i].nod[2] = vecAdd(cbFace[i].nod[1],dir_y);
+                cbFace[i].nod[3] = vecAdd(cbFace[i].nod[2],scaVecMul(-1,dir_x));
+                break;
+            case 1: //up x-y plane
+                pt = vecAdd(pt,dir_z);
+                cbFace[i].nod[0] = pt;
+                cbFace[i].nod[1] = vecAdd(cbFace[i].nod[0],dir_x);
+                cbFace[i].nod[2] = vecAdd(cbFace[i].nod[1],dir_y);
+                cbFace[i].nod[3] = vecAdd(cbFace[i].nod[2],scaVecMul(-1,dir_x));
+                break;
+            case 2: //left y-z plane
+                pt = cb.cnr;
+                cbFace[i].nod[0] = pt;
+                cbFace[i].nod[1] = vecAdd(cbFace[i].nod[0],dir_x);
+                cbFace[i].nod[2] = vecAdd(cbFace[i].nod[1],dir_z);
+                cbFace[i].nod[3] = vecAdd(cbFace[i].nod[2],scaVecMul(-1,dir_x));
+                break;
+            case 3: //right y-z plane
+                pt = vecAdd(cb.cnr,dir_y);
+                cbFace[i].nod[0] = pt;
+                cbFace[i].nod[1] = vecAdd(cbFace[i].nod[0],dir_x);
+                cbFace[i].nod[2] = vecAdd(cbFace[i].nod[1],dir_z);
+                cbFace[i].nod[3] = vecAdd(cbFace[i].nod[2],scaVecMul(-1,dir_x));
+                break;
+            case 4: //back z-x plane
+                pt = cb.cnr;
+                cbFace[i].nod[0] = pt;
+                cbFace[i].nod[1] = vecAdd(cbFace[i].nod[0],dir_y);
+                cbFace[i].nod[2] = vecAdd(cbFace[i].nod[1],dir_z);
+                cbFace[i].nod[3] = vecAdd(cbFace[i].nod[2],scaVecMul(-1,dir_y));
+                break;
+            case 5: //front z-x plane
+                pt = vecAdd(cb.cnr,dir_x);
+                cbFace[i].nod[0] = pt;
+                cbFace[i].nod[1] = vecAdd(cbFace[i].nod[0],dir_y);
+                cbFace[i].nod[2] = vecAdd(cbFace[i].nod[1],dir_z);
+                cbFace[i].nod[3] = vecAdd(cbFace[i].nod[2],scaVecMul(-1,dir_y));
+                break;
+            default:
+                printf("Should not enter this.\n");
+        }
+    }
+    
+    // first diagnonal
+    cbDiag[0].nod[0] = cb.cnr;
+    cbDiag[0].nod[1] = vecAdd(vecAdd(vecAdd(cbDiag[0].nod[0],dir_x),dir_y),dir_z);
+    
+    // second diagnonal
+    cbDiag[1].nod[0] = vecAdd(cbDiag[0].nod[0],dir_x);
+    cbDiag[1].nod[1] = vecAdd(vecAdd(vecAdd(cbDiag[1].nod[0],dir_y),scaVecMul(-1,dir_x)),dir_z);
+    
+    // third diagnoal
+    cbDiag[2].nod[0] = vecAdd(cbDiag[1].nod[0],dir_y);
+    cbDiag[2].nod[1] = vecAdd(vecAdd(vecAdd(cbDiag[2].nod[0],scaVecMul(-1,dir_x)),scaVecMul(-1,dir_y)),dir_z);
+    
+    // fourth diagonal
+    cbDiag[3].nod[0] = vecAdd(cbDiag[2].nod[0],scaVecMul(-1,dir_x));
+    cbDiag[3].nod[1] = vecAdd(vecAdd(vecAdd(cbDiag[3].nod[0],scaVecMul(-1,dir_y)),dir_x),dir_z);
+    
+    // determine if any of the three edges of the triangle intersects the faces;
+    //printf("Entered diagonal test.\n");
+    for(int i=0;i<3;i++) {
+        for(int j=0;j<6;j++) {
+            rel = DeterLnSegQuadRel(triEdge[i],cbFace[j]);
+            if(rel==1) {
+                return 1;
+            }
+        }
+    }
+    
+    for(int i=0;i<4;i++) {
+        rel = DeterLnSegTriRel(cbDiag[i],tri);
+        if(rel==1) {
+            return 1;
+        }
+    }
+    
+    return 0;
+}
+#else
+
+int DeterTriAaCbRel(const tri3d& tri, const aacb3d& cb)
+{
+    /*this function determines if a triangle intersects with a cube
+     tri: an triangle
+     cb: a cube
+     return: 
+     1: intersection
+     0: no intersection*/
+    
+    //test nodes of the triangle against the cube
+    int rel = 0;
+    for(int i=0;i<3;i++) {
+        rel = DeterPtAaCbRel(tri.nod[i],cb);
+        if(rel==1) {
+            // node i is in the cube, thus the cube is occupied
+            return 1;
+        }
+    }
+    
+    //test separating planes
+    rel = DeterTriCubeEdgePlaneRel(tri,cb);
+    if(rel==0) {
+        return 0;
+    }
+    
+    rel = DeterTriCubeVtxPlaneRel(tri,cb);
+    if(rel==0) {
+        return 0;
+    }
+    
+    //test the intersection between edges of the triangle and the six faces of the cube
+    lnseg3d triEdge[3];
+    quad_dbl cbFace[6];
+    lnseg3d cbDiag[4];
+    
+    //set up translation vectors
+    vec3d dir_x = scaVecMul(cb.len,bases[0]), dir_y = scaVecMul(cb.len,bases[1]), 
+            dir_z = scaVecMul(cb.len,bases[2]);
+    
+    //set the edges, faces and diagonals
+    for(int i=0;i<3;i++) {
+        triEdge[i].nod[0] = tri.nod[i];
+        triEdge[i].nod[1] = tri.nod[(i+1)%3];
+    }
+    
+    for(int i=0;i<6;i++) {
+        vec3d pt;
+        switch(i) {
+            case 0: //bottom x-y plane
+                pt = cb.cnr;
+                cbFace[i].nod[0] = pt;
+                cbFace[i].nod[1] = vecAdd(cbFace[i].nod[0],dir_x);
+                cbFace[i].nod[2] = vecAdd(cbFace[i].nod[1],dir_y);
+                cbFace[i].nod[3] = vecAdd(cbFace[i].nod[2],scaVecMul(-1,dir_x));
+                break;
+            case 1: //up x-y plane
+                pt = vecAdd(pt,dir_z);
+                cbFace[i].nod[0] = pt;
+                cbFace[i].nod[1] = vecAdd(cbFace[i].nod[0],dir_x);
+                cbFace[i].nod[2] = vecAdd(cbFace[i].nod[1],dir_y);
+                cbFace[i].nod[3] = vecAdd(cbFace[i].nod[2],scaVecMul(-1,dir_x));
+                break;
+            case 2: //left y-z plane
+                pt = cb.cnr;
+                cbFace[i].nod[0] = pt;
+                cbFace[i].nod[1] = vecAdd(cbFace[i].nod[0],dir_x);
+                cbFace[i].nod[2] = vecAdd(cbFace[i].nod[1],dir_z);
+                cbFace[i].nod[3] = vecAdd(cbFace[i].nod[2],scaVecMul(-1,dir_x));
+                break;
+            case 3: //right y-z plane
+                pt = vecAdd(cb.cnr,dir_y);
+                cbFace[i].nod[0] = pt;
+                cbFace[i].nod[1] = vecAdd(cbFace[i].nod[0],dir_x);
+                cbFace[i].nod[2] = vecAdd(cbFace[i].nod[1],dir_z);
+                cbFace[i].nod[3] = vecAdd(cbFace[i].nod[2],scaVecMul(-1,dir_x));
+                break;
+            case 4: //back z-x plane
+                pt = cb.cnr;
+                cbFace[i].nod[0] = pt;
+                cbFace[i].nod[1] = vecAdd(cbFace[i].nod[0],dir_y);
+                cbFace[i].nod[2] = vecAdd(cbFace[i].nod[1],dir_z);
+                cbFace[i].nod[3] = vecAdd(cbFace[i].nod[2],scaVecMul(-1,dir_y));
+                break;
+            case 5: //front z-x plane
+                pt = vecAdd(cb.cnr,dir_x);
+                cbFace[i].nod[0] = pt;
+                cbFace[i].nod[1] = vecAdd(cbFace[i].nod[0],dir_y);
+                cbFace[i].nod[2] = vecAdd(cbFace[i].nod[1],dir_z);
+                cbFace[i].nod[3] = vecAdd(cbFace[i].nod[2],scaVecMul(-1,dir_y));
+                break;
+            default:
+                printf("Should not enter this.\n");
+        }
+    }
+    
+    // first diagnonal
+    cbDiag[0].nod[0] = cb.cnr;
+    cbDiag[0].nod[1] = vecAdd(vecAdd(vecAdd(cbDiag[0].nod[0],dir_x),dir_y),dir_z);
+    
+    // second diagnonal
+    cbDiag[1].nod[0] = vecAdd(cbDiag[0].nod[0],dir_x);
+    cbDiag[1].nod[1] = vecAdd(vecAdd(vecAdd(cbDiag[1].nod[0],dir_y),scaVecMul(-1,dir_x)),dir_z);
+    
+    // third diagnoal
+    cbDiag[2].nod[0] = vecAdd(cbDiag[1].nod[0],dir_y);
+    cbDiag[2].nod[1] = vecAdd(vecAdd(vecAdd(cbDiag[2].nod[0],scaVecMul(-1,dir_x)),scaVecMul(-1,dir_y)),dir_z);
+    
+    // fourth diagonal
+    cbDiag[3].nod[0] = vecAdd(cbDiag[2].nod[0],scaVecMul(-1,dir_x));
+    cbDiag[3].nod[1] = vecAdd(vecAdd(vecAdd(cbDiag[3].nod[0],scaVecMul(-1,dir_y)),dir_x),dir_z);
+    
+    // determine if any of the three edges of the triangle intersects the faces;
+    //printf("Entered diagonal test.\n");
+    for(int i=0;i<3;i++) {
+        for(int j=0;j<6;j++) {
+            rel = DeterLnSegQuadRel(triEdge[i],cbFace[j]);
+            if(rel==1) {
+                return 1;
+            }
+        }
+    }
+    
+    for(int i=0;i<4;i++) {
+        rel = DeterLnSegTriRel(cbDiag[i],tri);
+        if(rel==1) {
+            return 1;
+        }
+    }
+    
+    return 0;
+}
+#endif
