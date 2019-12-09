@@ -21,6 +21,10 @@ __constant__ float INTPT[INTORDER];
 
 __constant__ float INTWGT[INTORDER];
 
+#ifndef NUM_EXTRAP_PER_LAUNCH
+#define NUM_EXTRAP_PER_LAUNCH 5120
+#endif
+
 void vecd2f(const vec3d* vec, const int len, vec3f* vecf)
 {
     for(int i=0;i<len;i++) {
@@ -2088,9 +2092,9 @@ gsl_complex rigid_sphere_monopole(const double wavNum, const double strength, co
     return result;
 }
 
-int GenFldUsingBEM(const vec3f* nod, const int numNod, const tri_elem* elem, const int numElem,
+int GenerateFieldUsingBEM(const vec3f* nod, const int numNod, const tri_elem* elem, const int numElem,
         const vec3f* chief, const int numCHIEF, const float wavNum, const char* src_type, 
-        const vec3f* src_loc, const float* mag, const int numSrc, const vec3f* extrap_pt, 
+        const vec3f* src_loc, const float* mag, const int numSrc, const vec3f* pt_extrap, 
         const int numExtrap, cuFloatComplex* prsr)
 {
     /*generate acoustic fields using BEM
@@ -2105,6 +2109,10 @@ int GenFldUsingBEM(const vec3f* nod, const int numNod, const tri_elem* elem, con
      extrap_pt: extrapolation points
      numExtrap: number of extrapolation points
      prsr: acoustic fields, of length numSrc*numExtrap*/
+    if(strcmp(src_type,"point")!=0 && strcmp(src_type,"monopole")!=0) {
+        printf("No valid source type provided!\n");
+        return EXIT_FAILURE;
+    }
     
     tri_elem *elem_d;
     CUDA_CALL(cudaMalloc(&elem_d,numElem*sizeof(tri_elem)));
@@ -2124,18 +2132,149 @@ int GenFldUsingBEM(const vec3f* nod, const int numNod, const tri_elem* elem, con
     cuFloatComplex *B = (cuFloatComplex*)malloc((numNod+numCHIEF)*numSrc*sizeof(cuFloatComplex));
     memset(B,0,(numNod+numCHIEF)*numSrc*sizeof(cuFloatComplex));
     
-    if(strcmp(src_type,"point")==0) {
+    if(strcmp(src_type,"point")==0) { //point source used
         for(int i=0;i<numNod+numCHIEF;i++) 
         {
             for(int j=0;j<numSrc;j++) 
             {
                 if(i<numNod)
                     //B[IDXC0(i,j,ldb)] = ptSrc(k,STRENGTH,src[j],nod[i]);
-                    B[IDXC0(i,j,ldb)] = ptSrc(wavNum,mag[j],src_loc[j],nod[i]);
+                    B[IDXC0(i,j,numNod+numCHIEF)] = ptSrc(wavNum,mag[j],src_loc[j],nod[i]);
                 else
                     //B[IDXC0(i,j,ldb)] = ptSrc(k,STRENGTH,src[j],chief[i - numNod]);
-                    B[IDXC0(i,j,ldb)] = ptSrc(wavNum,mag[j],src_loc[j],chief[i-numNod]);
+                    B[IDXC0(i,j,numNod+numCHIEF)] = ptSrc(wavNum,mag[j],src_loc[j],chief[i-numNod]);
             }
         }
     }
+    else { //monopole source used
+        for(int i=0;i<numNod+numCHIEF;i++) 
+        {
+            for(int j=0;j<numSrc;j++) 
+            {
+                if(i<numNod)
+                    //B[IDXC0(i,j,ldb)] = ptSrc(k,STRENGTH,src[j],nod[i]);
+                    B[IDXC0(i,j,numNod+numCHIEF)] = mpSrc(wavNum,mag[j],src_loc[j],nod[i]);
+                else
+                    //B[IDXC0(i,j,ldb)] = ptSrc(k,STRENGTH,src[j],chief[i - numNod]);
+                    B[IDXC0(i,j,numNod+numCHIEF)] = mpSrc(wavNum,mag[j],src_loc[j],chief[i-numNod]);
+            }
+        }
+    }
+    
+    // copy A and B to device memory
+    cuFloatComplex *A_d, *B_d;
+    CUDA_CALL(cudaMalloc(&A_d,(numNod+numCHIEF)*numNod*sizeof(cuFloatComplex)));
+    CUDA_CALL(cudaMemcpy(A_d,A,(numNod+numCHIEF)*numNod*sizeof(cuFloatComplex),cudaMemcpyHostToDevice));
+    
+    CUDA_CALL(cudaMalloc(&B_d,(numNod+numCHIEF)*numSrc*sizeof(cuFloatComplex)));
+    CUDA_CALL(cudaMemcpy(B_d,B,(numNod+numCHIEF)*numSrc*sizeof(cuFloatComplex),cudaMemcpyHostToDevice));
+    
+    // x dimension represents points and y dimension represents elements
+    int numBlock_pt, width_pt = 16, numBlock_el, width_el = 16;
+    numBlock_pt = (numNod+numCHIEF+width_pt-1)/width_pt;
+    numBlock_el = (numElem+width_el-1)/width_el;
+    dim3 gridLayout, blockLayout;
+    gridLayout.x = numBlock_pt;
+    gridLayout.y = numBlock_el;
+    
+    blockLayout.x = width_pt;
+    blockLayout.y = width_el;
+    
+    atomicPtsElems_nsgl<<<gridLayout,blockLayout>>>(wavNum,pt_d,numNod,0,numNod+numCHIEF-1,
+            elem_d,numElem,A_d,numNod+numCHIEF,B_d,numSrc,numNod+numCHIEF);
+    atomicPtsElems_sgl<<<numBlock_el,width_el>>>(wavNum,pt_d,elem_d,numElem,A_d,numNod+numCHIEF,
+            B_d,numSrc,numNod+numCHIEF);
+    
+    // solve the system using cusolver
+    
+    // create a handle for cusolver
+    cusolverDnHandle_t cusolverH = NULL;
+    CUSOLVER_CALL(cusolverDnCreate(&cusolverH));
+    
+    // A = QR
+    int lwork;
+    CUSOLVER_CALL(cusolverDnCgeqrf_bufferSize(cusolverH,numNod+numCHIEF,numNod,A_d
+            ,numNod+numCHIEF,&lwork));
+    
+    cuFloatComplex *workspace_d;
+    CUDA_CALL(cudaMalloc(&workspace_d,lwork*sizeof(cuFloatComplex)));
+    cuFloatComplex *tau_d;
+    CUDA_CALL(cudaMalloc(&tau_d,(numNod+numCHIEF)*sizeof(cuFloatComplex)));
+    int *deviceInfo_d, deviceInfo;
+    CUDA_CALL(cudaMalloc(&deviceInfo_d,sizeof(int)));
+    
+    
+    CUSOLVER_CALL(cusolverDnCgeqrf(cusolverH,numNod+numCHIEF,numNod,A_d,numNod+numCHIEF,
+            tau_d,workspace_d,lwork,deviceInfo_d));
+    CUDA_CALL(cudaMemcpy(&deviceInfo,deviceInfo_d,sizeof(int),cudaMemcpyDeviceToHost));
+    
+    //B = (Q^H)*B
+    CUSOLVER_CALL(cusolverDnCunmqr(cusolverH,CUBLAS_SIDE_LEFT,CUBLAS_OP_C,numNod+numCHIEF,numSrc,
+            numNod,A_d,numNod+numCHIEF,tau_d,B_d,numNod+numCHIEF,workspace_d,lwork,deviceInfo_d));
+    CUDA_CALL(cudaMemcpy(&deviceInfo,deviceInfo_d,sizeof(int),cudaMemcpyDeviceToHost));
+    
+    //Solve Rx = B
+    cuFloatComplex alpha = make_cuFloatComplex(1,0);
+    cublasHandle_t cublasH;
+    CUBLAS_CALL(cublasCreate_v2(&cublasH));
+    CUBLAS_CALL(cublasCtrsm_v2(cublasH,CUBLAS_SIDE_LEFT,CUBLAS_FILL_MODE_UPPER,
+            CUBLAS_OP_N,CUBLAS_DIAG_NON_UNIT,numNod,numSrc,&alpha,A_d,numNod+numCHIEF,B_d,numNod+numCHIEF));
+    //CUDA_CALL(cudaMemcpy(B,B_d,(numNod+numCHIEF)*numSrc*sizeof(cuFloatComplex),cudaMemcpyDeviceToHost));
+    
+    //release memory
+    CUDA_CALL(cudaFree(A_d));
+    //CUDA_CALL(cudaFree(B_d));
+    CUDA_CALL(cudaFree(tau_d));
+    CUDA_CALL(cudaFree(workspace_d));
+    CUDA_CALL(cudaFree(deviceInfo_d));
+    CUBLAS_CALL(cublasDestroy_v2(cublasH));
+    CUSOLVER_CALL(cusolverDnDestroy(cusolverH));
+    //CUDA_CALL(cudaFree(elem_d));
+    //CUDA_CALL(cudaFree(pt_d));
+    free(A);
+    
+    // start extrapolation.
+    int numExtrapGroup = (numExtrap+NUM_EXTRAP_PER_LAUNCH-1)/NUM_EXTRAP_PER_LAUNCH;
+    int crrNumExtrap, width_extrap = 32, numBlock_extrap;
+    
+    // copy extrapolation points to GPU
+    vec3f *pt_extrap_d;
+    CUDA_CALL(cudaMalloc(&pt_extrap_d,numExtrap*sizeof(vec3f)));
+    CUDA_CALL(cudaMemcpy(pt_extrap_d,pt_extrap,numExtrap*sizeof(vec3f),cudaMemcpyHostToDevice));
+    
+    // allocate memory for pressure array
+    cuFloatComplex *prsr_d;
+    CUDA_CALL(cudaMalloc(&prsr_d,NUM_EXTRAP_PER_LAUNCH*sizeof(cuFloatComplex)));
+    
+    for(int i=0;i<numSrc;i++) {
+        for(int j=0;j<numExtrapGroup;j++) {
+            if(j<numExtrap-1) {
+                crrNumExtrap = NUM_EXTRAP_PER_LAUNCH;
+            }
+            else {
+                crrNumExtrap = numExtrap-j*NUM_EXTRAP_PER_LAUNCH;
+            }
+            numBlock_extrap = (crrNumExtrap+width_extrap-1)/width_extrap;
+            if(strcmp(src_type,"point")==0) {
+                extrap_pt_sgl_src<<<numBlock_extrap,width_extrap>>>(wavNum,&pt_extrap_d[j*NUM_EXTRAP_PER_LAUNCH],
+                        crrNumExtrap,elem_d,numElem,pt_d,&B_d[IDXC0(0,i,numNod+numCHIEF)],
+                        mag[i],src_loc[i],prsr_d);
+            }
+            else {
+                extrap_mp_sgl_src<<<numBlock_extrap,width_extrap>>>(wavNum,&pt_extrap_d[j*NUM_EXTRAP_PER_LAUNCH],
+                        crrNumExtrap,elem_d,numElem,pt_d,&B_d[IDXC0(0,i,numNod+numCHIEF)],
+                        mag[i],src_loc[i],prsr_d);
+            }
+            CUDA_CALL(cudaMemcpy(&prsr[i*numExtrap+j*NUM_EXTRAP_PER_LAUNCH],prsr_d,crrNumExtrap*sizeof(cuFloatComplex),
+                    cudaMemcpyDeviceToHost));
+        }
+    }
+    
+    CUDA_CALL(cudaFree(pt_d));
+    CUDA_CALL(cudaFree(elem_d));
+    CUDA_CALL(cudaFree(prsr_d));
+    CUDA_CALL(cudaFree(pt_extrap_d));
+    CUDA_CALL(cudaFree(B_d));
+    
+    return EXIT_SUCCESS;
 }
