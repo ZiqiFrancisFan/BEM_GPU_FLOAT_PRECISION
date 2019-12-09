@@ -75,14 +75,15 @@ int main(int argc, char *argv[])
     float wavNum = 2*PI*f/SPEED_SOUND;
     
     double rs = 0.5, a = 0.1;
-    vec3d ev_pt = {1.2,1.2,0.1};
-    vec3f ev_pt_f = {1.2,1.2,0.1};
+    vec3d ev_pt = {1.0,1.2,0.1};
+    vec3f ev_pt_f = {1.0,1.2,0.1};
     gsl_complex prs = rigid_sphere_monopole(wavNum,STRENGTH,rs,a,ev_pt);
     
     vec3f src = {0,0,(float)rs};
     cuFloatComplex p;
     cuFloatComplex *B = (cuFloatComplex*)malloc((numPt+NUMCHIEF)*sizeof(cuFloatComplex));
-    HOST_CALL(bemSolver_mp(wavNum,elem,numElem,pt_f,numPt,chief,NUMCHIEF,&src,1,B,numPt+NUMCHIEF));
+    float strength = STRENGTH;
+    HOST_CALL(bemSolver_mp(wavNum,elem,numElem,pt_f,numPt,chief,NUMCHIEF,&src,&strength,1,B,numPt+NUMCHIEF));
     HOST_CALL(field_extrapolation_single_mp(wavNum,&ev_pt_f,1,elem,numElem,pt_f,numPt,B,STRENGTH,{0,0,(float)rs},&p));
     printf("Analytical: (%f,%f), BEM: (%f,%f)\n",GSL_REAL(prs),GSL_IMAG(prs),cuCrealf(p),cuCimagf(p));
     

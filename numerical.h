@@ -265,15 +265,27 @@ int qrSolver(const cuFloatComplex *A, const int mA, const int nA, const int ldA,
 
 int bemSolver_pt(const float k, const tri_elem *elem, const int numElem, 
         const vec3f *nod, const int numNod, const vec3f *chief, const int numCHIEF, 
-        const vec3f *src, const int numSrc, cuFloatComplex *B, const int ldb);
+        const vec3f *src, const float* strength, const int numSrc, cuFloatComplex *B, const int ldb);
 
 int bemSolver_dir(const float k, const tri_elem *elem, const int numElem, 
         const vec3f *nod, const int numNod, const vec3f *chief, const int numCHIEF, 
-        const vec3f *dir, const int numSrc, cuFloatComplex *B, const int ldb);
+        const vec3f *dir, const float* strength, const int numSrc, cuFloatComplex *B, const int ldb);
 
 int bemSolver_mp(const float k, const tri_elem *elem, const int numElem, 
         const vec3f *nod, const int numNod, const vec3f *chief, const int numCHIEF, 
-        const vec3f *src, const int numSrc, cuFloatComplex *B, const int ldb);
+        const vec3f *src, const float* strength, const int numSrc, cuFloatComplex *B, const int ldb);
+
+__device__ cuFloatComplex extrapolation_mp(const float wavNum, const vec3f x, 
+        const tri_elem* elem, const int numElem, const vec3f* pt, 
+        const cuFloatComplex* p, const float& strength, const vec3f& src);
+
+__global__ void extrap_mp_sgl_src(const float wavNum, const vec3f* expPt, const int numExpPt,
+        const tri_elem* elem, const int numElem, const vec3f* pt, const cuFloatComplex* p, 
+        const float strength, const vec3f src, cuFloatComplex *p_exp);
+
+__global__ void extrap_mp_multi_src(const float wavNum, const vec3f* pt_extrap, const int numExtrap, 
+        const tri_elem* elem, const int numElem, const vec3f* pt, const cuFloatComplex* B, 
+        const int ldb, const float* strength, const vec3f* src, const int numSrc, cuFloatComplex* prsr);
 
 void computeRigidSphereScattering(const vec3f *pt, const int numPt, const double a, 
         const double r, const double wavNum, const double strength);
