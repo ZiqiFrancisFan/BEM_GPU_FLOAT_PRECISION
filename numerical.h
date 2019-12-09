@@ -156,7 +156,10 @@ while(0)
 #ifndef EPS
 #define EPS 0.000000001
 #endif
-//int genGaussParams(const int n, float *pt, float *wgt);
+
+int genGaussParams(const int n, float *pt, float *wgt);
+
+__host__ void vecd2f(const vec3d* vec, const int len, vec3f* vecf);
 
 int cuGenGaussParams(const int n, float* pt, float* wgt);
 
@@ -291,5 +294,15 @@ int genFields_MultiPtSrcSglObj(const float strength, const float wavNum,
         const tri_elem* elems, const int numElems, const vec3d cnr, const double d, 
         const int level, cuFloatComplex* fields);
 
+gsl_complex rigid_sphere_monopole(const double wavNum, const double strength, const double rs, 
+        const double a, const vec3d y);
+
+int field_extrapolation_single_pt(const float wavNum, const vec3f* expPt, const int numExpPt, 
+        const tri_elem* elem, const int numElem, const vec3f* pt, const int numPt, 
+        const cuFloatComplex* p, const float strength, const vec3f src, cuFloatComplex *pExp);
+
+int field_extrapolation_single_mp(const float wavNum, const vec3f* expPt, const int numExpPt, 
+        const tri_elem* elem, const int numElem, const vec3f* pt, const int numPt, 
+        const cuFloatComplex* p, const float strength, const vec3f src, cuFloatComplex *pExp);
 #endif /* NUMERICAL_H */
 

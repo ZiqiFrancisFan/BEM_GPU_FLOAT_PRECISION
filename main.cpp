@@ -24,6 +24,7 @@ int main(int argc, char *argv[])
     
     SetHostBases();
     HOST_CALL(CopyBasesToConstant());
+    printf("Set bases.\n");
     /*
     int numPt, numElem;
     findNum("./mesh/sphere_100mm_5120.obj",&numPt,&numElem);
@@ -53,22 +54,43 @@ int main(int argc, char *argv[])
     CUDA_CALL(cudaDeviceReset());
     return EXIT_SUCCESS;
      */
+    printf("started main.\n");
     int numPt, numElem;
     findNum("./mesh/sphere_100mm_5120.obj",&numPt,&numElem);
-    rect_coord_dbl *pt = (rect_coord_dbl*)malloc(numPt*sizeof(rect_coord_dbl));
+    vec3d *pt = (vec3d*)malloc(numPt*sizeof(vec3d));
     tri_elem *elem = (tri_elem*)malloc(numElem*sizeof(tri_elem));
     readOBJ("./mesh/sphere_100mm_5120.obj",pt,elem);
     
-    double len = 0.0025;
-    aarect3d sp;
-    sp.cnr = {-0.5,-0.5,-0.5};
-    sp.len[0] = 1.0;
-    sp.len[1] = 1.0;
-    sp.len[2] = 1.0;
-    HOST_CALL(RectSpaceVoxelOnGPU(sp,len,pt,elem,numElem,"./data/vox"));
+    printf("read objects, %d elements, %d points\n",numElem,numPt);
     
+    vec3f *pt_f = (vec3f*)malloc(numPt*sizeof(vec3f));
+    vecd2f(pt,numPt,pt_f);
+    
+    
+    vec3f *chief = (vec3f*)malloc(NUMCHIEF*sizeof(vec3f));
+    HOST_CALL(genCHIEF(pt_f,numPt,elem,numElem,chief,NUMCHIEF));
+    printf("chief generated.\n");
+    
+    float f = 200;
+    float wavNum = 2*PI*f/SPEED_SOUND;
+    
+    double rs = 0.5, a = 0.1;
+    vec3d ev_pt = {1.2,1.2,0.1};
+    vec3f ev_pt_f = {1.2,1.2,0.1};
+    gsl_complex prs = rigid_sphere_monopole(wavNum,STRENGTH,rs,a,ev_pt);
+    
+    vec3f src = {0,0,(float)rs};
+    cuFloatComplex p;
+    cuFloatComplex *B = (cuFloatComplex*)malloc((numPt+NUMCHIEF)*sizeof(cuFloatComplex));
+    HOST_CALL(bemSolver_mp(wavNum,elem,numElem,pt_f,numPt,chief,NUMCHIEF,&src,1,B,numPt+NUMCHIEF));
+    HOST_CALL(field_extrapolation_single_mp(wavNum,&ev_pt_f,1,elem,numElem,pt_f,numPt,B,STRENGTH,{0,0,(float)rs},&p));
+    printf("Analytical: (%f,%f), BEM: (%f,%f)\n",GSL_REAL(prs),GSL_IMAG(prs),cuCrealf(p),cuCimagf(p));
+    
+    free(chief);
+    free(pt_f);
     free(elem);
     free(pt);
+    free(B);
     CUDA_CALL(cudaDeviceReset());
     return EXIT_SUCCESS;
 }

@@ -20,6 +20,15 @@ __constant__ float INTPT[INTORDER];
 
 __constant__ float INTWGT[INTORDER];
 
+void vecd2f(const vec3d* vec, const int len, vec3f* vecf)
+{
+    for(int i=0;i<len;i++) {
+        for(int j=0;j<3;j++) {
+            vecf[i].coords[j] = vec[i].coords[j];
+        }
+    }
+}
+
 int genGaussParams(const int n, float* pt, float* wgt) 
 {
     int i, j;
@@ -543,8 +552,8 @@ bool inBdry(const bool *flag, const int numFlag) {
     }
 }
 
-int genCHIEF(const vec3f *pt, const int numPt, const tri_elem *elem, const int numElem, 
-        vec3f *pCHIEF, const int numCHIEF) {
+int genCHIEF(const vec3f* pt, const int numPt, const tri_elem* elem, const int numElem, 
+        vec3f* pCHIEF, const int numCHIEF) {
     int i, cnt;
     float threshold_inner = 0.0000001;
     float *dist_h = (float*)malloc(numPt*sizeof(float));
@@ -626,6 +635,7 @@ int genCHIEF(const vec3f *pt, const int numPt, const tri_elem *elem, const int n
     CUDA_CALL(cudaFree(elem_d));
     CUDA_CALL(cudaFree(flag_d));
     CUDA_CALL(cudaFree(dist_d));
+    
     return EXIT_SUCCESS;
 }
 
