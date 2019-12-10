@@ -4,6 +4,8 @@
 
 /data/vox*
 
+/data/field*
+
 /doc
 
 *.pdf

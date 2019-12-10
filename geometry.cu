@@ -5,6 +5,7 @@
  */
 #include "geometry.h"
 #include "octree.h"
+#include "mesh.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <float.h>
@@ -1365,11 +1366,11 @@ int RectSpaceVoxelOnGPU(const aarect3d sp, const double len, const vec3d* pt,
         dimsize[i] = floor(sp.len[i]/len);
     }
     totNumCb = dimsize[0]*dimsize[1]*dimsize[2];
-    printf("The size of each dimension determined.\n");
+    //printf("The size of each dimension determined.\n");
     
     int *flag = (int*)malloc(totNumCb*sizeof(int)); //allocate host memory for flags
     memset(flag,0,totNumCb*sizeof(int));
-    printf("Flags initialized.\n");
+    //printf("Flags initialized.\n");
     
     tri3d *tris = (tri3d*)malloc(numElem*sizeof(tri3d)); //allocate memory for triangles
     /*set up the tris array from the mesh*/
@@ -1378,7 +1379,7 @@ int RectSpaceVoxelOnGPU(const aarect3d sp, const double len, const vec3d* pt,
             tris[i].nod[j] = pt[elem[i].nod[j]];
         }
     }
-    printf("Triangles set up.\n");
+    //printf("Triangles set up.\n");
     
     
     int idx;
@@ -1729,7 +1730,7 @@ __global__ void OverlapTrisAARects(const tri3d* tri, const int numTri, const aar
     }
 }
 
-__host__ int RectSpaceVoxelSATOnCPU(const aarect3d sp, const double voxlen, const vec3d* pt, 
+int RectSpaceVoxelSATOnCPU(const aarect3d sp, const double voxlen, const vec3d* pt, 
         const tri_elem* elem, const int numElem, bool* flag)
 {
     /*
@@ -2001,6 +2002,33 @@ int write_voxels(const int* flag, const int numvox[3], const char* file_path)
         for(int i=0;i<numvox[0]*numvox[1]*numvox[2];i++) {
             t = (flag[i]>0) ? 1 : 0;
             status = fprintf(file,"%d ",t);
+            if((i+1)%numvox[0]==0) {
+                status = fprintf(file,"\n");
+            }
+            if((i+1)%(numvox[0]*numvox[1])==0) {
+                status = fprintf(file,"\n");
+            }
+            if(status<0) {
+                printf("Failed to write the %dth line to file\n",i);
+                return EXIT_FAILURE;
+            }
+        }
+        fclose(file);
+        return EXIT_SUCCESS;
+    }
+}
+
+int write_field(const cuFloatComplex* field, const int numvox[3], const char* file_path)
+{
+    FILE *file = fopen(file_path,"w");
+    if(file==NULL) {
+        printf("Failed to open file.\n");
+        return EXIT_FAILURE;
+    }
+    else {
+        int status;
+        for(int i=0;i<numvox[0]*numvox[1]*numvox[2];i++) {
+            status = fprintf(file,"(%f,%f) ",cuCrealf(field[i]),cuCimagf(field[i]));
             if((i+1)%numvox[0]==0) {
                 status = fprintf(file,"\n");
             }

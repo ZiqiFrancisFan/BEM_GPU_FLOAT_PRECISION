@@ -306,6 +306,9 @@ int genFields_MultiPtSrcSglObj(const float strength, const float wavNum,
         const tri_elem* elems, const int numElems, const vec3d cnr, const double d, 
         const int level, cuFloatComplex* fields);
 
+gsl_complex rigid_sphere_point(const double wavNum, const double strength, const double rs, 
+        const double a, const vec3d y);
+
 gsl_complex rigid_sphere_monopole(const double wavNum, const double strength, const double rs, 
         const double a, const vec3d y);
 
@@ -316,5 +319,14 @@ int field_extrapolation_single_pt(const float wavNum, const vec3f* expPt, const 
 int field_extrapolation_single_mp(const float wavNum, const vec3f* expPt, const int numExpPt, 
         const tri_elem* elem, const int numElem, const vec3f* pt, const int numPt, 
         const cuFloatComplex* p, const float strength, const vec3f src, cuFloatComplex *pExp);
+
+int GenerateFieldUsingBEM(const vec3f* nod, const int numNod, const tri_elem* elem, const int numElem,
+        const float wavNum, const char* src_type, const vec3f* src_loc, const float* mag, const int numSrc, 
+        const vec3f* pt_extrap, const int numExtrap, cuFloatComplex* prsr);
+
+int GenerateVoxelField(const char* file_path, const float wavNum, const vec3f* src_loc, 
+        const float* mag, const int numSrc, const aarect3d rect, const double len, 
+        const char* vox_grid_path, const char* field_grid_path);
+
 #endif /* NUMERICAL_H */
 

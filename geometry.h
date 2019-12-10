@@ -130,5 +130,7 @@ __host__ int write_voxels(const bool* flag, const int numvox[3], const char* fil
 
 __host__ int write_voxels(const int* flag, const int numvox[3], const char* file_path);
 
+__host__ int write_field(const cuFloatComplex* field, const int numvox[3], const char* file_path);
+
 #endif /* GEOMETRY_H */
 

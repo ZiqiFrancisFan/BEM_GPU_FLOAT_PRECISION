@@ -6,8 +6,10 @@
 #include "numerical.h"
 #include "octree.h"
 #include "mesh.h"
+#include "geometry.h"
 #include <math_constants.h>
 #include <cusolverDn.h>
+#include <cufft.h>
 #include <float.h>
 #include <string.h>
 
@@ -2093,9 +2095,8 @@ gsl_complex rigid_sphere_monopole(const double wavNum, const double strength, co
 }
 
 int GenerateFieldUsingBEM(const vec3f* nod, const int numNod, const tri_elem* elem, const int numElem,
-        const vec3f* chief, const int numCHIEF, const float wavNum, const char* src_type, 
-        const vec3f* src_loc, const float* mag, const int numSrc, const vec3f* pt_extrap, 
-        const int numExtrap, cuFloatComplex* prsr)
+        const float wavNum, const char* src_type, const vec3f* src_loc, const float* mag, 
+        const int numSrc, const vec3f* pt_extrap, const int numExtrap, cuFloatComplex* prsr)
 {
     /*generate acoustic fields using BEM
      nod: nodes on the mesh
@@ -2114,64 +2115,71 @@ int GenerateFieldUsingBEM(const vec3f* nod, const int numNod, const tri_elem* el
         return EXIT_FAILURE;
     }
     
+    //generate chief points
+    vec3f *chief = (vec3f*)malloc(NUMCHIEF*sizeof(vec3f));
+    HOST_CALL(genCHIEF(nod,numNod,elem,numElem,chief,NUMCHIEF));
+    //printf("Generated chief.\n");
+    
     tri_elem *elem_d;
     CUDA_CALL(cudaMalloc(&elem_d,numElem*sizeof(tri_elem)));
     CUDA_CALL(cudaMemcpy(elem_d,elem,numElem*sizeof(tri_elem),cudaMemcpyHostToDevice));
     
     vec3f *pt_d;
-    CUDA_CALL(cudaMalloc(&pt_d,(numNod+numCHIEF)*sizeof(vec3f)));
+    CUDA_CALL(cudaMalloc(&pt_d,(numNod+NUMCHIEF)*sizeof(vec3f)));
     CUDA_CALL(cudaMemcpy(pt_d,nod,numNod*sizeof(vec3f),cudaMemcpyHostToDevice));
-    CUDA_CALL(cudaMemcpy(pt_d+numNod,chief,numCHIEF*sizeof(vec3f),cudaMemcpyHostToDevice));
+    CUDA_CALL(cudaMemcpy(pt_d+numNod,chief,NUMCHIEF*sizeof(vec3f),cudaMemcpyHostToDevice));
     
-    cuFloatComplex *A = (cuFloatComplex*)malloc((numNod+numCHIEF)*numNod*sizeof(cuFloatComplex));
-    memset(A,0,(numNod+numCHIEF)*numNod*sizeof(cuFloatComplex));
+    free(chief);
+    
+    cuFloatComplex *A = (cuFloatComplex*)malloc((numNod+NUMCHIEF)*numNod*sizeof(cuFloatComplex));
+    memset(A,0,(numNod+NUMCHIEF)*numNod*sizeof(cuFloatComplex));
     for(int i=0;i<numNod;i++) 
     {
-        A[IDXC0(i,i,numNod+numCHIEF)] = make_cuFloatComplex(1,0);
+        A[IDXC0(i,i,numNod+NUMCHIEF)] = make_cuFloatComplex(1,0);
     }
-    cuFloatComplex *B = (cuFloatComplex*)malloc((numNod+numCHIEF)*numSrc*sizeof(cuFloatComplex));
-    memset(B,0,(numNod+numCHIEF)*numSrc*sizeof(cuFloatComplex));
+    cuFloatComplex *B = (cuFloatComplex*)malloc((numNod+NUMCHIEF)*numSrc*sizeof(cuFloatComplex));
+    memset(B,0,(numNod+NUMCHIEF)*numSrc*sizeof(cuFloatComplex));
     
     if(strcmp(src_type,"point")==0) { //point source used
-        for(int i=0;i<numNod+numCHIEF;i++) 
+        for(int i=0;i<numNod+NUMCHIEF;i++) 
         {
             for(int j=0;j<numSrc;j++) 
             {
                 if(i<numNod)
-                    //B[IDXC0(i,j,ldb)] = ptSrc(k,STRENGTH,src[j],nod[i]);
-                    B[IDXC0(i,j,numNod+numCHIEF)] = ptSrc(wavNum,mag[j],src_loc[j],nod[i]);
+                    B[IDXC0(i,j,numNod+NUMCHIEF)] = ptSrc(wavNum,mag[j],src_loc[j],nod[i]);
                 else
-                    //B[IDXC0(i,j,ldb)] = ptSrc(k,STRENGTH,src[j],chief[i - numNod]);
-                    B[IDXC0(i,j,numNod+numCHIEF)] = ptSrc(wavNum,mag[j],src_loc[j],chief[i-numNod]);
+                    B[IDXC0(i,j,numNod+NUMCHIEF)] = ptSrc(wavNum,mag[j],src_loc[j],chief[i-numNod]);
             }
         }
     }
     else { //monopole source used
-        for(int i=0;i<numNod+numCHIEF;i++) 
+        for(int i=0;i<numNod+NUMCHIEF;i++) 
         {
             for(int j=0;j<numSrc;j++) 
             {
                 if(i<numNod)
-                    //B[IDXC0(i,j,ldb)] = ptSrc(k,STRENGTH,src[j],nod[i]);
-                    B[IDXC0(i,j,numNod+numCHIEF)] = mpSrc(wavNum,mag[j],src_loc[j],nod[i]);
+                    B[IDXC0(i,j,numNod+NUMCHIEF)] = mpSrc(wavNum,mag[j],src_loc[j],nod[i]);
                 else
-                    //B[IDXC0(i,j,ldb)] = ptSrc(k,STRENGTH,src[j],chief[i - numNod]);
-                    B[IDXC0(i,j,numNod+numCHIEF)] = mpSrc(wavNum,mag[j],src_loc[j],chief[i-numNod]);
+                    B[IDXC0(i,j,numNod+NUMCHIEF)] = mpSrc(wavNum,mag[j],src_loc[j],chief[i-numNod]);
             }
         }
     }
     
     // copy A and B to device memory
     cuFloatComplex *A_d, *B_d;
-    CUDA_CALL(cudaMalloc(&A_d,(numNod+numCHIEF)*numNod*sizeof(cuFloatComplex)));
-    CUDA_CALL(cudaMemcpy(A_d,A,(numNod+numCHIEF)*numNod*sizeof(cuFloatComplex),cudaMemcpyHostToDevice));
+    CUDA_CALL(cudaMalloc(&A_d,(numNod+NUMCHIEF)*numNod*sizeof(cuFloatComplex)));
+    CUDA_CALL(cudaMemcpy(A_d,A,(numNod+NUMCHIEF)*numNod*sizeof(cuFloatComplex),cudaMemcpyHostToDevice));
     
-    CUDA_CALL(cudaMalloc(&B_d,(numNod+numCHIEF)*numSrc*sizeof(cuFloatComplex)));
-    CUDA_CALL(cudaMemcpy(B_d,B,(numNod+numCHIEF)*numSrc*sizeof(cuFloatComplex),cudaMemcpyHostToDevice));
+    CUDA_CALL(cudaMalloc(&B_d,(numNod+NUMCHIEF)*numSrc*sizeof(cuFloatComplex)));
+    CUDA_CALL(cudaMemcpy(B_d,B,(numNod+NUMCHIEF)*numSrc*sizeof(cuFloatComplex),cudaMemcpyHostToDevice));
+    
+    // A and B not needed on host
+    free(A);
+    free(B);
     
     // x dimension represents points and y dimension represents elements
     int numBlock_pt, width_pt = 16, numBlock_el, width_el = 16;
-    numBlock_pt = (numNod+numCHIEF+width_pt-1)/width_pt;
+    numBlock_pt = (numNod+NUMCHIEF+width_pt-1)/width_pt;
     numBlock_el = (numElem+width_el-1)/width_el;
     dim3 gridLayout, blockLayout;
     gridLayout.x = numBlock_pt;
@@ -2180,10 +2188,10 @@ int GenerateFieldUsingBEM(const vec3f* nod, const int numNod, const tri_elem* el
     blockLayout.x = width_pt;
     blockLayout.y = width_el;
     
-    atomicPtsElems_nsgl<<<gridLayout,blockLayout>>>(wavNum,pt_d,numNod,0,numNod+numCHIEF-1,
-            elem_d,numElem,A_d,numNod+numCHIEF,B_d,numSrc,numNod+numCHIEF);
-    atomicPtsElems_sgl<<<numBlock_el,width_el>>>(wavNum,pt_d,elem_d,numElem,A_d,numNod+numCHIEF,
-            B_d,numSrc,numNod+numCHIEF);
+    atomicPtsElems_nsgl<<<gridLayout,blockLayout>>>(wavNum,pt_d,numNod,0,numNod+NUMCHIEF-1,
+            elem_d,numElem,A_d,numNod+NUMCHIEF,B_d,numSrc,numNod+NUMCHIEF);
+    atomicPtsElems_sgl<<<numBlock_el,width_el>>>(wavNum,pt_d,elem_d,numElem,A_d,numNod+NUMCHIEF,
+            B_d,numSrc,numNod+NUMCHIEF);
     
     // solve the system using cusolver
     
@@ -2193,24 +2201,24 @@ int GenerateFieldUsingBEM(const vec3f* nod, const int numNod, const tri_elem* el
     
     // A = QR
     int lwork;
-    CUSOLVER_CALL(cusolverDnCgeqrf_bufferSize(cusolverH,numNod+numCHIEF,numNod,A_d
-            ,numNod+numCHIEF,&lwork));
+    CUSOLVER_CALL(cusolverDnCgeqrf_bufferSize(cusolverH,numNod+NUMCHIEF,numNod,A_d
+            ,numNod+NUMCHIEF,&lwork));
     
     cuFloatComplex *workspace_d;
     CUDA_CALL(cudaMalloc(&workspace_d,lwork*sizeof(cuFloatComplex)));
     cuFloatComplex *tau_d;
-    CUDA_CALL(cudaMalloc(&tau_d,(numNod+numCHIEF)*sizeof(cuFloatComplex)));
+    CUDA_CALL(cudaMalloc(&tau_d,(numNod+NUMCHIEF)*sizeof(cuFloatComplex)));
     int *deviceInfo_d, deviceInfo;
     CUDA_CALL(cudaMalloc(&deviceInfo_d,sizeof(int)));
     
     
-    CUSOLVER_CALL(cusolverDnCgeqrf(cusolverH,numNod+numCHIEF,numNod,A_d,numNod+numCHIEF,
+    CUSOLVER_CALL(cusolverDnCgeqrf(cusolverH,numNod+NUMCHIEF,numNod,A_d,numNod+NUMCHIEF,
             tau_d,workspace_d,lwork,deviceInfo_d));
     CUDA_CALL(cudaMemcpy(&deviceInfo,deviceInfo_d,sizeof(int),cudaMemcpyDeviceToHost));
     
     //B = (Q^H)*B
-    CUSOLVER_CALL(cusolverDnCunmqr(cusolverH,CUBLAS_SIDE_LEFT,CUBLAS_OP_C,numNod+numCHIEF,numSrc,
-            numNod,A_d,numNod+numCHIEF,tau_d,B_d,numNod+numCHIEF,workspace_d,lwork,deviceInfo_d));
+    CUSOLVER_CALL(cusolverDnCunmqr(cusolverH,CUBLAS_SIDE_LEFT,CUBLAS_OP_C,numNod+NUMCHIEF,numSrc,
+            numNod,A_d,numNod+NUMCHIEF,tau_d,B_d,numNod+NUMCHIEF,workspace_d,lwork,deviceInfo_d));
     CUDA_CALL(cudaMemcpy(&deviceInfo,deviceInfo_d,sizeof(int),cudaMemcpyDeviceToHost));
     
     //Solve Rx = B
@@ -2218,8 +2226,8 @@ int GenerateFieldUsingBEM(const vec3f* nod, const int numNod, const tri_elem* el
     cublasHandle_t cublasH;
     CUBLAS_CALL(cublasCreate_v2(&cublasH));
     CUBLAS_CALL(cublasCtrsm_v2(cublasH,CUBLAS_SIDE_LEFT,CUBLAS_FILL_MODE_UPPER,
-            CUBLAS_OP_N,CUBLAS_DIAG_NON_UNIT,numNod,numSrc,&alpha,A_d,numNod+numCHIEF,B_d,numNod+numCHIEF));
-    //CUDA_CALL(cudaMemcpy(B,B_d,(numNod+numCHIEF)*numSrc*sizeof(cuFloatComplex),cudaMemcpyDeviceToHost));
+            CUBLAS_OP_N,CUBLAS_DIAG_NON_UNIT,numNod,numSrc,&alpha,A_d,numNod+NUMCHIEF,B_d,numNod+NUMCHIEF));
+    //CUDA_CALL(cudaMemcpy(B,B_d,(numNod+NUMCHIEF)*numSrc*sizeof(cuFloatComplex),cudaMemcpyDeviceToHost));
     
     //release memory
     CUDA_CALL(cudaFree(A_d));
@@ -2231,9 +2239,12 @@ int GenerateFieldUsingBEM(const vec3f* nod, const int numNod, const tri_elem* el
     CUSOLVER_CALL(cusolverDnDestroy(cusolverH));
     //CUDA_CALL(cudaFree(elem_d));
     //CUDA_CALL(cudaFree(pt_d));
-    free(A);
+    
+    //printf("Computed surface pressure.\n");
+    
     
     // start extrapolation.
+    //printf("Number of exrapolation points: %d\n",numExtrap);
     int numExtrapGroup = (numExtrap+NUM_EXTRAP_PER_LAUNCH-1)/NUM_EXTRAP_PER_LAUNCH;
     int crrNumExtrap, width_extrap = 32, numBlock_extrap;
     
@@ -2248,21 +2259,22 @@ int GenerateFieldUsingBEM(const vec3f* nod, const int numNod, const tri_elem* el
     
     for(int i=0;i<numSrc;i++) {
         for(int j=0;j<numExtrapGroup;j++) {
-            if(j<numExtrap-1) {
+            if(j<numExtrapGroup-1) {
                 crrNumExtrap = NUM_EXTRAP_PER_LAUNCH;
             }
             else {
                 crrNumExtrap = numExtrap-j*NUM_EXTRAP_PER_LAUNCH;
             }
+            //printf("%dth source, %d points\n",i,crrNumExtrap);
             numBlock_extrap = (crrNumExtrap+width_extrap-1)/width_extrap;
             if(strcmp(src_type,"point")==0) {
                 extrap_pt_sgl_src<<<numBlock_extrap,width_extrap>>>(wavNum,&pt_extrap_d[j*NUM_EXTRAP_PER_LAUNCH],
-                        crrNumExtrap,elem_d,numElem,pt_d,&B_d[IDXC0(0,i,numNod+numCHIEF)],
+                        crrNumExtrap,elem_d,numElem,pt_d,&B_d[IDXC0(0,i,numNod+NUMCHIEF)],
                         mag[i],src_loc[i],prsr_d);
             }
             else {
                 extrap_mp_sgl_src<<<numBlock_extrap,width_extrap>>>(wavNum,&pt_extrap_d[j*NUM_EXTRAP_PER_LAUNCH],
-                        crrNumExtrap,elem_d,numElem,pt_d,&B_d[IDXC0(0,i,numNod+numCHIEF)],
+                        crrNumExtrap,elem_d,numElem,pt_d,&B_d[IDXC0(0,i,numNod+NUMCHIEF)],
                         mag[i],src_loc[i],prsr_d);
             }
             CUDA_CALL(cudaMemcpy(&prsr[i*numExtrap+j*NUM_EXTRAP_PER_LAUNCH],prsr_d,crrNumExtrap*sizeof(cuFloatComplex),
@@ -2275,6 +2287,56 @@ int GenerateFieldUsingBEM(const vec3f* nod, const int numNod, const tri_elem* el
     CUDA_CALL(cudaFree(prsr_d));
     CUDA_CALL(cudaFree(pt_extrap_d));
     CUDA_CALL(cudaFree(B_d));
+    //printf("Completed extrapolation.\n");
+    return EXIT_SUCCESS;
+}
+
+int GenerateVoxelField(const char* file_path, const float wavNum, const vec3f* src_loc, 
+        const float* mag, const int numSrc, const aarect3d rect, const double len, 
+        const char* vox_grid_path, const char* field_grid_path)
+{
+    int numNod, numElem;
+    findNum(file_path,&numNod,&numElem);
+    vec3d *nod_d = (vec3d*)malloc(numNod*sizeof(vec3d));
+    tri_elem *elem = (tri_elem*)malloc(numElem*sizeof(tri_elem));
+    readOBJ(file_path,nod_d,elem);
+    
+    vec3f *nod_f = (vec3f*)malloc(numNod*sizeof(vec3f));
+    vecd2f(nod_d,numNod,nod_f);
+    
+    int grid_size[3];
+    for(int i=0;i<3;i++) {
+        grid_size[i] = floor(rect.len[i]/len);
+    }
+    
+    vec3f *pt_extrap = (vec3f*)malloc(grid_size[0]*grid_size[1]*grid_size[2]*sizeof(vec3f));
+    vec3f cnr;
+    for(int i=0;i<3;i++) {
+        cnr.coords[i] = rect.cnr.coords[i];
+    }
+    // get the center of each voxel as the evaluation point
+    for(int z=0;z<grid_size[2];z++) {
+        for(int y=0;y<grid_size[1];y++) {
+            for(int x=0;x<grid_size[0];x++) {
+                int idx = z*grid_size[0]*grid_size[1]+y*grid_size[0]+x;
+                pt_extrap[idx].coords[0] = cnr.coords[0]+x*len+len/2;
+                pt_extrap[idx].coords[1] = cnr.coords[1]+y*len+len/2;
+                pt_extrap[idx].coords[2] = cnr.coords[2]+z*len+len/2;
+            }
+        }
+    }
+    HOST_CALL(RectSpaceVoxelOnGPU(rect,len,nod_d,elem,numElem,vox_grid_path));
+    cuFloatComplex *prsr = (cuFloatComplex*)malloc(grid_size[0]*grid_size[1]*grid_size[2]
+            *numSrc*sizeof(cuFloatComplex));
+    HOST_CALL(GenerateFieldUsingBEM(nod_f,numNod,elem,numElem,wavNum,"monopole",
+            src_loc,mag,numSrc,pt_extrap,grid_size[0]*grid_size[1]*grid_size[2],prsr));
+    HOST_CALL(write_field(prsr,grid_size,field_grid_path));
+    
+    free(nod_f);
+    free(nod_d);
+    free(elem);
+    free(prsr);
+    free(pt_extrap);
     
     return EXIT_SUCCESS;
 }
