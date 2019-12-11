@@ -2045,6 +2045,33 @@ int write_field(const cuFloatComplex* field, const int numvox[3], const char* fi
     }
 }
 
+int write_float_grid(const float* field, const int numvox[3], const char* file_path)
+{
+    FILE *file = fopen(file_path,"w");
+    if(file==NULL) {
+        printf("Failed to open file.\n");
+        return EXIT_FAILURE;
+    }
+    else {
+        int status;
+        for(int i=0;i<numvox[0]*numvox[1]*numvox[2];i++) {
+            status = fprintf(file,"%f ",field[i]);
+            if((i+1)%numvox[0]==0) {
+                status = fprintf(file,"\n");
+            }
+            if((i+1)%(numvox[0]*numvox[1])==0) {
+                status = fprintf(file,"\n");
+            }
+            if(status<0) {
+                printf("Failed to write the %dth line to file\n",i);
+                return EXIT_FAILURE;
+            }
+        }
+        fclose(file);
+        return EXIT_SUCCESS;
+    }
+}
+
 /*use axis-aligned cubes to save computing*/
 int DeterPtEdgePlaneRel(const vec3d& pt, const aacb3d& cb, const int i, const int a[2])
 {

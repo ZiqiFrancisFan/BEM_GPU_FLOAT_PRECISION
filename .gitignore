@@ -2,11 +2,9 @@
 
 /figure/*.png
 
-/data/vox*
+/data/*
 
-/data/field*
-
-/doc
+/doc/*
 
 *.pdf
 

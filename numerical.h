@@ -324,9 +324,13 @@ int GenerateFieldUsingBEM(const vec3f* nod, const int numNod, const tri_elem* el
         const float wavNum, const char* src_type, const vec3f* src_loc, const float* mag, const int numSrc, 
         const vec3f* pt_extrap, const int numExtrap, cuFloatComplex* prsr);
 
-int GenerateVoxelField(const char* file_path, const float wavNum, const vec3f* src_loc, 
-        const float* mag, const int numSrc, const aarect3d rect, const double len, 
-        const char* vox_grid_path, const char* field_grid_path);
+int GenerateVoxelField(const char* file_path, const float wavNum, const char* src_type, 
+        const vec3f* src_loc, const float* mag, const int numSrc, const aarect3d rect, 
+        const double len, const char* vox_grid_path, const char* field_grid_path);
+
+int WriteLoudnessGeometry(const char* file_path, const float band[2], const char* src_type, 
+        const float* mag, const vec3f* src_loc, const int numSrc, const aarect3d rect, 
+        const double len, const char* vox_grid_path, const char* field_grid_path);
 
 #endif /* NUMERICAL_H */
 

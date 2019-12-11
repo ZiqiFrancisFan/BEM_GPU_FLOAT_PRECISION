@@ -22,21 +22,25 @@ for i = 1 : dim
 end
 
 folder = '../data/';
-filename = 'field';
+filename = 'loudness0';
 
-format = '(%f,%f) ';
+format = '%f ';
 path = [folder,filename];
 fileID = fopen(path,'r');
 temp = fscanf(fileID,format);
-for i=1:length(temp)/2
-    field(i) = complex(temp(2*i-1),temp(2*i));
-end
 fclose(fileID);
 
+%for i=1:length(temp)/2
+%    field(i) = complex(temp(2*i-1),temp(2*i));
+%end
 
-field = reshape(field,[dim,dim,dim]);
-field(find(grid==1)) = 0;
 
+%field = abs(reshape(field,[dim,dim,dim]));
+field = reshape(temp,[dim,dim,dim]);
+field(find(grid==1)) = nan;
+
+minVal = min(min(min(field)));
+maxVal = max(max(max(field)));
 
 
 
@@ -46,9 +50,13 @@ daspect(hAx1,[1,1,1]);
 hFig2 = figure('units','normalized','outerposition',[0 0 1 1]);
 hAx2 = axes(hFig2);
 daspect(hAx2,[1,1,1]);
+%field(find(field>10)) = 5;
 for i=1:dim
-    imagesc(hAx1,abs(field(:,:,i)));
+    %caxis([minVal maxVal]);
+    imagesc(hAx1,field(:,:,i));
     daspect(hAx1,[1,1,1]);
+    colorbar(hAx1);
+    
     imagesc(hAx2,grid(:,:,i));
     daspect(hAx2,[1,1,1]);
     pause(0.5);

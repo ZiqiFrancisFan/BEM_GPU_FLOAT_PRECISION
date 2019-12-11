@@ -12,6 +12,8 @@
 #include <cufft.h>
 #include <float.h>
 #include <string.h>
+#include <stdio.h>
+#include <stdlib.h>
 
 //air density and speed of sound
 __constant__ float density = 1.2041;
@@ -22,6 +24,9 @@ __constant__ float speed = 343.21;
 __constant__ float INTPT[INTORDER]; 
 
 __constant__ float INTWGT[INTORDER];
+
+float intpt[INTORDER];
+float intwgt[INTORDER];
 
 #ifndef NUM_EXTRAP_PER_LAUNCH
 #define NUM_EXTRAP_PER_LAUNCH 5120
@@ -2291,9 +2296,9 @@ int GenerateFieldUsingBEM(const vec3f* nod, const int numNod, const tri_elem* el
     return EXIT_SUCCESS;
 }
 
-int GenerateVoxelField(const char* file_path, const float wavNum, const vec3f* src_loc, 
-        const float* mag, const int numSrc, const aarect3d rect, const double len, 
-        const char* vox_grid_path, const char* field_grid_path)
+int GenerateVoxelField(const char* file_path, const float wavNum, const char* src_type, 
+        const vec3f* src_loc, const float* mag, const int numSrc, const aarect3d rect, 
+        const double len, const char* vox_grid_path, const char* field_grid_path)
 {
     int numNod, numElem;
     findNum(file_path,&numNod,&numElem);
@@ -2328,9 +2333,21 @@ int GenerateVoxelField(const char* file_path, const float wavNum, const vec3f* s
     HOST_CALL(RectSpaceVoxelOnGPU(rect,len,nod_d,elem,numElem,vox_grid_path));
     cuFloatComplex *prsr = (cuFloatComplex*)malloc(grid_size[0]*grid_size[1]*grid_size[2]
             *numSrc*sizeof(cuFloatComplex));
-    HOST_CALL(GenerateFieldUsingBEM(nod_f,numNod,elem,numElem,wavNum,"monopole",
+    printf("Voxelization completed.\n");
+    HOST_CALL(GenerateFieldUsingBEM(nod_f,numNod,elem,numElem,wavNum,src_type,
             src_loc,mag,numSrc,pt_extrap,grid_size[0]*grid_size[1]*grid_size[2],prsr));
-    HOST_CALL(write_field(prsr,grid_size,field_grid_path));
+    
+    for(int i=0;i<numSrc;i++) {
+        char temp[4];
+        char *result = (char*)malloc((strlen(field_grid_path)+5)*sizeof(char));
+        strcpy(result,field_grid_path);
+        sprintf(temp,"%d",i);
+        strcat(result,temp);
+        //printf("result: %s\n",result);
+        HOST_CALL(write_field(&prsr[i*grid_size[0]*grid_size[1]*grid_size[2]],grid_size,result));
+        free(result);
+    }
+    
     
     free(nod_f);
     free(nod_d);
@@ -2338,5 +2355,102 @@ int GenerateVoxelField(const char* file_path, const float wavNum, const vec3f* s
     free(prsr);
     free(pt_extrap);
     
+    return EXIT_SUCCESS;
+}
+
+int GenLoudnessFieldUsingBEM(const vec3f* nod, const int numNod, const tri_elem* elem, const int numElem,
+        const float band[2], const char* src_type, const vec3f* src_loc, const float* mag, 
+        const int numSrc, const vec3f* pt_extrap, const int numExtrap, float* loudness)
+{
+    /*generate loudness fields of multiple sources using the boundary element method
+     nod: nodes on the surface of an object
+     numNod: number of nodes on the surface of an object
+     elem: elements
+     numElem: number of elements
+     band: lower and upper bounds of angular frequencies
+     src_type: type of sound sources
+     src_loc: locations of sources
+     mag: magnitudes of sources
+     numSrc: number of sources
+     pt_extrap: extrapolation points
+     numExtrap: number of extrapolation points
+     loudness: the loudness field*/
+    
+    // allocate memory for content of each frequency
+    cuFloatComplex *prsr = (cuFloatComplex*)malloc(numSrc*numExtrap*sizeof(cuFloatComplex));
+    // set loudness field to 0
+    memset(loudness,0,numSrc*numExtrap*sizeof(float));
+    
+    for(int i=0;i<INTORDER;i++) {
+        float omega = (band[1]-band[0])/2*intpt[i]+(band[0]+band[1])/2;
+        float wavNum = omega/SPEED_SOUND;
+        HOST_CALL(GenerateFieldUsingBEM(nod,numNod,elem,numElem,wavNum,src_type,
+                src_loc,mag,numSrc,pt_extrap,numExtrap,prsr));
+        for(int j=0;j<numSrc*numExtrap;j++) {
+            loudness[j] += 0.5*intwgt[i]*powf(cuCabsf(prsr[j]),2);
+        }
+    }
+    for(int i=0;i<numSrc*numExtrap;i++) {
+        loudness[i] = 10*logf(loudness[i])/logf(10);
+    }
+    free(prsr);
+    return EXIT_SUCCESS;
+}
+
+int WriteLoudnessGeometry(const char* file_path, const float band[2], const char* src_type, 
+        const float* mag, const vec3f* src_loc, const int numSrc, const aarect3d rect, 
+        const double len, const char* vox_grid_path, const char* field_grid_path)
+{
+    int numNod, numElem;
+    findNum(file_path,&numNod,&numElem);
+    vec3d *nod_d = (vec3d*)malloc(numNod*sizeof(vec3d));
+    tri_elem *elem = (tri_elem*)malloc(numElem*sizeof(tri_elem));
+    readOBJ(file_path,nod_d,elem);
+    
+    vec3f *nod_f = (vec3f*)malloc(numNod*sizeof(vec3f));
+    vecd2f(nod_d,numNod,nod_f);
+    
+    int grid_size[3];
+    for(int i=0;i<3;i++) {
+        grid_size[i] = floor(rect.len[i]/len);
+    }
+    
+    vec3f *pt_extrap = (vec3f*)malloc(grid_size[0]*grid_size[1]*grid_size[2]*sizeof(vec3f));
+    vec3f cnr;
+    for(int i=0;i<3;i++) {
+        cnr.coords[i] = rect.cnr.coords[i];
+    }
+    // get the center of each voxel as the evaluation point
+    for(int z=0;z<grid_size[2];z++) {
+        for(int y=0;y<grid_size[1];y++) {
+            for(int x=0;x<grid_size[0];x++) {
+                int idx = z*grid_size[0]*grid_size[1]+y*grid_size[0]+x;
+                pt_extrap[idx].coords[0] = cnr.coords[0]+x*len+len/2;
+                pt_extrap[idx].coords[1] = cnr.coords[1]+y*len+len/2;
+                pt_extrap[idx].coords[2] = cnr.coords[2]+z*len+len/2;
+            }
+        }
+    }
+    HOST_CALL(RectSpaceVoxelOnGPU(rect,len,nod_d,elem,numElem,vox_grid_path));
+    
+    float *loudness = (float*)malloc(numSrc*grid_size[0]*grid_size[1]*grid_size[2]*sizeof(float));
+    HOST_CALL(GenLoudnessFieldUsingBEM(nod_f,numNod,elem,numElem,band,src_type,src_loc,
+            mag,numSrc,pt_extrap,grid_size[0]*grid_size[1]*grid_size[2],loudness));
+    for(int i=0;i<numSrc;i++) {
+        char temp[4];
+        char *result = (char*)malloc((strlen(field_grid_path)+5)*sizeof(char));
+        strcpy(result,field_grid_path);
+        sprintf(temp,"%d",i);
+        strcat(result,temp);
+        //printf("result: %s\n",result);
+        HOST_CALL(write_float_grid(&loudness[i*grid_size[0]*grid_size[1]*grid_size[2]],grid_size,result));
+        free(result);
+    }
+    
+    free(loudness);
+    free(pt_extrap);
+    free(nod_d);
+    free(nod_f);
+    free(elem);
     return EXIT_SUCCESS;
 }
