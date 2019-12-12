@@ -17,7 +17,7 @@ for i = 1 : dim_sz(3)
 end
 
 folder = '../data/';
-filename = 'loudness1';
+filename = 'loudness0';
 
 path = [folder,filename];
 fileID = fopen(path,'r');
