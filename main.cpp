@@ -27,20 +27,20 @@ int main(int argc, char *argv[])
     HOST_CALL(gaussPtsToDevice(intpt,intwgt));
     SetHostBases();
     HOST_CALL(CopyBasesToConstant());
-    vec3f src_loc = {0,-0.5,0};
+    vec3f src_loc[2] = {{0,-3,0.5},{-3,0,0.5}};
     
-    float mag = 10;
+    float mag[2] = {1,1};
     aarect3d rect;
-    rect.cnr = {-0.2,-0.2,-0.2};
-    rect.len[0] = 0.4;
-    rect.len[1] = 0.4;
-    rect.len[2] = 0.4;
+    rect.cnr = {-2.5,-2.5,0};
+    rect.len[0] = 5;
+    rect.len[1] = 5;
+    rect.len[2] = 1;
     float band[2];
-    band[0] = 2*PI*4000;
-    band[2] = 2*PI*8000;
+    band[0] = 2*PI*1000;
+    band[2] = 2*PI*2000;
     //HOST_CALL(GenerateVoxelField("./mesh/sphere_100mm_5120.obj",2*PI*4000/SPEED_SOUND,"point",&src_loc,&mag,1,rect,0.005,"./data/vox","./data/field"));
-    HOST_CALL(WriteLoudnessGeometry("./mesh/sphere_100mm_5120.obj",band,"point",
-            &mag,&src_loc,1,rect,0.0025,"./data/vox","./data/loudness"));
+    HOST_CALL(WriteLoudnessGeometry("./mesh/test.obj",band,"point",
+            mag,src_loc,2,rect,0.01,"./data/vox","./data/loudness"));
     
     return EXIT_SUCCESS;
 }

@@ -11,11 +11,11 @@
 #include <float.h>
 
 #ifndef NUM_TRI_PER_LAUNCH
-#define NUM_TRI_PER_LAUNCH 1000
+#define NUM_TRI_PER_LAUNCH 1024
 #endif
 
 #ifndef NUM_CB_PER_LAUNCH
-#define NUM_CB_PER_LAUNCH 1000
+#define NUM_CB_PER_LAUNCH 1024
 #endif
 
 __constant__ vec3d BASES[3];
@@ -1989,14 +1989,15 @@ int RectSpaceVoxelSATOnGPU(const aarect3d sp, const double voxlen, const vec3d* 
 }
 
 
-int write_voxels(const int* flag, const int numvox[3], const char* file_path)
+int write_voxels(int* flag, const int numvox[3], const char* file_path)
 {
-    FILE *file = fopen(file_path,"w");
+    FILE *file = fopen(file_path,"wb");
     if(file==NULL) {
         printf("Failed to open file.\n");
         return EXIT_FAILURE;
     }
     else {
+        /*
         int status;
         int t;
         for(int i=0;i<numvox[0]*numvox[1]*numvox[2];i++) {
@@ -2013,6 +2014,14 @@ int write_voxels(const int* flag, const int numvox[3], const char* file_path)
                 return EXIT_FAILURE;
             }
         }
+        */
+        for(int i=0;i<numvox[0]*numvox[1]*numvox[2];i++) {
+            if(flag[i] > 0) {
+                flag[i] = 1;
+            }
+        }
+        fwrite(numvox,sizeof(int),3,file);
+        fwrite(flag,sizeof(int),numvox[0]*numvox[1]*numvox[2],file);
         fclose(file);
         return EXIT_SUCCESS;
     }
@@ -2020,7 +2029,7 @@ int write_voxels(const int* flag, const int numvox[3], const char* file_path)
 
 int write_field(const cuFloatComplex* field, const int numvox[3], const char* file_path)
 {
-    FILE *file = fopen(file_path,"w");
+    FILE *file = fopen(file_path,"wb");
     if(file==NULL) {
         printf("Failed to open file.\n");
         return EXIT_FAILURE;
@@ -2029,6 +2038,7 @@ int write_field(const cuFloatComplex* field, const int numvox[3], const char* fi
         int status;
         for(int i=0;i<numvox[0]*numvox[1]*numvox[2];i++) {
             status = fprintf(file,"(%f,%f) ",cuCrealf(field[i]),cuCimagf(field[i]));
+            //fwrite(field,sizeof(cuFloatComplex),numvox[0]*numvox[1]*numvox[2],file);
             if((i+1)%numvox[0]==0) {
                 status = fprintf(file,"\n");
             }
@@ -2053,6 +2063,7 @@ int write_float_grid(const float* field, const int numvox[3], const char* file_p
         return EXIT_FAILURE;
     }
     else {
+        /*
         int status;
         for(int i=0;i<numvox[0]*numvox[1]*numvox[2];i++) {
             status = fprintf(file,"%f ",field[i]);
@@ -2067,6 +2078,9 @@ int write_float_grid(const float* field, const int numvox[3], const char* file_p
                 return EXIT_FAILURE;
             }
         }
+        */
+        fwrite(numvox,sizeof(int),3,file);
+        fwrite(field,sizeof(float),numvox[0]*numvox[1]*numvox[2],file);
         fclose(file);
         return EXIT_SUCCESS;
     }

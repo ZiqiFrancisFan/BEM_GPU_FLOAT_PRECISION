@@ -174,6 +174,16 @@ int gaussPtsToDevice(const float *evalPt, const float *wgt)
     return EXIT_SUCCESS;
 }
 
+void printMat(const float* mat, const int numRow, const int numCol, const int lda)
+{
+    for(int i=0;i<numRow;i++) {
+        for(int j=0;j<numCol;j++) {
+            printf("%f ",mat[IDXC0(i,j,lda)]);
+        }
+        printf("\n");
+    }
+}
+
 void printMat(const double* mat, const int numRow, const int numCol, const int lda)
 {
     for(int i=0;i<numRow;i++) {
@@ -2436,6 +2446,7 @@ int WriteLoudnessGeometry(const char* file_path, const float band[2], const char
     float *loudness = (float*)malloc(numSrc*grid_size[0]*grid_size[1]*grid_size[2]*sizeof(float));
     HOST_CALL(GenLoudnessFieldUsingBEM(nod_f,numNod,elem,numElem,band,src_type,src_loc,
             mag,numSrc,pt_extrap,grid_size[0]*grid_size[1]*grid_size[2],loudness));
+    //printMat(loudness,1,numSrc*grid_size[0]*grid_size[1]*grid_size[2],1);
     for(int i=0;i<numSrc;i++) {
         char temp[4];
         char *result = (char*)malloc((strlen(field_grid_path)+5)*sizeof(char));

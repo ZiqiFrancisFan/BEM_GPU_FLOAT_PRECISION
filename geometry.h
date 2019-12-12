@@ -128,7 +128,7 @@ __host__ int RectSpaceVoxelOnGPU(const aarect3d sp, const double len, const vec3
 /*write an occupancy grid to file*/
 __host__ int write_voxels(const bool* flag, const int numvox[3], const char* file_path);
 
-__host__ int write_voxels(const int* flag, const int numvox[3], const char* file_path);
+__host__ int write_voxels(int* flag, const int numvox[3], const char* file_path);
 
 __host__ int write_field(const cuFloatComplex* field, const int numvox[3], const char* file_path);
 

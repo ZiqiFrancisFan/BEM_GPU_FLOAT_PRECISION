@@ -4,30 +4,25 @@ clear; close all; clc;
 folder = '../data/';
 filename = 'vox';
 
-format = '%d ';
 path = [folder,filename];
 fileID = fopen(path,'r');
-temp = fscanf(fileID,format);
+dim_sz = fread(fileID,3,'int');
+temp = fread(fileID,'int');
 fclose(fileID);
 
+grid = reshape(temp,[dim_sz(1),dim_sz(2),dim_sz(3)]);
 
-
-dim = round(length(temp)^(1/3));
-grid = imbinarize(reshape(temp,[dim,dim,dim]));
-
-dim = round(length(temp)^(1/3));
-grid = reshape(temp,[dim,dim,dim]);
-for i = 1 : dim
+for i = 1 : dim_sz(3)
     grid(:,:,i) = ConvertBoundary2SolidObject(grid(:,:,i));
 end
 
 folder = '../data/';
-filename = 'loudness0';
+filename = 'loudness1';
 
-format = '%f ';
 path = [folder,filename];
 fileID = fopen(path,'r');
-temp = fscanf(fileID,format);
+dim_sz = fread(fileID,3,'int');
+temp = fread(fileID,'single');
 fclose(fileID);
 
 %for i=1:length(temp)/2
@@ -36,11 +31,8 @@ fclose(fileID);
 
 
 %field = abs(reshape(field,[dim,dim,dim]));
-field = reshape(temp,[dim,dim,dim]);
+field = reshape(temp,[dim_sz(1),dim_sz(2),dim_sz(3)]);
 field(find(grid==1)) = nan;
-
-minVal = min(min(min(field)));
-maxVal = max(max(max(field)));
 
 
 
@@ -51,7 +43,7 @@ hFig2 = figure('units','normalized','outerposition',[0 0 1 1]);
 hAx2 = axes(hFig2);
 daspect(hAx2,[1,1,1]);
 %field(find(field>10)) = 5;
-for i=1:dim
+for i=1:20
     %caxis([minVal maxVal]);
     imagesc(hAx1,field(:,:,i));
     daspect(hAx1,[1,1,1]);

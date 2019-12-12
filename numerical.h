@@ -172,6 +172,8 @@ void print_float_mat(const float *A, const int numRow, const int numCol, const i
 void print_cuFloatComplex_mat(const cuFloatComplex *A, const int numRow, const int numCol, 
         const int lda);
 
+void printMat(const float* mat, const int numRow, const int numCol, const int lda);
+
 __host__ __device__ void printVec(const vec3f* pt, const int numPt);
 
 __host__ __device__ void printVec(const vec3d* pt, const int numPt);
