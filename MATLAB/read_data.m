@@ -17,7 +17,7 @@ for i = 1 : dim_sz(3)
 end
 
 folder = '../data/';
-filename = 'loudness0';
+filename = 'loudness_1';
 
 path = [folder,filename];
 fileID = fopen(path,'r');
@@ -43,7 +43,7 @@ hFig2 = figure('units','normalized','outerposition',[0 0 1 1]);
 hAx2 = axes(hFig2);
 daspect(hAx2,[1,1,1]);
 %field(find(field>10)) = 5;
-for i=1:20
+for i=1:dim_sz(3)
     %caxis([minVal maxVal]);
     imagesc(hAx1,field(:,:,i));
     daspect(hAx1,[1,1,1]);

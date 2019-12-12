@@ -35,12 +35,21 @@ int main(int argc, char *argv[])
     rect.len[0] = 5;
     rect.len[1] = 5;
     rect.len[2] = 1;
+    aarect2d rect_2d;
+    rect_2d.cnr.coords[0] = rect.cnr.coords[0];
+    rect_2d.cnr.coords[1] = rect.cnr.coords[1];
+    rect_2d.len[0] = rect.len[0];
+    rect_2d.len[1] = rect.len[1];
+    double len = 0.01;
+    double zCoord = rect.len[2]/2+rect.cnr.coords[2];
     float band[2];
     band[0] = 2*PI*1000;
     band[2] = 2*PI*2000;
     //HOST_CALL(GenerateVoxelField("./mesh/sphere_100mm_5120.obj",2*PI*4000/SPEED_SOUND,"point",&src_loc,&mag,1,rect,0.005,"./data/vox","./data/field"));
-    HOST_CALL(WriteLoudnessGeometry("./mesh/test.obj",band,"point",
-            mag,src_loc,4,rect,0.01,"./data/vox","./data/loudness"));
+    //HOST_CALL(WriteLoudnessGeometry("./mesh/test.obj",band,"point",
+            //mag,src_loc,4,rect,0.01,"./data/vox","./data/loudness"));
+    HOST_CALL(WriteZSliceVoxLoudness("./mesh/test.obj",band,"point",mag,src_loc,4,
+            zCoord,len,rect_2d,"./data/vox","./data/loudness"));
     
     return EXIT_SUCCESS;
 }

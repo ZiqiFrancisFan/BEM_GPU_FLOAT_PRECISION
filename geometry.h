@@ -122,7 +122,7 @@ __host__ int RectSpaceVoxelSATOnGPU(const aarect3d sp, const double voxlen, cons
         const tri_elem* elem, const int numElem, const char* filename);
 
 /*converts a rectangular sapce to an occupancy grid on GPU using the accurate but slow approach*/
-__host__ int RectSpaceVoxelOnGPU(const aarect3d sp, const double len, const vec3d* pt, 
+__host__ int RectSpaceToOccGridOnGPU(const aarect3d sp, const double len, const vec3d* pt, 
         const tri_elem* elem, const int numElem, const char* filePath);
 
 /*write an occupancy grid to file*/

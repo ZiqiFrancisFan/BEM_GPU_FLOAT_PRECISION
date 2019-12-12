@@ -1348,7 +1348,7 @@ __host__ int CubeSpaceVoxelOnGPU(const aacb3d sp, const int numEachDim, const ve
     return EXIT_SUCCESS;
 }
 
-int RectSpaceVoxelOnGPU(const aarect3d sp, const double len, const vec3d* pt, 
+int RectSpaceToOccGridOnGPU(const aarect3d sp, const double len, const vec3d* pt, 
         const tri_elem* elem, const int numElem, const char* filePath)
 {
     /*voxelizes a rectangular space into an occupancy grid and write it to a file

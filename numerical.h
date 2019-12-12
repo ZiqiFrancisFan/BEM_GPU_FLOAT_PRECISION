@@ -334,5 +334,10 @@ int WriteLoudnessGeometry(const char* file_path, const float band[2], const char
         const float* mag, const vec3f* src_loc, const int numSrc, const aarect3d rect, 
         const double len, const char* vox_grid_path, const char* field_grid_path);
 
+int WriteZSliceVoxLoudness(const char* file_path, const float band[2], const char* src_type, 
+        const float* mag, const vec3f* src_loc, const int numSrc, const double zCoord, 
+        const double len, const aarect2d rect_2d, const char* vox_grid_path, 
+        const char* field_grid_path);
+
 #endif /* NUMERICAL_H */
 
