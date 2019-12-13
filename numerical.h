@@ -279,7 +279,7 @@ int bemSolver_mp(const float k, const tri_elem *elem, const int numElem,
 
 __device__ cuFloatComplex extrapolation_mp(const float wavNum, const vec3f x, 
         const tri_elem* elem, const int numElem, const vec3f* pt, 
-        const cuFloatComplex* p, const float& strength, const vec3f& src);
+        const cuFloatComplex* p, const float strength, const vec3f src);
 
 __global__ void extrap_mp_sgl_src(const float wavNum, const vec3f* expPt, const int numExpPt,
         const tri_elem* elem, const int numElem, const vec3f* pt, const cuFloatComplex* p, 

@@ -29,7 +29,7 @@ float intpt[INTORDER];
 float intwgt[INTORDER];
 
 #ifndef NUM_EXTRAP_PER_LAUNCH
-#define NUM_EXTRAP_PER_LAUNCH 4048
+#define NUM_EXTRAP_PER_LAUNCH 1024
 #endif
 
 #ifndef REF_SOUND_PRESSURE
@@ -581,7 +581,7 @@ bool inBdry(const bool *flag, const int numFlag) {
 int genCHIEF(const vec3f* pt, const int numPt, const tri_elem* elem, const int numElem, 
         vec3f* pCHIEF, const int numCHIEF) {
     int i, cnt;
-    float threshold_inner = 0.0000001;
+    float threshold_inner = EPS;
     float *dist_h = (float*)malloc(numPt*sizeof(float));
     float minDist; //minimum distance between the chief point to all surface nod
     float *dist_d;
@@ -1741,7 +1741,7 @@ __device__ cuFloatComplex extrapolation_dir(const float wavNum, const vec3f x,
 
 __device__ cuFloatComplex extrapolation_pt(const float wavNum, const vec3f x, 
         const tri_elem* elem, const int numElem, const vec3f* pt, 
-        const cuFloatComplex* p, const float& strength, const vec3f& src)
+        const cuFloatComplex* p, const float strength, const vec3f src)
 {
     /*field extrapolation from the surface to a single point in free space
      x: the single point in free space
@@ -1752,13 +1752,13 @@ __device__ cuFloatComplex extrapolation_pt(const float wavNum, const vec3f x,
      src: source location*/
     cuFloatComplex result = ptSrc(wavNum,strength,src,x);
     cuFloatComplex temp;
+    vec3f nod[3];
+    cuFloatComplex gCoeff[3], hCoeff[3]; 
+    float cCoeff[3];
     for(int i=0;i<numElem;i++) {
-        vec3f nod[3];
         for(int j=0;j<3;j++) {
             nod[j] = pt[elem[i].nod[j]];
         }
-        cuFloatComplex gCoeff[3], hCoeff[3]; 
-        float cCoeff[3];
         g_h_c_nsgl(wavNum,x,nod,gCoeff,hCoeff,cCoeff);
         for(int j=0;j<3;j++) {
             temp = cuCdivf(elem[i].bc[2],elem[i].bc[1]);
@@ -1768,7 +1768,20 @@ __device__ cuFloatComplex extrapolation_pt(const float wavNum, const vec3f x,
             temp = cuCmulf(temp,gCoeff[j]);
             temp = cuCsubf(hCoeff[j],temp);
             temp = cuCmulf(temp,p[elem[i].nod[j]]);
+            if(isnan(cuCrealf(temp)) || isnan(cuCimagf(temp))) {
+                printf("problem with temp.\n");
+                if(isnan(cuCrealf(p[elem[i].nod[j]])) || isnan(cuCimagf(p[elem[i].nod[j]]))) {
+                    printf("%d elem, pressure array issue\n",i);
+                    printf("nodes: %d, %d, %d\n",elem[i].nod[0],elem[i].nod[1],elem[i].nod[2]);
+                    
+                }
+                return make_cuFloatComplex(0,0);
+            }
             result = cuCsubf(result,temp);
+            if(isnan(cuCrealf(result)) || isnan(cuCimagf(result))) {
+                printf("result issue.\n");
+                return make_cuFloatComplex(0,0);
+            }
         }
     }
     return result;
@@ -1776,7 +1789,7 @@ __device__ cuFloatComplex extrapolation_pt(const float wavNum, const vec3f x,
 
 __device__ cuFloatComplex extrapolation_mp(const float wavNum, const vec3f x, 
         const tri_elem* elem, const int numElem, const vec3f* pt, 
-        const cuFloatComplex* p, const float& strength, const vec3f& src)
+        const cuFloatComplex* p, const float strength, const vec3f src)
 {
     /*field extrapolation from the surface to a single monopole in free space
      x: the single point in free space
@@ -1854,6 +1867,15 @@ __global__ void extrap_pt_sgl_src(const float wavNum, const vec3f* expPt, const 
     int idx = blockIdx.x*blockDim.x+threadIdx.x;
     if(idx < numExpPt) {
         p_exp[idx] = extrapolation_pt(wavNum,expPt[idx],elem,numElem,pt,p,strength,src);
+        /*
+        if(idx==0) {
+            printf("(%f,%f)\n",cuCrealf(p_exp[idx]),cuCimagf(p_exp[idx]));
+            printf("strength: %f\n",strength);
+            printf("source: (%f,%f,%f)\n",src.coords[0],src.coords[1],src.coords[2]);
+            printf("extrapolation point: (%f,%f,%f)\n",expPt[idx].coords[0],expPt[idx].coords[1],
+                    expPt[idx].coords[2]);
+        }
+        */ 
     }
 }
 
@@ -2148,7 +2170,7 @@ int GenerateFieldUsingBEM(const vec3f* nod, const int numNod, const tri_elem* el
     CUDA_CALL(cudaMemcpy(pt_d,nod,numNod*sizeof(vec3f),cudaMemcpyHostToDevice));
     CUDA_CALL(cudaMemcpy(pt_d+numNod,chief,NUMCHIEF*sizeof(vec3f),cudaMemcpyHostToDevice));
     
-    free(chief); //chief has been copied to device, no longer need on host
+    //free(chief); //chief has been copied to device, no longer need on host
     
     cuFloatComplex *A = (cuFloatComplex*)malloc((numNod+NUMCHIEF)*numNod*sizeof(cuFloatComplex));
     memset(A,0,(numNod+NUMCHIEF)*numNod*sizeof(cuFloatComplex));
@@ -2194,7 +2216,7 @@ int GenerateFieldUsingBEM(const vec3f* nod, const int numNod, const tri_elem* el
     
     // A and B not needed on host
     free(A);
-    free(B);
+    
     
     // x dimension represents points and y dimension represents elements
     int numBlock_pt, width_pt = 16, numBlock_el, width_el = 16;
@@ -2240,14 +2262,42 @@ int GenerateFieldUsingBEM(const vec3f* nod, const int numNod, const tri_elem* el
             numNod,A_d,numNod+NUMCHIEF,tau_d,B_d,numNod+NUMCHIEF,workspace_d,lwork,deviceInfo_d));
     CUDA_CALL(cudaMemcpy(&deviceInfo,deviceInfo_d,sizeof(int),cudaMemcpyDeviceToHost));
     
+    CUDA_CALL(cudaMemcpy(B,B_d,(numNod+NUMCHIEF)*numSrc*sizeof(cuFloatComplex),cudaMemcpyDeviceToHost));
+    //CUDA_CALL(cudaDeviceSynchronize());
+    for(int i=0;i<numSrc;i++) {
+        for(int j=0;j<numNod;j++) {
+            if(isnan(cuCrealf(B[IDXC0(j,i,numNod+NUMCHIEF)])) || 
+                    isnan(cuCimagf(B[IDXC0(j,i,numNod+NUMCHIEF)]))) {
+                printf("B problem, %dth source, %dth node.\n",i,j);
+                printPts(chief,NUMCHIEF);
+                free(B);
+                free(chief);
+                return EXIT_FAILURE;
+            }
+        }
+    }
+    free(chief);
     //Solve Rx = B
     cuFloatComplex alpha = make_cuFloatComplex(1,0);
     cublasHandle_t cublasH;
     CUBLAS_CALL(cublasCreate_v2(&cublasH));
     CUBLAS_CALL(cublasCtrsm_v2(cublasH,CUBLAS_SIDE_LEFT,CUBLAS_FILL_MODE_UPPER,
             CUBLAS_OP_N,CUBLAS_DIAG_NON_UNIT,numNod,numSrc,&alpha,A_d,numNod+NUMCHIEF,B_d,numNod+NUMCHIEF));
-    //CUDA_CALL(cudaMemcpy(B,B_d,(numNod+NUMCHIEF)*numSrc*sizeof(cuFloatComplex),cudaMemcpyDeviceToHost));
-    
+    CUDA_CALL(cudaMemcpy(B,B_d,(numNod+NUMCHIEF)*numSrc*sizeof(cuFloatComplex),cudaMemcpyDeviceToHost));
+    //CUDA_CALL(cudaDeviceSynchronize());
+    for(int i=0;i<numSrc;i++) {
+        for(int j=0;j<numNod;j++) {
+            if(isnan(cuCrealf(B[IDXC0(j,i,numNod+NUMCHIEF)])) || 
+                    isnan(cuCimagf(B[IDXC0(j,i,numNod+NUMCHIEF)]))) {
+                printf("B problem after mul, %dth source, %dth node.\n",i,j);
+                printPts(chief,NUMCHIEF);
+                free(B);
+                //free(chief);
+                return EXIT_FAILURE;
+            }
+        }
+    }
+    free(B);
     //release memory
     CUDA_CALL(cudaFree(A_d)); // A_d no longer needed in extrapolation
     //CUDA_CALL(cudaFree(B_d));
@@ -2277,6 +2327,9 @@ int GenerateFieldUsingBEM(const vec3f* nod, const int numNod, const tri_elem* el
     CUDA_CALL(cudaMalloc(&prsr_d,NUM_EXTRAP_PER_LAUNCH*sizeof(cuFloatComplex)));
     
     for(int i=0;i<numSrc;i++) {
+        //printf("source: \n");
+        //printVec(src_loc+i,1);
+        //printf("magnitude: %f\n",mag[i]);
         for(int j=0;j<numExtrapGroup;j++) {
             if(j<numExtrapGroup-1) {
                 crrNumExtrap = NUM_EXTRAP_PER_LAUNCH;
@@ -2299,6 +2352,7 @@ int GenerateFieldUsingBEM(const vec3f* nod, const int numNod, const tri_elem* el
             //CUDA_CALL(cudaDeviceSynchronize());
             CUDA_CALL(cudaMemcpy(&prsr[i*numExtrap+j*NUM_EXTRAP_PER_LAUNCH],prsr_d,crrNumExtrap*sizeof(cuFloatComplex),
                     cudaMemcpyDeviceToHost));
+            
             //CUDA_CALL(cudaDeviceSynchronize());
         }
     }
