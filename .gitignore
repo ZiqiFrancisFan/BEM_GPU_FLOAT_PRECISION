@@ -10,7 +10,9 @@
 
 vox*
 
-loudness*
+data/loudness*
+
+data/vox*
 
 main
 
