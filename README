@@ -1,9 +1,41 @@
 This repo is for generating acoustic fields fast for inverse estimation of objects.
 
-format to use the executable:
+Example of the command to use the executable:
 ./main --obj_file ./mesh/test.obj --src_type point --src_radi 3 --src_num 4 --low_ng_freq 6283.18530718 --up_ng_freq 12566.3706144 
     --src_mag 1.0 --x_cnr -2.5 --y_cnr -2.5 --x_len 5 --y_len 5 --z_coord 0.5 --side_len 0.01 --vox_file ./data/vox --field_file ./data/loudness
 
-Generated data can be viewed using the MATLAB scirpt read_data in the MATLAB folder. 
+obj_file: path for the obj object
+
+src_type: type of sound source, "point" or "monopole"
+
+src_radi: radius of source location
+
+src_num: number of sources evenly distributed
+
+low_ng_freq: lower angular frequency for the band of loudness
+
+up_ng_freq: upper angular frequency for the band of loudness
+
+src_mag: magnitude of sources
+
+x_cnr: x coordinate of the corner of the simulation region
+
+y_cnr: y coordinate of the corner of the simulation region
+
+x_len: size of region in the x direction
+
+y_len: size of region in the y direction
+
+z_coord: z coordinate for the plane of interest, of the same height as the source
+
+side_len: side length of a unit voxel
+
+vox_file: the path of the file for the voxel grid
+
+field_file: the path of the file for the loudness field
+
+Viewing data: 
+
+Generated data can be viewed using the MATLAB scirpt read_data.m in the MATLAB folder.
 
 Suggestions for Vibhav: modify "61" to "60" in the makefile as you make, if you are using a Tesla P100.  
