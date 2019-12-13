@@ -175,6 +175,10 @@ LIBRARIES += -lstdc++ -lm -lgsl -lgslcblas
 
 
 ################################################################################
+vpath %.c ./src
+vpath %.h ./src
+vpath %.o ./bin
+vpath main .bin
 
 # Target rules
 all: build
