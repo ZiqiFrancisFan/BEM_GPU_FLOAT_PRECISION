@@ -1438,7 +1438,7 @@ int RectSpaceToOccGridOnGPU(const aarect3d sp, const double len, const vec3d* pt
                     cbs+i*NUM_CB_PER_LAUNCH,currNumCb,flag+flagArrIdx));
         }
     }
-    printf("completed voxelization.\n");
+    //printf("completed voxelization.\n");
     HOST_CALL(write_voxels(flag,dimsize,filePath));
     free(flag);
     free(tris);
@@ -2000,7 +2000,7 @@ int RectSpaceVoxelSATOnGPU(const aarect3d sp, const double voxlen, const vec3d* 
 
 int write_voxels(int* flag, const int numvox[3], const char* file_path)
 {
-    printf("grid size: (%d,%d,%d)\n",numvox[0],numvox[1],numvox[2]);
+    //printf("grid size: (%d,%d,%d)\n",numvox[0],numvox[1],numvox[2]);
     FILE *file = fopen(file_path,"wb");
     if(file==NULL) {
         printf("Failed to open file.\n");

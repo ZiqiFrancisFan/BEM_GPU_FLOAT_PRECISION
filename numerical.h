@@ -22,7 +22,6 @@
 #include <cuda_runtime.h>
 #include <curand.h>
 
-#include <cublas_v2.h>
 #include <cusolverDn.h>
 
 #include "dataStructs.h"

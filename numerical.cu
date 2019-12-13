@@ -7,6 +7,7 @@
 #include "octree.h"
 #include "mesh.h"
 #include "geometry.h"
+#include <cublas_v2.h>
 #include <math_constants.h>
 #include <cusolverDn.h>
 #include <cufft.h>
@@ -581,7 +582,6 @@ bool inBdry(const bool *flag, const int numFlag) {
 int genCHIEF(const vec3f* pt, const int numPt, const tri_elem* elem, const int numElem, 
         vec3f* pCHIEF, const int numCHIEF) {
     int i, cnt;
-    float threshold_inner = EPS;
     float *dist_h = (float*)malloc(numPt*sizeof(float));
     float minDist; //minimum distance between the chief point to all surface nod
     float *dist_d;
@@ -612,6 +612,7 @@ int genCHIEF(const vec3f* pt, const int numPt, const tri_elem* elem, const int n
     //Find the bounding box
     float xb[2], yb[2], zb[2];
     findBB(pt,numPt,0,xb,yb,zb);
+    float threshold_inner = 0.01*min(min(xb[1]-xb[0],yb[1]-yb[0]),zb[1]-zb[0]);
     
     //create a handle to curand
     curandGenerator_t gen;
@@ -661,6 +662,8 @@ int genCHIEF(const vec3f* pt, const int numPt, const tri_elem* elem, const int n
     CUDA_CALL(cudaFree(elem_d));
     CUDA_CALL(cudaFree(flag_d));
     CUDA_CALL(cudaFree(dist_d));
+    
+    //printPts(pCHIEF,numCHIEF);
     
     return EXIT_SUCCESS;
 }
@@ -1768,6 +1771,7 @@ __device__ cuFloatComplex extrapolation_pt(const float wavNum, const vec3f x,
             temp = cuCmulf(temp,gCoeff[j]);
             temp = cuCsubf(hCoeff[j],temp);
             temp = cuCmulf(temp,p[elem[i].nod[j]]);
+            /*
             if(isnan(cuCrealf(temp)) || isnan(cuCimagf(temp))) {
                 printf("problem with temp.\n");
                 if(isnan(cuCrealf(p[elem[i].nod[j]])) || isnan(cuCimagf(p[elem[i].nod[j]]))) {
@@ -1777,11 +1781,14 @@ __device__ cuFloatComplex extrapolation_pt(const float wavNum, const vec3f x,
                 }
                 return make_cuFloatComplex(0,0);
             }
+            */ 
             result = cuCsubf(result,temp);
+            /*
             if(isnan(cuCrealf(result)) || isnan(cuCimagf(result))) {
                 printf("result issue.\n");
                 return make_cuFloatComplex(0,0);
             }
+            */ 
         }
     }
     return result;
@@ -2135,6 +2142,19 @@ gsl_complex rigid_sphere_monopole(const double wavNum, const double strength, co
     return result;
 }
 
+int CheckNanInMat(const cuFloatComplex* mat, const int m, const int n, const int ld)
+{
+    for(int i=0;i<m;i++) {
+        for(int j=0;j<n;j++) {
+            if(isnan(cuCrealf(mat[IDXC0(i,j,ld)])) || isnan(cuCimagf(mat[IDXC0(i,j,ld)]))) {
+                printf("Found nan in matrix, %dth row, %dth column.\n",i,j);
+                return EXIT_FAILURE;
+            }
+        }
+    }
+    return EXIT_SUCCESS;
+}
+
 int GenerateFieldUsingBEM(const vec3f* nod, const int numNod, const tri_elem* elem, const int numElem,
         const float wavNum, const char* src_type, const vec3f* src_loc, const float* mag, 
         const int numSrc, const vec3f* pt_extrap, const int numExtrap, cuFloatComplex* prsr)
@@ -2170,15 +2190,22 @@ int GenerateFieldUsingBEM(const vec3f* nod, const int numNod, const tri_elem* el
     CUDA_CALL(cudaMemcpy(pt_d,nod,numNod*sizeof(vec3f),cudaMemcpyHostToDevice));
     CUDA_CALL(cudaMemcpy(pt_d+numNod,chief,NUMCHIEF*sizeof(vec3f),cudaMemcpyHostToDevice));
     
-    //free(chief); //chief has been copied to device, no longer need on host
-    
     cuFloatComplex *A = (cuFloatComplex*)malloc((numNod+NUMCHIEF)*numNod*sizeof(cuFloatComplex));
+    if(A==NULL) {
+        printf("Allocating A failed.\n");
+        return EXIT_FAILURE;
+    }
     memset(A,0,(numNod+NUMCHIEF)*numNod*sizeof(cuFloatComplex));
     for(int i=0;i<numNod;i++) 
     {
         A[IDXC0(i,i,numNod+NUMCHIEF)] = make_cuFloatComplex(1,0);
     }
+    
     cuFloatComplex *B = (cuFloatComplex*)malloc((numNod+NUMCHIEF)*numSrc*sizeof(cuFloatComplex));
+    if(B==NULL) {
+        printf("Allocating B failed.\n");
+        return EXIT_FAILURE;
+    }
     memset(B,0,(numNod+NUMCHIEF)*numSrc*sizeof(cuFloatComplex));
     
     if(strcmp(src_type,"point")==0) { //point source used
@@ -2206,6 +2233,8 @@ int GenerateFieldUsingBEM(const vec3f* nod, const int numNod, const tri_elem* el
         }
     }
     
+    free(chief); //chief no longer needed
+    
     // copy A and B to device memory
     cuFloatComplex *A_d, *B_d;
     CUDA_CALL(cudaMalloc(&A_d,(numNod+NUMCHIEF)*numNod*sizeof(cuFloatComplex)));
@@ -2214,9 +2243,13 @@ int GenerateFieldUsingBEM(const vec3f* nod, const int numNod, const tri_elem* el
     CUDA_CALL(cudaMalloc(&B_d,(numNod+NUMCHIEF)*numSrc*sizeof(cuFloatComplex)));
     CUDA_CALL(cudaMemcpy(B_d,B,(numNod+NUMCHIEF)*numSrc*sizeof(cuFloatComplex),cudaMemcpyHostToDevice));
     
-    // A and B not needed on host
-    free(A);
-    
+    /* A and B no longer needed on host */
+    if(A!=NULL) {
+        free(A);
+    }
+    if(B!=NULL) {
+        free(B);
+    }
     
     // x dimension represents points and y dimension represents elements
     int numBlock_pt, width_pt = 16, numBlock_el, width_el = 16;
@@ -2229,13 +2262,13 @@ int GenerateFieldUsingBEM(const vec3f* nod, const int numNod, const tri_elem* el
     blockLayout.x = width_pt;
     blockLayout.y = width_el;
     
+    /*generate a system*/
     atomicPtsElems_nsgl<<<gridLayout,blockLayout>>>(wavNum,pt_d,numNod,0,numNod+NUMCHIEF-1,
             elem_d,numElem,A_d,numNod+NUMCHIEF,B_d,numSrc,numNod+NUMCHIEF);
     atomicPtsElems_sgl<<<numBlock_el,width_el>>>(wavNum,pt_d,elem_d,numElem,A_d,numNod+NUMCHIEF,
             B_d,numSrc,numNod+NUMCHIEF);
     
-    // solve the system using cusolver
-    
+    /*solve the system using cusolver*/
     // create a handle for cusolver
     cusolverDnHandle_t cusolverH = NULL;
     CUSOLVER_CALL(cusolverDnCreate(&cusolverH));
@@ -2249,55 +2282,34 @@ int GenerateFieldUsingBEM(const vec3f* nod, const int numNod, const tri_elem* el
     CUDA_CALL(cudaMalloc(&workspace_d,lwork*sizeof(cuFloatComplex)));
     cuFloatComplex *tau_d;
     CUDA_CALL(cudaMalloc(&tau_d,(numNod+NUMCHIEF)*sizeof(cuFloatComplex)));
-    int *deviceInfo_d, deviceInfo;
+    int *deviceInfo_d, deviceInfo = 1;
     CUDA_CALL(cudaMalloc(&deviceInfo_d,sizeof(int)));
     
     
     CUSOLVER_CALL(cusolverDnCgeqrf(cusolverH,numNod+NUMCHIEF,numNod,A_d,numNod+NUMCHIEF,
             tau_d,workspace_d,lwork,deviceInfo_d));
     CUDA_CALL(cudaMemcpy(&deviceInfo,deviceInfo_d,sizeof(int),cudaMemcpyDeviceToHost));
+    if(deviceInfo!=0) {
+        printf("QR decomposition failed.\n");
+        return EXIT_FAILURE;
+    }
     
     //B = (Q^H)*B
     CUSOLVER_CALL(cusolverDnCunmqr(cusolverH,CUBLAS_SIDE_LEFT,CUBLAS_OP_C,numNod+NUMCHIEF,numSrc,
             numNod,A_d,numNod+NUMCHIEF,tau_d,B_d,numNod+NUMCHIEF,workspace_d,lwork,deviceInfo_d));
     CUDA_CALL(cudaMemcpy(&deviceInfo,deviceInfo_d,sizeof(int),cudaMemcpyDeviceToHost));
-    
-    CUDA_CALL(cudaMemcpy(B,B_d,(numNod+NUMCHIEF)*numSrc*sizeof(cuFloatComplex),cudaMemcpyDeviceToHost));
-    //CUDA_CALL(cudaDeviceSynchronize());
-    for(int i=0;i<numSrc;i++) {
-        for(int j=0;j<numNod;j++) {
-            if(isnan(cuCrealf(B[IDXC0(j,i,numNod+NUMCHIEF)])) || 
-                    isnan(cuCimagf(B[IDXC0(j,i,numNod+NUMCHIEF)]))) {
-                printf("B problem, %dth source, %dth node.\n",i,j);
-                printPts(chief,NUMCHIEF);
-                free(B);
-                free(chief);
-                return EXIT_FAILURE;
-            }
-        }
+    if(deviceInfo!=0) {
+        printf("QR decomposition failed.\n");
+        return EXIT_FAILURE;
     }
-    free(chief);
+    
     //Solve Rx = B
     cuFloatComplex alpha = make_cuFloatComplex(1,0);
     cublasHandle_t cublasH;
     CUBLAS_CALL(cublasCreate_v2(&cublasH));
     CUBLAS_CALL(cublasCtrsm_v2(cublasH,CUBLAS_SIDE_LEFT,CUBLAS_FILL_MODE_UPPER,
             CUBLAS_OP_N,CUBLAS_DIAG_NON_UNIT,numNod,numSrc,&alpha,A_d,numNod+NUMCHIEF,B_d,numNod+NUMCHIEF));
-    CUDA_CALL(cudaMemcpy(B,B_d,(numNod+NUMCHIEF)*numSrc*sizeof(cuFloatComplex),cudaMemcpyDeviceToHost));
-    //CUDA_CALL(cudaDeviceSynchronize());
-    for(int i=0;i<numSrc;i++) {
-        for(int j=0;j<numNod;j++) {
-            if(isnan(cuCrealf(B[IDXC0(j,i,numNod+NUMCHIEF)])) || 
-                    isnan(cuCimagf(B[IDXC0(j,i,numNod+NUMCHIEF)]))) {
-                printf("B problem after mul, %dth source, %dth node.\n",i,j);
-                printPts(chief,NUMCHIEF);
-                free(B);
-                //free(chief);
-                return EXIT_FAILURE;
-            }
-        }
-    }
-    free(B);
+    
     //release memory
     CUDA_CALL(cudaFree(A_d)); // A_d no longer needed in extrapolation
     //CUDA_CALL(cudaFree(B_d));
@@ -2312,7 +2324,7 @@ int GenerateFieldUsingBEM(const vec3f* nod, const int numNod, const tri_elem* el
     //printf("Computed surface pressure.\n");
     
     
-    // start extrapolation.
+    /* start extrapolation */
     //printf("Number of exrapolation points: %d\n",numExtrap);
     int numExtrapGroup = (numExtrap+NUM_EXTRAP_PER_LAUNCH-1)/NUM_EXTRAP_PER_LAUNCH;
     int crrNumExtrap, width_extrap = 32, numBlock_extrap;
@@ -2456,7 +2468,7 @@ int GenLoudnessFieldUsingBEM(const vec3f* nod, const int numNod, const tri_elem*
         float wavNum = omega/SPEED_SOUND;
         HOST_CALL(GenerateFieldUsingBEM(nod,numNod,elem,numElem,wavNum,src_type,
                 src_loc,mag,numSrc,pt_extrap,numExtrap,prsr));
-        CUDA_CALL(cudaDeviceSynchronize());
+        //CUDA_CALL(cudaDeviceSynchronize());
         for(int j=0;j<numSrc*numExtrap;j++) {
             loudness[j] += 0.5*intwgt[i]*powf(cuCabsf(prsr[j])/REF_SOUND_PRESSURE,2);
         }
@@ -2513,6 +2525,10 @@ int WriteLoudnessGeometry(const char* file_path, const float band[2], const char
     HOST_CALL(RectSpaceToOccGridOnGPU(rect,len,nod_d,elem,numElem,vox_grid_path));
     
     float *loudness = (float*)malloc(numSrc*grid_size[0]*grid_size[1]*grid_size[2]*sizeof(float));
+    if(loudness==NULL) {
+        printf("Allocation of loudness failed.\n");
+        return EXIT_FAILURE;
+    }
     HOST_CALL(GenLoudnessFieldUsingBEM(nod_f,numNod,elem,numElem,band,src_type,src_loc,
             mag,numSrc,pt_extrap,grid_size[0]*grid_size[1]*grid_size[2],loudness));
     //printMat(loudness,1,numSrc*grid_size[0]*grid_size[1]*grid_size[2],1);
@@ -2549,7 +2565,7 @@ int WriteZSliceVoxLoudness(const char* file_path, const float band[2], const cha
     rect_3d.len[1] = rect_2d.len[1];
     rect_3d.len[2] = len+2*EPS;
     
-    print(&rect_3d,1);
+    //print(&rect_3d,1);
     HOST_CALL(WriteLoudnessGeometry(file_path,band,src_type,mag,src_loc,numSrc,
             rect_3d,len,vox_grid_path,field_grid_path));
     return EXIT_SUCCESS;

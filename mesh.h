@@ -25,10 +25,10 @@ void readOBJ(const char *filename, rect_coord_flt* p, tri_elem* e);
 
 void readOBJ(const char *filename, rect_coord_dbl* p, tri_elem* e);
 
-void printPts(const rect_coord_flt* p,const int num);
+void printPts(const vec3f* p,const int num);
 void printElems(const tri_elem* elem, const int num);
 
-int findBB(const rect_coord_flt* pt, const int numPt, const float threshold, float x[2], 
+int findBB(const vec3f* pt, const int numPt, const float threshold, float x[2], 
     float y[2], float z[2]);
 
 int write_hrtfs_to_file(const cuFloatComplex* HRTFs_le, const cuFloatComplex* HRTFs_re, 
