@@ -25,6 +25,8 @@ __host__ void SetHostBases();
 
 __host__ int CopyBasesToConstant();
 
+void print(const aarect3d* rect, const int num);
+
 __host__ __device__ vec2d GetMin(const aarect2d rect);
 
 __host__ __device__ vec2d GetMax(const aarect2d rect);

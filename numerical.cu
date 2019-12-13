@@ -29,7 +29,11 @@ float intpt[INTORDER];
 float intwgt[INTORDER];
 
 #ifndef NUM_EXTRAP_PER_LAUNCH
-#define NUM_EXTRAP_PER_LAUNCH 5120
+#define NUM_EXTRAP_PER_LAUNCH 4048
+#endif
+
+#ifndef REF_SOUND_PRESSURE
+#define REF_SOUND_PRESSURE 0.00002
 #endif
 
 void vecd2f(const vec3d* vec, const int len, vec3f* vecf)
@@ -2144,7 +2148,7 @@ int GenerateFieldUsingBEM(const vec3f* nod, const int numNod, const tri_elem* el
     CUDA_CALL(cudaMemcpy(pt_d,nod,numNod*sizeof(vec3f),cudaMemcpyHostToDevice));
     CUDA_CALL(cudaMemcpy(pt_d+numNod,chief,NUMCHIEF*sizeof(vec3f),cudaMemcpyHostToDevice));
     
-    free(chief);
+    free(chief); //chief has been copied to device, no longer need on host
     
     cuFloatComplex *A = (cuFloatComplex*)malloc((numNod+NUMCHIEF)*numNod*sizeof(cuFloatComplex));
     memset(A,0,(numNod+NUMCHIEF)*numNod*sizeof(cuFloatComplex));
@@ -2245,7 +2249,7 @@ int GenerateFieldUsingBEM(const vec3f* nod, const int numNod, const tri_elem* el
     //CUDA_CALL(cudaMemcpy(B,B_d,(numNod+NUMCHIEF)*numSrc*sizeof(cuFloatComplex),cudaMemcpyDeviceToHost));
     
     //release memory
-    CUDA_CALL(cudaFree(A_d));
+    CUDA_CALL(cudaFree(A_d)); // A_d no longer needed in extrapolation
     //CUDA_CALL(cudaFree(B_d));
     CUDA_CALL(cudaFree(tau_d));
     CUDA_CALL(cudaFree(workspace_d));
@@ -2254,7 +2258,7 @@ int GenerateFieldUsingBEM(const vec3f* nod, const int numNod, const tri_elem* el
     CUSOLVER_CALL(cusolverDnDestroy(cusolverH));
     //CUDA_CALL(cudaFree(elem_d));
     //CUDA_CALL(cudaFree(pt_d));
-    
+    //CUDA_CALL(cudaDeviceSynchronize());
     //printf("Computed surface pressure.\n");
     
     
@@ -2292,8 +2296,10 @@ int GenerateFieldUsingBEM(const vec3f* nod, const int numNod, const tri_elem* el
                         crrNumExtrap,elem_d,numElem,pt_d,&B_d[IDXC0(0,i,numNod+NUMCHIEF)],
                         mag[i],src_loc[i],prsr_d);
             }
+            //CUDA_CALL(cudaDeviceSynchronize());
             CUDA_CALL(cudaMemcpy(&prsr[i*numExtrap+j*NUM_EXTRAP_PER_LAUNCH],prsr_d,crrNumExtrap*sizeof(cuFloatComplex),
                     cudaMemcpyDeviceToHost));
+            //CUDA_CALL(cudaDeviceSynchronize());
         }
     }
     
@@ -2396,9 +2402,11 @@ int GenLoudnessFieldUsingBEM(const vec3f* nod, const int numNod, const tri_elem*
         float wavNum = omega/SPEED_SOUND;
         HOST_CALL(GenerateFieldUsingBEM(nod,numNod,elem,numElem,wavNum,src_type,
                 src_loc,mag,numSrc,pt_extrap,numExtrap,prsr));
+        CUDA_CALL(cudaDeviceSynchronize());
         for(int j=0;j<numSrc*numExtrap;j++) {
-            loudness[j] += 0.5*intwgt[i]*powf(cuCabsf(prsr[j]),2);
+            loudness[j] += 0.5*intwgt[i]*powf(cuCabsf(prsr[j])/REF_SOUND_PRESSURE,2);
         }
+        CUDA_CALL(cudaDeviceSynchronize());
     }
     for(int i=0;i<numSrc*numExtrap;i++) {
         loudness[i] = 10*logf(loudness[i])/logf(10);
@@ -2487,6 +2495,7 @@ int WriteZSliceVoxLoudness(const char* file_path, const float band[2], const cha
     rect_3d.len[1] = rect_2d.len[1];
     rect_3d.len[2] = len+2*EPS;
     
+    print(&rect_3d,1);
     HOST_CALL(WriteLoudnessGeometry(file_path,band,src_type,mag,src_loc,numSrc,
             rect_3d,len,vox_grid_path,field_grid_path));
     return EXIT_SUCCESS;

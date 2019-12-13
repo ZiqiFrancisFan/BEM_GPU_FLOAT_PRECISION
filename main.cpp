@@ -52,11 +52,14 @@ int main(int argc, char *argv[])
     HOST_CALL(WriteZSliceVoxLoudness("./mesh/test1.obj",band,"point",mag,src_loc,4,
             zCoord,len,rect_2d,"./data/vox","./data/loudness"));
     */
-    
+    HOST_CALL(cuGenGaussParams(INTORDER,intpt,intwgt));
+    HOST_CALL(gaussPtsToDevice(intpt,intwgt));
+    SetHostBases();
+    HOST_CALL(CopyBasesToConstant());
     int c;
     int option_index = 0;
     char obj_file[50] = "./mesh/test.obj", src_type[50] = "point", vox_file[50] = "./data/vox", 
-            field_file[50] = "./data/lu";
+            field_file[50] = "./data/loudness";
     double z_coord, len, radius = 3.0, src_mag = 1.0, x_cnr = -5, y_cnr = -5, 
             x_len = 10, y_len = 10;
     float band[2];
@@ -169,8 +172,8 @@ int main(int argc, char *argv[])
     rect.cnr.coords[1] = y_cnr;
     rect.len[0] = x_len;
     rect.len[1] = y_len;
-    HOST_CALL(WriteZSliceVoxLoudness(obj_file,band,"point",mag,src,src_num,
-            z_coord,len,rect,"./data/vox","./data/loudness"));
+    HOST_CALL(WriteZSliceVoxLoudness(obj_file,band,"point",mag,src,src_num,z_coord,
+            len,rect,vox_file,field_file));
     CUDA_CALL(cudaDeviceReset());
     free(mag);
     free(src);

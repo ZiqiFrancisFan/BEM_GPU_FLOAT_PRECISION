@@ -22,6 +22,15 @@ __constant__ vec3d BASES[3];
 
 vec3d bases[3];
 
+void print(const aarect3d* rect, const int num)
+{
+    for(int i=0;i<num;i++) {
+        printf("%dth rectangle, corner: (%lf,%lf,%lf), lengths: %lf, %lf, %lf\n",
+                i,rect[i].cnr.coords[0],rect[i].cnr.coords[1],rect[i].cnr.coords[2],
+                rect[i].len[0],rect[i].len[1],rect[i].len[2]);
+    }
+}
+
 __host__ int CopyBasesToConstant()
 {
     vec3d bases[3];
@@ -1429,7 +1438,7 @@ int RectSpaceToOccGridOnGPU(const aarect3d sp, const double len, const vec3d* pt
                     cbs+i*NUM_CB_PER_LAUNCH,currNumCb,flag+flagArrIdx));
         }
     }
-    
+    printf("completed voxelization.\n");
     HOST_CALL(write_voxels(flag,dimsize,filePath));
     free(flag);
     free(tris);
@@ -1991,6 +2000,7 @@ int RectSpaceVoxelSATOnGPU(const aarect3d sp, const double voxlen, const vec3d* 
 
 int write_voxels(int* flag, const int numvox[3], const char* file_path)
 {
+    printf("grid size: (%d,%d,%d)\n",numvox[0],numvox[1],numvox[2]);
     FILE *file = fopen(file_path,"wb");
     if(file==NULL) {
         printf("Failed to open file.\n");
@@ -2057,7 +2067,12 @@ int write_field(const cuFloatComplex* field, const int numvox[3], const char* fi
 
 int write_float_grid(const float* field, const int numvox[3], const char* file_path)
 {
-    FILE *file = fopen(file_path,"w");
+    //printf("field: \n");
+    //for(int i=0;i<numvox[0]*numvox[1]*numvox[2];i++) {
+    //    printf("%f ",field[i]);
+    //}
+    //printf("\n");
+    FILE *file = fopen(file_path,"wb");
     if(file==NULL) {
         printf("Failed to open file.\n");
         return EXIT_FAILURE;

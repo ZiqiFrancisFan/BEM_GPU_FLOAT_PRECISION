@@ -17,7 +17,7 @@ for i = 1 : dim_sz(3)
 end
 
 folder = '../data/';
-filename = 'loudness_2';
+filename = 'loudness_1';
 
 path = [folder,filename];
 fileID = fopen(path,'r');
@@ -39,9 +39,9 @@ field(find(grid==1)) = nan;
 hFig1 = figure('units','normalized','outerposition',[0 0 1 1]);
 hAx1 = axes(hFig1);
 daspect(hAx1,[1,1,1]);
-hFig2 = figure('units','normalized','outerposition',[0 0 1 1]);
-hAx2 = axes(hFig2);
-daspect(hAx2,[1,1,1]);
+%hFig2 = figure('units','normalized','outerposition',[0 0 1 1]);
+%hAx2 = axes(hFig2);
+%daspect(hAx2,[1,1,1]);
 %field(find(field>10)) = 5;
 for i=1:dim_sz(3)
     %caxis([minVal maxVal]);
@@ -49,7 +49,7 @@ for i=1:dim_sz(3)
     daspect(hAx1,[1,1,1]);
     colorbar(hAx1);
     
-    imagesc(hAx2,grid(:,:,i));
-    daspect(hAx2,[1,1,1]);
-    pause(0.5);
+    %imagesc(hAx2,grid(:,:,i));
+    %daspect(hAx2,[1,1,1]);
+    %pause(0.5);
 end

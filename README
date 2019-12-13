@@ -1,23 +1,4 @@
-This folder contains code for a fast implementation of the BEM acoustics.
+This repo is for generating acoustic fields fast for inverse estimation of objects.
 
 format to use the executable:
-./main.a --file filename --left left_index --right right_index 
-    --low_freq low_frequency --high_freq high_frequency --freq_interp frequency_interpolation 
-    --source source_type --low_phi lower_phi --high_phi higher_phi --phi_interp phi_interplation 
-    --low_theta lower_theta --high_theta higher_theta --theta_interp theta_interpolation
-
-filename: the name of the file including its suffix. Only supports .obj currently;
-left_index: node index of the left ear;
-right_index: node index of the right ear;
-low_frequency: lower frequency bound;
-high_frequency: upper frequency bound;
-
-source type: plane or point;
-
-example:
-./main.a  --file guo_equal.obj --left 7269 --right 15533 --low_freq 25 --high_freq 12000
-     --freq_interp 25 --source plane --low_phi 0 --high_phi 355 --phi_interp 5 --low_theta 0 --high_theta 135 --theta_interp 5
-
-./main.a  --file guo_equal.obj --left 7269 --right 15533 --low_freq 25 --high_freq 12000
-     --freq_interp 25 --source point --low_phi 0 --high_phi 355 --phi_interp 5 --low_theta 0 --high_theta 135 --theta_interp 5
-     --radius 1
+./main.a --obj_file ./mesh/test.obj --src_type point --src_radi 3 --src_num 4 --low_ng_freq 6283.18530718 --up_ng_freq 12566.3706144 --src_mag 1.0 --x_cnr -2.5 --y_cnr -2.5 --x_len 5 --y_len 5 --z_coord 0.5 --side_len 0.01 --vox_file vox --field_file loudness
