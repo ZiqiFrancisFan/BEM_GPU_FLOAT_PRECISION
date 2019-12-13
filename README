@@ -3,3 +3,5 @@ This repo is for generating acoustic fields fast for inverse estimation of objec
 format to use the executable:
 ./main --obj_file ./mesh/test.obj --src_type point --src_radi 3 --src_num 4 --low_ng_freq 6283.18530718 --up_ng_freq 12566.3706144 
     --src_mag 1.0 --x_cnr -2.5 --y_cnr -2.5 --x_len 5 --y_len 5 --z_coord 0.5 --side_len 0.01 --vox_file ./data/vox --field_file ./data/loudness
+
+Generated data can be viewed using the MATLAB scirpt read_data in the MATLAB folder. 

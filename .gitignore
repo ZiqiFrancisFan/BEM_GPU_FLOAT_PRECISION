@@ -2,13 +2,15 @@
 
 /figure/*.png
 
-/data/*
-
 /doc/*
 
 *.pdf
 
 *.png
+
+vox*
+
+loudness*
 
 main
 
