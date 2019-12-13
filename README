@@ -5,3 +5,5 @@ format to use the executable:
     --src_mag 1.0 --x_cnr -2.5 --y_cnr -2.5 --x_len 5 --y_len 5 --z_coord 0.5 --side_len 0.01 --vox_file ./data/vox --field_file ./data/loudness
 
 Generated data can be viewed using the MATLAB scirpt read_data in the MATLAB folder. 
+
+Suggestions for Vibhav: modify "61" to "60" in the makefile as you make, if you are using a Tesla P100.  
