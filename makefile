@@ -175,10 +175,11 @@ LIBRARIES += -lstdc++ -lm -lgsl -lgslcblas
 
 
 ################################################################################
-vpath %.c ./src
-vpath %.h ./src
-vpath %.o ./bin
-vpath main .bin
+vpath %.cpp src
+vpath %.cu src
+vpath %.h src
+vpath %.o bin
+vpath main bin
 
 # Target rules
 all: build
@@ -200,19 +201,19 @@ main : $(OBJ)
 	$(EXEC) $(NVCC) $(ALL_LDFLAGS) $(GENCODE_FLAGS) -o $@ $+ $(LIBRARIES)
 
 main.o : main.cpp numerical.h mesh.h dataStructs.h geometry.h
-	$(EXEC) $(HOST_COMPILER) $(INCLUDES) $(CCFLAGS) $(EXTRA_CCFLAGS) -c main.cpp
+	$(EXEC) $(HOST_COMPILER) $(INCLUDES) -c $(CCFLAGS) $(EXTRA_CCFLAGS) $<
 
 numerical.o : numerical.cu numerical.h mesh.h dataStructs.h octree.h
-	$(NVCCONLY) -dc $(INCLUDES) $(ALL_CCFLAGS) $(EXTRA_CCFLAGS) $(GENCODE_FLAGS) numerical.cu
+	$(NVCCONLY) -dc $(INCLUDES) $(ALL_CCFLAGS) $(EXTRA_CCFLAGS) $(GENCODE_FLAGS) $<
 	
 mesh.o: mesh.cpp mesh.h numerical.h dataStructs.h
-	$(NVCCONLY) -dc $(INCLUDES) $(ALL_CCFLAGS) $(EXTRA_CCFLAGS) $(GENCODE_FLAGS) mesh.cpp
+	$(NVCCONLY) -dc $(INCLUDES) $(ALL_CCFLAGS) $(EXTRA_CCFLAGS) $(GENCODE_FLAGS) $<
 	
 octree.o: octree.cpp octree.h numerical.h dataStructs.h mesh.h
-	$(NVCC) $(INCLUDES) $(ALL_CCFLAGS) $(EXTRA_CCFLAGS) $(GENCODE_FLAGS) -c octree.cpp
+	$(NVCC) $(INCLUDES) -c $(ALL_CCFLAGS) $(EXTRA_CCFLAGS) $(GENCODE_FLAGS) $<
 	
 geometry.o: geometry.cu geometry.h numerical.h dataStructs.h octree.h
-	$(NVCCONLY) -dc $(INCLUDES) $(ALL_CCFLAGS) $(EXTRA_CCFLAGS) $(GENCODE_FLAGS) geometry.cu
+	$(NVCCONLY) -dc $(INCLUDES) -c $(ALL_CCFLAGS) $(EXTRA_CCFLAGS) $(GENCODE_FLAGS) $<
 
 
 # main: $(OBJ)

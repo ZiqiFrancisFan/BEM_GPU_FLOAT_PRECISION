@@ -1,0 +1,39 @@
+/*
+ * To change this license header, choose License Headers in Project Properties.
+ * To change this template file, choose Tools | Templates
+ * and open the template in the editor.
+ */
+
+/* 
+ * File:   mesh.h
+ * Author: ziqi
+ *
+ * Created on February 23, 2019, 1:30 PM
+ */
+
+#ifndef MESH_H
+#define MESH_H
+
+
+
+#include "dataStructs.h"
+#include <stdio.h>
+#include <stdlib.h>
+void findNum(const char * filename,int *pV, int *pE);
+
+void readOBJ(const char *filename, rect_coord_flt* p, tri_elem* e);
+
+void readOBJ(const char *filename, rect_coord_dbl* p, tri_elem* e);
+
+void printPts(const vec3f* p,const int num);
+void printElems(const tri_elem* elem, const int num);
+
+int findBB(const vec3f* pt, const int numPt, const float threshold, float x[2], 
+    float y[2], float z[2]);
+
+int write_hrtfs_to_file(const cuFloatComplex* HRTFs_le, const cuFloatComplex* HRTFs_re, 
+        const int numSrcs, const int numFreqs, const char* file_le, const char* file_re);
+
+
+#endif /* MESH_H */
+
