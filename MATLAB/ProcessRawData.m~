@@ -1,0 +1,8 @@
+function [grid,field] = ProcessRawData(grid_path,field_path,len,dark_label)
+%ProcessRawData Summary of this function goes here
+%   Reads the raw data of an occupancy grid and a field to get matlab
+%   matrices
+outputArg1 = inputArg1;
+outputArg2 = inputArg2;
+end
+
