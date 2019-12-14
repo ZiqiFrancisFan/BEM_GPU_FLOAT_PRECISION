@@ -18,14 +18,15 @@ for i=1:numLoudness
     field_name = [field_name_base,'_',num2str(i-1)];
     field_path = [folder,field_name];
     [grid,field] = ProcessRawData(grid_path,field_path,100,-5);
-    caxis(ax1,[-10,10]);
-    imagesc(ax1,field);
-    set(ax1,'visible','off');
-    daspect(ax1,[1,1,1]);
-    pause(1.0);
     if i==1
         imagesc(ax2,grid);
         set(ax2,'visible','off');
         daspect(ax2,[1,1,1]);
     end
+    caxis(ax1,[-10,10]);
+    imagesc(ax1,field);
+    set(ax1,'visible','off');
+    daspect(ax1,[1,1,1]);
+    pause(1.0);
+    
 end

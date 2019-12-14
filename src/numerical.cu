@@ -1708,6 +1708,70 @@ __host__ __device__ sph3d vec2sph(const vec3d s)
     return temp;
 }
 
+__global__ void g_h_elem_extraps(const float wavNum, const vec3f nod[3], const vec3f* ptExtrap, 
+        const int numExtrap, cuFloatComplex* g, cuFloatComplex* h, float* c)
+{
+    /*generate all g and h coefficients of a single element and all extrapolation point
+     wavNum: the current wave number
+     nod: 3 nodes on the element
+     ptExtrap: an array for extrapolation points
+     g: an array for all g coefficients, of length 3*numExtrap
+     h: an array for all h coefficiens, of length 3*numExtrap
+     c: an array for c coefficients, of length 3*numExtrap*/
+    int idx = blockIdx.x*blockDim.x+threadIdx.x;
+    if(idx<numExtrap) {
+        g_h_c_nsgl(wavNum,ptExtrap[idx],nod,&g[3*idx],&h[3*idx],&c[3*idx]);
+    }
+}
+
+__global__ void updateExrapSglElem(const float wavNum, const tri_elem elem, const vec3f* pt, 
+        const vec3f* pt_extrap, const int numExtrap, const int numSrc, const cuFloatComplex* B, 
+        const int ldb, cuFloatComplex* prsr)
+{
+    /* update the pressure array according to a single element 
+       elem: the element
+       g: an array for current g coefficients
+       h: an array for current h coefficients
+       B: pressure on the surface of the object
+       ldb: the dimension of the B matrix
+       prsr: an array for pressure of extrapolation points */
+    
+    int idx_extrap = blockIdx.x*blockDim.x+threadIdx.x; // index for extrapolation
+    int idx_src = blockIdx.y*blockDim.y+threadIdx.y; // index for source
+    
+    if(idx_extrap<numExtrap && idx_src<numSrc) {
+        vec3f nod[3];
+        cuFloatComplex gCoeff[3], hCoeff[3], temp[3];
+        float cCoeff;
+        for(int i=0;i<3;i++) {
+            nod[i] = pt[elem.nod[i]];
+        }
+        g_h_c_nsgl(wavNum,pt_extrap[idx_extrap],nod,gCoeff,hCoeff,&cCoeff); //compute coefficients
+        for(int i=0;i<3;i++) {
+            temp[i] = make_cuFloatComplex(0,0);
+        }
+        
+        for(int i=0;i<3;i++) {
+            temp[0] = cuCaddf(temp[0],gCoeff[i]);
+        }
+        temp[0] = cuCmulf(temp[0],cuCdivf(elem.bc[2],elem.bc[1]));
+        
+        for(int i=0;i<3;i++) {
+            temp[1] = cuCaddf(temp[1],cuCmulf(hCoeff[i],B[IDXC0(elem.nod[i],idx_src,ldb)]));
+        }
+        
+        for(int i=0;i<3;i++) {
+            temp[2] = cuCaddf(temp[2],cuCmulf(gCoeff[i],B[IDXC0(elem.nod[i],idx_src,ldb)]));
+        }
+        temp[2] = cuCmulf(temp[2],cuCdivf(elem.bc[0],elem.bc[1]));
+        
+        temp[2] = cuCsubf(cuCsubf(temp[2],temp[1]),temp[0]);
+        
+        prsr[idx_src*numExtrap+idx_extrap] = cuCaddf(prsr[idx_src*numExtrap+idx_extrap],temp[2]);
+        
+    }
+}
+
 __device__ cuFloatComplex extrapolation_dir(const float wavNum, const vec3f x, 
         const tri_elem* elem, const int numElem, const vec3f* pt, 
         const cuFloatComplex* p, const float& strength, const vec3f& dir)
