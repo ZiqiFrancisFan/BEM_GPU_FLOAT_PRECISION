@@ -2899,7 +2899,7 @@ int WriteOctaveLoudnessGeometry(const char* file_path, const int numOctave, cons
     for(int i=0;i<numOctave;i++) {
         sprintf(octave,"_oct%d",i);
         for(int j=0;j<numSrc;j++) {
-            char *final_path = (char*)malloc((strlen(field_grid_path)+10)*sizeof(char)); //
+            char *final_path = (char*)malloc((strlen(field_grid_path)+20)*sizeof(char)); //
             strcpy(final_path,field_grid_path);
             strcat(final_path,octave);
             sprintf(source,"_src%d",j);

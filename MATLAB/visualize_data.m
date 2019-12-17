@@ -2,11 +2,13 @@
 clear; close all; clc;
 
 %% specify the path
-folder = '../data/';
-grid_name = 'vox';
-field_name_base = 'field';
+inputbase = '../data/validation/input/raw/';
+outputbase = '../data/validation/output/raw/';
 
-grid_path = [folder,grid_name];
+gridnamebase = 'vox0';
+fieldnamebase = 'field0';
+
+gridpath = [inputbase,gridnamebase];
 numOct = 4;
 numSrc = 8;
 fig1 = figure;
@@ -17,9 +19,9 @@ fig2 = figure;
 ax2 = axes(fig2);
 for i=1:numOct
     for j=1:numSrc
-        field_name = [field_name_base,'_oct',num2str(i-1),'_src',num2str(j-1)];
-        field_path = [folder,field_name];
-        [grid,field] = ProcessRawData(grid_path,field_path,100,-4);
+        fieldname = [fieldnamebase,'_oct',num2str(i-1),'_src',num2str(j-1)];
+        fieldpath = [outputbase,fieldname];
+        [grid,field] = ProcessRawData(gridpath,fieldpath,100,-4);
         %save([field_path,'slow.mat'],'field');
         if i==1 && j==1
             imagesc(ax2,grid);
