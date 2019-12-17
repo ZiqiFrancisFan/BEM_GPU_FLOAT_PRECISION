@@ -2701,10 +2701,10 @@ int GenerateVoxelField(const char* file_path, const float wavNum, const char* sr
             src_loc,mag,numSrc,pt_extrap,grid_size[0]*grid_size[1]*grid_size[2],prsr));
     
     for(int i=0;i<numSrc;i++) {
-        char temp[4];
+        char temp[10];
         char *result = (char*)malloc((strlen(field_grid_path)+5)*sizeof(char));
         strcpy(result,field_grid_path);
-        sprintf(temp,"%d",i);
+        sprintf(temp,"src_%d",i);
         strcat(result,temp);
         //printf("result: %s\n",result);
         HOST_CALL(write_field(&prsr[i*grid_size[0]*grid_size[1]*grid_size[2]],grid_size,result));
@@ -2816,16 +2816,102 @@ int WriteLoudnessGeometry(const char* file_path, const float band[2], const char
             mag,numSrc,pt_extrap,grid_size[0]*grid_size[1]*grid_size[2],loudness));
     //printMat(loudness,1,numSrc*grid_size[0]*grid_size[1]*grid_size[2],1);
     for(int i=0;i<numSrc;i++) {
-        char temp[4];
+        char temp[10];
         char *result = (char*)malloc((strlen(field_grid_path)+5)*sizeof(char));
         strcpy(result,field_grid_path);
-        sprintf(temp,"_%d",i);
+        sprintf(temp,"_src_%d",i);
         strcat(result,temp);
         //printf("result: %s\n",result);
         HOST_CALL(write_float_grid(&loudness[i*grid_size[0]*grid_size[1]*grid_size[2]],grid_size,result));
         free(result);
     }
     
+    free(loudness);
+    free(pt_extrap);
+    free(nod_d);
+    free(nod_f);
+    free(elem);
+    return EXIT_SUCCESS;
+}
+
+int WriteOctaveLoudnessGeometry(const char* file_path, const int numOctave, const char* src_type, 
+        const float* mag, const vec3f* src_loc, const int numSrc, const aarect3d rect, 
+        const double len, const char* vox_grid_path, const char* field_grid_path)
+{
+    /*write the loudness fields and their corresponding occupancy grid of object
+     file_path: path of objects
+     band: freqeuncy bands in radians
+     src_type: the type of sources, "point" or "monopole"
+     mag: magnitudes of sources
+     vox_grid_path: path of the occupancy grid file
+     field_grid_path: path of files of the fields*/
+    int numNod, numElem;
+    findNum(file_path,&numNod,&numElem);
+    vec3d *nod_d = (vec3d*)malloc(numNod*sizeof(vec3d));
+    tri_elem *elem = (tri_elem*)malloc(numElem*sizeof(tri_elem));
+    readOBJ(file_path,nod_d,elem);
+    
+    vec3f *nod_f = (vec3f*)malloc(numNod*sizeof(vec3f));
+    vecd2f(nod_d,numNod,nod_f);
+    
+    int grid_size[3];
+    for(int i=0;i<3;i++) {
+        grid_size[i] = floor(rect.len[i]/len);
+    }
+    
+    vec3f *pt_extrap = (vec3f*)malloc(grid_size[0]*grid_size[1]*grid_size[2]*sizeof(vec3f));
+    vec3f cnr;
+    for(int i=0;i<3;i++) {
+        cnr.coords[i] = rect.cnr.coords[i];
+    }
+    // get the center of each voxel as the evaluation point
+    for(int z=0;z<grid_size[2];z++) {
+        for(int y=0;y<grid_size[1];y++) {
+            for(int x=0;x<grid_size[0];x++) {
+                int idx = z*grid_size[0]*grid_size[1]+y*grid_size[0]+x;
+                pt_extrap[idx].coords[0] = cnr.coords[0]+x*len+len/2;
+                pt_extrap[idx].coords[1] = cnr.coords[1]+y*len+len/2;
+                pt_extrap[idx].coords[2] = cnr.coords[2]+z*len+len/2;
+            }
+        }
+    }
+    HOST_CALL(RectSpaceToOccGridOnGPU(rect,len,nod_d,elem,numElem,vox_grid_path)); //voxelize the rectangular space on GPU
+    
+    float *loudness = (float*)malloc(numOctave*numSrc*grid_size[0]*grid_size[1]*grid_size[2]*sizeof(float));
+    if(loudness==NULL) {
+        printf("Allocation of loudness failed.\n");
+        return EXIT_FAILURE;
+    }
+    
+    float band[2];
+    for(int i=0;i<numOctave;i++) {
+        band[0] = 2*PI*125.0*powf(2,i);
+        band[1] = 2*PI*125.0*powf(2,i+1);
+        HOST_CALL(GenLoudnessFieldUsingBEM(nod_f,numNod,elem,numElem,band,src_type,src_loc,
+            mag,numSrc,pt_extrap,grid_size[0]*grid_size[1]*grid_size[2],
+                &loudness[i*numSrc*grid_size[0]*grid_size[1]*grid_size[2]]));
+    }
+    //HOST_CALL(GenLoudnessFieldUsingBEM(nod_f,numNod,elem,numElem,band,src_type,src_loc,
+    //        mag,numSrc,pt_extrap,grid_size[0]*grid_size[1]*grid_size[2],loudness));
+    //printMat(loudness,1,numSrc*grid_size[0]*grid_size[1]*grid_size[2],1);
+    
+    char octave[10], source[10];
+    for(int i=0;i<numOctave;i++) {
+        sprintf(octave,"_oct%d",i);
+        for(int j=0;j<numSrc;j++) {
+            char *final_path = (char*)malloc((strlen(field_grid_path)+10)*sizeof(char)); //
+            strcpy(final_path,field_grid_path);
+            strcat(final_path,octave);
+            sprintf(source,"_src%d",j);
+            strcat(final_path,source);
+            //printf("%s\n",final_path);
+            HOST_CALL(write_float_grid(&loudness[i*numSrc*grid_size[0]*grid_size[1]*grid_size[2]+j*grid_size[0]*grid_size[1]*grid_size[2]],
+                    grid_size,final_path));
+            free(final_path);
+        }
+        
+    }
+    //free(final_path);
     free(loudness);
     free(pt_extrap);
     free(nod_d);
@@ -2850,6 +2936,26 @@ int WriteZSliceVoxLoudness(const char* file_path, const float band[2], const cha
     
     //print(&rect_3d,1);
     HOST_CALL(WriteLoudnessGeometry(file_path,band,src_type,mag,src_loc,numSrc,
+            rect_3d,len,vox_grid_path,field_grid_path));
+    return EXIT_SUCCESS;
+}
+
+int WriteZSliceVoxOctaveLoudness(const char* file_path, const int numOctave, const char* src_type, 
+        const float* mag, const vec3f* src_loc, const int numSrc, const double zCoord, 
+        const double len, const aarect2d rect_2d, const char* vox_grid_path, 
+        const char* field_grid_path)
+{
+    // create a rectangle volume
+    aarect3d rect_3d;
+    rect_3d.cnr.coords[0] = rect_2d.cnr.coords[0];
+    rect_3d.cnr.coords[1] = rect_2d.cnr.coords[1];
+    rect_3d.cnr.coords[2] = zCoord-len/2-EPS;
+    rect_3d.len[0] = rect_2d.len[0];
+    rect_3d.len[1] = rect_2d.len[1];
+    rect_3d.len[2] = len+2*EPS;
+    
+    //print(&rect_3d,1);
+    HOST_CALL(WriteOctaveLoudnessGeometry(file_path,numOctave,src_type,mag,src_loc,numSrc,
             rect_3d,len,vox_grid_path,field_grid_path));
     return EXIT_SUCCESS;
 }

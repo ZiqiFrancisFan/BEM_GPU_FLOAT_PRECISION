@@ -8,6 +8,10 @@
 
 *.png
 
+*.mat
+
+field*
+
 vox*
 
 data/loudness*

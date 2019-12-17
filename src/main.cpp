@@ -63,7 +63,7 @@ int main(int argc, char *argv[])
     double z_coord, len, radius = 3.0, src_mag = 1.0, x_cnr = -5, y_cnr = -5, 
             x_len = 10, y_len = 10;
     float band[2];
-    int src_num = 4;
+    int src_num = 4, oct_num = 0;
     aarect2d rect = {x_cnr,y_cnr,x_len,y_len};
     struct option long_options[] = {
         {"obj_file", required_argument, NULL, 0},
@@ -81,6 +81,7 @@ int main(int argc, char *argv[])
         {"y_len", required_argument, NULL, 12},
         {"z_coord", required_argument, NULL, 13},
         {"side_len", required_argument, NULL, 14},
+        {"oct_num",required_argument,NULL,15},
         {0,0,0,0}
     };
     // parse command line arguments
@@ -91,63 +92,66 @@ int main(int argc, char *argv[])
         switch(c) {
             case 0:
                 strcpy(obj_file,optarg);
-                printf("file name: %s\n",obj_file);
+                //printf("file name: %s\n",obj_file);
                 break;
             case 1:
                 strcpy(src_type,optarg);
-                printf("source type: %s\n",src_type);
+                //printf("source type: %s\n",src_type);
                 break;
             case 2:
                 strcpy(vox_file,optarg);
-                printf("vox file: %s\n",vox_file);
+                //printf("vox file: %s\n",vox_file);
                 break;
             case 3:
                 strcpy(field_file,optarg);
-                printf("field file: %s\n",field_file);
+                //printf("field file: %s\n",field_file);
                 break;
             case 4:
                 band[0] = atof(optarg);
-                printf("lower frequency bound: %lf\n",band[0]);
+                //printf("lower frequency bound: %lf\n",band[0]);
                 break;
             case 5:
                 band[1] = atof(optarg);
-                printf("frequency interpolation: %lf\n",band[1]);
+                //printf("frequency interpolation: %lf\n",band[1]);
                 break;
             case 6:
                 radius = atof(optarg);
-                printf("radius of sources: %lf\n",radius);
+                //printf("radius of sources: %lf\n",radius);
                 break;
             case 7:
                 src_num = atof(optarg);
-                printf("number of sources: %d\n",src_num);
+                //printf("number of sources: %d\n",src_num);
                 break;
             case 8:
                 src_mag = atof(optarg);
-                printf("magnitude of sources: %lf\n",src_mag);
+                //printf("magnitude of sources: %lf\n",src_mag);
                 break;
             case 9:
                 x_cnr = atof(optarg);
-                printf("x coordinate of the corner: %lf\n",x_cnr);
+                //printf("x coordinate of the corner: %lf\n",x_cnr);
                 break;
             case 10:
                 y_cnr = atof(optarg);
-                printf("y coordinate of the corner: %lf\n",y_cnr);
+                //printf("y coordinate of the corner: %lf\n",y_cnr);
                 break;
             case 11:
                 x_len = atof(optarg);
-                printf("length in x direction: %lf\n",x_len);
+                //printf("length in x direction: %lf\n",x_len);
                 break;
             case 12:
                 y_len = atof(optarg);
-                printf("length in y direction: %lf\n",y_len);
+                //printf("length in y direction: %lf\n",y_len);
                 break;
             case 13:
                 z_coord = atof(optarg);
-                printf("coordinate of z slice: %lf\n",z_coord);
+                //printf("coordinate of z slice: %lf\n",z_coord);
                 break;
             case 14:
                 len = atof(optarg);
-                printf("side length: %lf\n",len);
+                //printf("side length: %lf\n",len);
+                break;
+            case 15:
+                oct_num = atoi(optarg);
                 break;
             default:
                 printf("The current option is not recognized.\n");
@@ -172,8 +176,15 @@ int main(int argc, char *argv[])
     rect.cnr.coords[1] = y_cnr;
     rect.len[0] = x_len;
     rect.len[1] = y_len;
-    HOST_CALL(WriteZSliceVoxLoudness(obj_file,band,"point",mag,src,src_num,z_coord,
+    if(oct_num==0) {
+        HOST_CALL(WriteZSliceVoxLoudness(obj_file,band,"point",mag,src,src_num,z_coord,
             len,rect,vox_file,field_file));
+    }
+    else {
+        HOST_CALL(WriteZSliceVoxOctaveLoudness(obj_file,oct_num,"point",mag,src,
+                src_num,z_coord,len,rect,vox_file,field_file));
+    }
+    
     CUDA_CALL(cudaDeviceReset());
     free(mag);
     free(src);
