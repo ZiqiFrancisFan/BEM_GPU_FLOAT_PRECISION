@@ -16,11 +16,12 @@ fclose(fileID);
 
 field = reshape(field,[dim_sz(1),dim_sz(2),dim_sz(3)]);
 
-disp(min(min(field)));
-
 len = (dim_sz(1)-dark_len)/2;
 
-field(len+1:len+dark_len,len+1:len+dark_len) = dark_label;
+field(len+1:len+dark_len,len+1:len+dark_len) = nan;
+
+%disp(min(min(field)));
+disp([min(min(field)),max(max(field))]);
 
 end
 

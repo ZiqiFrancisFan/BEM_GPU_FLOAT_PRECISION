@@ -58,8 +58,8 @@ int main(int argc, char *argv[])
     HOST_CALL(CopyBasesToConstant());
     int c;
     int option_index = 0;
-    char obj_file[100] = "./mesh/test.obj", src_type[50] = "point", vox_file[100] = "./data/vox", 
-            field_file[100] = "./data/loudness";
+    char obj_file[200] = "./mesh/test.obj", src_type[50] = "point", vox_file[200] = "./data/vox", 
+            field_file[200] = "./data/loudness";
     double z_coord, len, radius = 3.0, src_mag = 1.0, x_cnr = -5, y_cnr = -5, 
             x_len = 10, y_len = 10;
     float band[2];

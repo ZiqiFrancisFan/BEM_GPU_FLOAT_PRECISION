@@ -2,11 +2,11 @@
 clear; close all; clc;
 
 %% specify the path
-inputbase = '../data/validation/input/raw/';
-outputbase = '../data/validation/output/raw/';
+inputbase = '../data/test/input/raw/';
+outputbase = '../data/test/output/raw/';
 
-gridnamebase = 'vox0';
-fieldnamebase = 'field0';
+gridnamebase = 'vox2';
+fieldnamebase = 'field2';
 
 gridpath = [inputbase,gridnamebase];
 numOct = 4;
@@ -32,6 +32,6 @@ for i=1:numOct
         imagesc(ax1,field);
         set(ax1,'visible','off');
         daspect(ax1,[1,1,1]);
-        pause(3.0);
+        pause(1.0);
     end
 end
