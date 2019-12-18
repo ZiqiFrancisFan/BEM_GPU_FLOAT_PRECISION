@@ -10,10 +10,6 @@
 
 *.mat
 
-field*
-
-vox*
-
 data/loudness*
 
 data/vox*
