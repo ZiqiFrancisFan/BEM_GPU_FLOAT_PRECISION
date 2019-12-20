@@ -188,5 +188,6 @@ int main(int argc, char *argv[])
     CUDA_CALL(cudaDeviceReset());
     free(mag);
     free(src);
+    
     return EXIT_SUCCESS;
 }

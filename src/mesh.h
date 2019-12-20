@@ -25,6 +25,8 @@ void readOBJ(const char *filename, rect_coord_flt* p, tri_elem* e);
 
 void readOBJ(const char *filename, rect_coord_dbl* p, tri_elem* e);
 
+int FindNumObj(const char *file, int& num);
+
 void printPts(const vec3f* p,const int num);
 void printElems(const tri_elem* elem, const int num);
 

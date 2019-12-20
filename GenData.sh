@@ -32,11 +32,11 @@ radius=0.5
 height=1
 freq_max=2000
 
-numPolyEachType_train=2
-numPolyEachType_val=2
-numPolyEachType_test=2
+numPolyEachType_train=1
+numPolyEachType_val=1
+numPolyEachType_test=1
 
-lowNumSide=3
+lowNumSide=4
 upNumSide=4
 
 for group in "train" "validation" "test"
@@ -73,7 +73,7 @@ do
         do
             for (( idx=0; idx<numEachType; idx++ ))
             do
-                curr_idx=$(((num_side-3)*numEachType+idx))
+                curr_idx=$(((num_side-lowNumSide)*numEachType+idx))
                 echo "dealing with mesh: ${base}/${group}/mesh/poly_${curr_idx}.obj"
                 ./main --obj_file="${base}/${group}/mesh/poly_${curr_idx}.obj" --src_type="point" --src_radi=5 --src_num=8 --oct_num=4\
                 --src_mag=1.0 --x_cnr=-2.56 --y_cnr=-2.56 --x_len=5.12 --y_len=5.12 --z_coord=0.5 --side_len=0.01\
@@ -90,7 +90,7 @@ do
         do
             for (( idx=0; idx<numEachType; idx++ ))
             do
-                curr_idx=$(((num_side-3)*numEachType+idx))
+                curr_idx=$(((num_side-lowNumSide)*numEachType+idx))
                 echo "dealing with mesh: ${base}/${group}/mesh/poly_${curr_idx}.obj"
                 ./main --obj_file="${base}/${group}/mesh/poly_${curr_idx}.obj" --src_type="point" --src_radi=5 --src_num=8 --oct_num=4\
                 --src_mag=1.0 --x_cnr=-2.56 --y_cnr=-2.56 --x_len=5.12 --y_len=5.12 --z_coord=0.5 --side_len=0.01\
@@ -107,7 +107,7 @@ do
         do
             for (( idx=0; idx<numEachType; idx++ ))
             do
-                curr_idx=$(((num_side-3)*numEachType+idx))
+                curr_idx=$(((num_side-lowNumSide)*numEachType+idx))
                 echo "dealing with mesh: ${base}/${group}/mesh/poly_${curr_idx}.obj"
                 ./main --obj_file="${base}/${group}/mesh/poly_${curr_idx}.obj" --src_type="point" --src_radi=5 --src_num=8 --oct_num=4\
                 --src_mag=1.0 --x_cnr=-2.56 --y_cnr=-2.56 --x_len=5.12 --y_len=5.12 --z_coord=0.5 --side_len=0.01\

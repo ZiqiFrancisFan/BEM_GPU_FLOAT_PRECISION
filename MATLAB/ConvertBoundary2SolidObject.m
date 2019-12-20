@@ -25,7 +25,7 @@ while(y <= size(input,1))
 
     rightBoundaryStart = 0;
     rightBoundaryEnd = 0;
-    while(x < size(input,2) - 1)
+    while(x < size(input,2)-1)
         
         if(leftBoundaryStart==0 && input(y,x)==0 && input(y,x+1)==1)
             leftBoundaryStart = x + 1;

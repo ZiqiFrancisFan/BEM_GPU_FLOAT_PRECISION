@@ -1357,6 +1357,193 @@ __host__ int CubeSpaceVoxelOnGPU(const aacb3d sp, const int numEachDim, const ve
     return EXIT_SUCCESS;
 }
 
+int DiffOutBdIn(int* vox, const int dimsize[3])
+{
+    /*Label inside of boundary as 2
+     vox: an array for voxel labels
+     dimsize: the size of the voxel grid in three dimensions*/
+    
+    // convert the vox array to 0 and 1
+    for(int i=0;i<dimsize[0]*dimsize[1]*dimsize[2];i++) {
+        if(vox[i] > 0) {
+            vox[i] = 1;
+        }
+    }
+    
+    // label the voxels inside the boundary as 2
+    int x = 0, y = 0, z = 0;
+    while(z < dimsize[2]) { // the z loop, loops over each x-y plane
+        y = 0; // initialize y for each z
+        while(y < dimsize[1]) { // the y loop, loops over each x line
+            x = 0; // initialize each x for each z and y
+            int left_bd_start = -1, left_bd_end = -1, right_bd_start = -1, 
+                    right_bd_end = -1; // initialize the flags for start and end status of left/right sides of boundary
+            while(x < dimsize[0]-1) { // the x loop, loops over each pixel
+                if(left_bd_start == -1 && vox[z*dimsize[0]*dimsize[1]+y*dimsize[0]+x] == 0 
+                        && vox[z*dimsize[0]*dimsize[1]+y*dimsize[0]+x+1] == 1) { 
+                    left_bd_start = x+1; // found a left starting point of the boundary
+                    // look for the end of the left boundary from the next voxel in the x direction
+                    int x_temp = left_bd_start+1;
+                    while(left_bd_end == -1 && x_temp < dimsize[0] && 
+                            vox[z*dimsize[0]*dimsize[1]+y*dimsize[0]+x_temp] != 0) { // not arriving at the inside of the boundary
+                        x_temp++;
+                    }
+                    left_bd_end = x_temp-1; // x_temp is either the first inside voxel or the end of the grid
+                    if(x_temp == dimsize[0]) {
+                        printf("Boundary not closed in this grid."); // the end of the left boundary is already at the right end of the grid
+                        return EXIT_FAILURE;
+                    }
+                    else {
+                        x = x_temp+1; // new start point for x, the voxel next to the first inside
+                    }
+                }
+                if(left_bd_end != -1 && right_bd_start == -1 && 
+                        vox[z*dimsize[0]*dimsize[1]+y*dimsize[0]+x] == 1) { //found left boundary, and the start of the right boundary
+                    right_bd_start = x;
+                    int x_temp = right_bd_start+1;
+                    while(right_bd_end == -1 && x_temp < dimsize[0] && 
+                            vox[z*dimsize[0]*dimsize[1]+y*dimsize[0]+x_temp] != 0) {
+                        x_temp++;
+                    }
+                    right_bd_end = x_temp-1;
+                    x = x_temp;
+                }
+                if(left_bd_end != -1 && right_bd_start != -1) {
+                    for(int idx=left_bd_end+1;idx<right_bd_start;idx++) {
+                        vox[z*dimsize[0]*dimsize[1]+y*dimsize[0]+idx] = 2; // inside
+                    }
+                    left_bd_start = -1;
+                    left_bd_end = -1;
+                    right_bd_start = -1;
+                    right_bd_end = -1;
+                }
+                x++;
+            }
+            y++;
+        }
+        z++;
+    }
+    return EXIT_SUCCESS;
+}
+
+int RectSpaceToOccGridGenChiefOnGPU(const aarect3d sp, const double len, const vec3d* pt, 
+        const tri_elem* elem, const int numElem, const char* filePath, vec3f* chief)
+{
+    /*voxelizes a rectangular space into an occupancy grid and write it to a file
+     and generate chief points
+     sp: a rectangular space
+     len: side length of the cube
+     pt: an array of points
+     elem: an array of triangular elements
+     numElem: the number of triangular elements
+     filePath: the path to the file
+     return: success or failure flag of the program
+     */
+    
+    int dimsize[3], totNumCb; //x, y, z in order
+    for(int i=0;i<3;i++) {
+        dimsize[i] = floor(sp.len[i]/len);
+    }
+    totNumCb = dimsize[0]*dimsize[1]*dimsize[2];
+    //printf("The size of each dimension determined.\n");
+    
+    int *flag = (int*)malloc(totNumCb*sizeof(int)); //allocate host memory for flags
+    memset(flag,0,totNumCb*sizeof(int));
+    //printf("Flags initialized.\n");
+    
+    tri3d *tris = (tri3d*)malloc(numElem*sizeof(tri3d)); //allocate memory for triangles
+    /*set up the tris array from the mesh*/
+    for(int i=0;i<numElem;i++) {
+        for(int j=0;j<3;j++) {
+            tris[i].nod[j] = pt[elem[i].nod[j]];
+        }
+    }
+    //printf("Triangles set up.\n");
+    
+    
+    int idx;
+    aacb3d *cbs = (aacb3d*)malloc(totNumCb*sizeof(aacb3d)), cb;
+    vec3d offset[3];
+    for(int z=0;z<dimsize[2];z++) {
+        offset[2] = scaVecMul(z*len,bases[2]); // offset in the z direction
+        for(int y=0;y<dimsize[1];y++) {
+            offset[1] = scaVecMul(y*len,bases[1]); // offset in the y direction
+            for(int x=0;x<dimsize[0];x++) {
+                offset[0] = scaVecMul(x*len,bases[0]); // offset in the x direction
+                idx = z*(dimsize[0]*dimsize[1])+y*dimsize[0]+x; // index of the current cube
+                cb.cnr = vecAdd(vecAdd(vecAdd(sp.cnr,offset[0]),offset[1]),offset[2]);
+                cb.len = len;
+                cbs[idx] = cb;
+                //HOST_CALL(GetTrisCbRel(tris,numElem,cb,&flag[idx]));
+            }
+        }
+    }
+    //printf("Cube array set up.\n");
+    
+    int numCbGroup = (totNumCb+NUM_CB_PER_LAUNCH-1)/NUM_CB_PER_LAUNCH, 
+            numTriGroup = (numElem+NUM_TRI_PER_LAUNCH-1)/NUM_TRI_PER_LAUNCH,
+            currNumTri, currNumCb, flagArrIdx;
+    for(int i=0;i<numCbGroup;i++) {
+        //printf("%dth group of cubes\n",i);
+        flagArrIdx = i*NUM_CB_PER_LAUNCH;
+        if(i<numCbGroup-1) {
+            /*not the last cube group*/
+            currNumCb = NUM_CB_PER_LAUNCH;
+        }
+        else {
+            /*the last cube group*/
+            currNumCb = totNumCb-i*NUM_CB_PER_LAUNCH;
+        }
+        for(int j=0;j<numTriGroup;j++) {
+            //printf("%dth group of triangles\n",j);
+            if(j<numTriGroup-1) {
+                /*not the last triangle group*/
+                currNumTri = NUM_TRI_PER_LAUNCH;
+            }
+            else {
+                /*the last triangle group*/
+                currNumTri = numElem-j*NUM_TRI_PER_LAUNCH;
+            }
+            HOST_CALL(GetTrisCbsRel(tris+j*NUM_TRI_PER_LAUNCH,currNumTri,
+                    cbs+i*NUM_CB_PER_LAUNCH,currNumCb,flag+flagArrIdx));
+        }
+    }
+    HOST_CALL(DiffOutBdIn(flag,dimsize));
+    //printf("completed voxelization.\n");
+    HOST_CALL(write_voxels(flag,dimsize,filePath));
+    
+    //find chief points
+    int chief_idx = 0;
+    for(int z=0;z<dimsize[2];z++) {
+        for(int y=0;y<dimsize[1];y++) {
+            for(int x=0;x<dimsize[0];x++) {
+                if(flag[z*dimsize[0]*dimsize[1]+y*dimsize[0]+x]==2) {
+                    // found an inside point
+                    vec3d temp = vecAdd(vecAdd(vecAdd(sp.cnr,scaVecMul((x+0.5)*len,bases[0])),
+                            scaVecMul((y+0.5)*len,bases[1])),scaVecMul((z+0.5)*len,bases[2]));
+                    vecd2f(&temp,1,&chief[chief_idx]);
+                    chief_idx++;
+                }
+                if(chief_idx==NUMCHIEF) {
+                    break;
+                }
+            }
+            if(chief_idx==NUMCHIEF) {
+                break;
+            }
+        }
+        if(chief_idx==NUMCHIEF) {
+            break;
+        }
+    }
+    
+    
+    free(flag);
+    free(tris);
+    free(cbs);
+    return EXIT_SUCCESS;
+}
+
 int RectSpaceToOccGridOnGPU(const aarect3d sp, const double len, const vec3d* pt, 
         const tri_elem* elem, const int numElem, const char* filePath)
 {
@@ -1439,6 +1626,9 @@ int RectSpaceToOccGridOnGPU(const aarect3d sp, const double len, const vec3d* pt
         }
     }
     //printf("completed voxelization.\n");
+    for(int i=0;i<totNumCb;i++) {
+        flag[i] = (flag[i]==0 ? 0 : 1);
+    }
     HOST_CALL(write_voxels(flag,dimsize,filePath));
     free(flag);
     free(tris);
@@ -2024,12 +2214,13 @@ int write_voxels(int* flag, const int numvox[3], const char* file_path)
                 return EXIT_FAILURE;
             }
         }
-        */
+        
         for(int i=0;i<numvox[0]*numvox[1]*numvox[2];i++) {
             if(flag[i] > 0) {
                 flag[i] = 1;
             }
         }
+         */ 
         fwrite(numvox,sizeof(int),3,file);
         fwrite(flag,sizeof(int),numvox[0]*numvox[1]*numvox[2],file);
         fclose(file);

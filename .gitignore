@@ -14,10 +14,14 @@ vox*
 
 *.mat
 
+*.obj
+
 data/loudness*
 
 data/vox*
 
 main
+
+pipeline
 
 *.[oa]

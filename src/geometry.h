@@ -127,6 +127,9 @@ __host__ int RectSpaceVoxelSATOnGPU(const aarect3d sp, const double voxlen, cons
 __host__ int RectSpaceToOccGridOnGPU(const aarect3d sp, const double len, const vec3d* pt, 
         const tri_elem* elem, const int numElem, const char* filePath);
 
+int RectSpaceToOccGridGenChiefOnGPU(const aarect3d sp, const double len, const vec3d* pt, 
+        const tri_elem* elem, const int numElem, const char* filePath, vec3f* chief);
+
 /*write an occupancy grid to file*/
 __host__ int write_voxels(const bool* flag, const int numvox[3], const char* file_path);
 

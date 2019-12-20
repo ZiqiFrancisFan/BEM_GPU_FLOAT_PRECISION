@@ -90,6 +90,26 @@ void readOBJ(const char *filename, vec3d* p, tri_elem* e)
     fclose(fp);
 }
 
+int FindNumObj(const char *file, int& num)
+{
+    /*finds the number of objects in the file*/
+    FILE *fp = fopen(file,"r");
+    if(fp == NULL) {
+        printf("Failed to open file.\n");
+        return EXIT_FAILURE;
+    }
+    char line[50]; // For reading each line of file
+    num=0;
+    while(fgets(line,49,fp) != NULL) {
+        if(line[0] == 'o') {
+            num++;
+        }
+    }
+    fclose(fp);
+    return EXIT_SUCCESS;
+}
+
+
 void printPts(const vec3f* p, const int num) 
 {
     for(int i=0;i<num;i++) {
