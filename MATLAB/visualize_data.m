@@ -31,10 +31,12 @@ for i=1:numOct
             set(ax2,'visible','off');
             daspect(ax2,[1,1,1]);
         end
-        caxis(ax1,[-5,12]);
+        
         imagesc(ax1,field);
         set(ax1,'visible','off');
         daspect(ax1,[1,1,1]);
+        colorbar(ax1);
+        %caxis(ax1,[20,75]);
         pause(2.0);
     end
 end
