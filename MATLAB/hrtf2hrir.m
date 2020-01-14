@@ -8,14 +8,14 @@ freq_interp = 100;
 low_phi = 0;
 up_phi = 355;
 phi_interp = 5;
-low_theta = 0;
+low_theta = 5;
 up_theta = 135;
 theta_interp = 5;
 
 numFreqs = floor((up_freq-low_freq)/freq_interp)+1;
 numHorizontalSrcs = floor((up_phi-low_phi)/phi_interp)+1;
-numVerticalSrcs = floor((up_theta-low_theta)/theta_interp)+1;
-c = 343.21;
+numVerticalSrcs = 2*(floor((up_theta-low_theta)/theta_interp)+1);
+c = 343.21; %speed of sound
 
 coeffs = zeros(1,numFreqs);
 
@@ -23,7 +23,7 @@ coeffs = zeros(1,numFreqs);
 radius = 1;
 locs = zeros(numHorizontalSrcs+numVerticalSrcs,3);
 for i = 1 : numHorizontalSrcs
-    theta = pi/2;
+    theta = pi/2; % theta = pi/2 denotes the horizontal plane 
     phi = phi_interp*(i-1)*(pi/180);
     x = radius*sin(theta)*cos(phi);
     y = radius*sin(theta)*sin(phi);
@@ -32,12 +32,17 @@ for i = 1 : numHorizontalSrcs
 end
 
 for i = 1 : numVerticalSrcs
-    phi = 0;
-    theta = theta_interp*(i-1)*(pi/180);
+    if i <= numVerticalSrcs/2
+        phi = 0;
+        theta = low_theta+theta_interp*(i-1)*(pi/180);
+    else
+        phi = pi;
+        theta = low_theta+theta_interp*(i-numVerticalSrcs/2-1)*(pi/180);
+    end
     x = radius*sin(theta)*cos(phi);
     y = radius*sin(theta)*sin(phi);
     z = radius*cos(theta);
-    locs(i+numHorizontalSrcs,:) = [x,y,z];
+    locs(numHorizontalSrcs+i,:) = [x,y,z];
 end
 
 qs = 0.1;
@@ -126,14 +131,14 @@ save('right_hrirs.mat','right_hrirs');
 
 %% play the horizontal sound
 %make input noise
-noise = makePinkNoise(1,44100);
-for i= 1 : numHorizontalSrcs
-    left_channel = conv(noise,left_hrirs(i,:));
-    right_channel = conv(noise, right_hrirs(i,:));
-    binaural = [left_channel',right_channel'];
-    sound(binaural,44100);
-    pause(2.0);
-end
+% noise = makePinkNoise(1,44100);
+% for i= 1 : numHorizontalSrcs
+%     left_channel = conv(noise,left_hrirs(i,:));
+%     right_channel = conv(noise, right_hrirs(i,:));
+%     binaural = [left_channel',right_channel'];
+%     sound(binaural,44100);
+%     pause(2.0);
+% end
 
 %% plot hrirs
 hfig = figure;

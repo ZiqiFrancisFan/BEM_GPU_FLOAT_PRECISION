@@ -22,6 +22,6 @@ example:
      --freq_interp 25 --source point --low_phi 0 --high_phi 355 --phi_interp 5 --low_theta 0 --high_theta 135 --theta_interp 5
      --radius 1
 
-./main.a  --file guo_equal.obj --left 7269 --right 15533 --low_freq 25 --high_freq 12000
-     --freq_interp 25 --source monopole --low_phi 0 --high_phi 355 --phi_interp 5 --low_theta 0 --high_theta 135 --theta_interp 5
+./main.a  --file guo_equal.obj --left 7269 --right 15533 --low_freq 100 --high_freq 22000
+     --freq_interp 100 --source monopole --low_phi 0 --high_phi 355 --phi_interp 5 --low_theta 5 --high_theta 135 --theta_interp 5
      --radius 1
