@@ -2,6 +2,10 @@
 
 **/figure
 
+*.png
+
+*.pdf
+
 *.[oa]
 
 **/data
