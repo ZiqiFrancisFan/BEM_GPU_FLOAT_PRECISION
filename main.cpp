@@ -199,7 +199,7 @@ int main(int argc, char *argv[]) {
         int numHorDirs = floor((high_phi-low_phi)/phi_interp)+1;
         int numVertDirs = floor((high_theta-low_theta)/theta_interp)+1;
         
-        cart_coord_float* dirs = (cart_coord_float*)malloc((numHorDirs+numVertDirs)*sizeof(cart_coord_float)); // memory for directions
+        cart_coord_float* dirs = (cart_coord_float*)malloc((numHorDirs+2*numVertDirs)*sizeof(cart_coord_float)); // memory for directions
         
         // set up horizontal directions
         for(int i=0;i<numHorDirs;i++) {
@@ -238,32 +238,49 @@ int main(int argc, char *argv[]) {
             dirs[numHorDirs+i] = dir;
         }
         
+        // set up vertical directions
+        for(int i=0;i<numVertDirs;i++) {
+            float theta = low_theta+i*theta_interp;
+            theta = PI/180*theta;
+            float r = 1;
+            float x = -r*sin(theta);
+            float y = 0;
+            float z = r*cos(theta);
+            cart_coord_float tempPt = {x,y,z};
+            cart_coord_float dir = cartCoordSub(origin,tempPt);
+            float dirNrm = sqrt(pow(dir.coords[0],2)+pow(dir.coords[1],2)+pow(dir.coords[2],2));
+            for(int j=0;j<3;j++) {
+                dir.coords[j]/=dirNrm;
+            }
+            dirs[numHorDirs+numVertDirs+i] = dir;
+        }
+        
         printf("Directions set up.\n");
         
         //for(int i=0;i<numHorDirs+numVertDirs;i++) {
         //    printf("%dth direction: (%f,%f,%f)\n",i,dirs[i].coords[0],dirs[i].coords[1],dirs[i].coords[2]);
         //}
         int numFreqs = floor((high_freq-low_freq)/freq_interp)+1;
-        cuFloatComplex *left_hrtfs = (cuFloatComplex*)malloc((numHorDirs+numVertDirs)*numFreqs*sizeof(cuFloatComplex));
-        cuFloatComplex *right_hrtfs = (cuFloatComplex*)malloc((numHorDirs+numVertDirs)*numFreqs*sizeof(cuFloatComplex));
-        cuFloatComplex* B = (cuFloatComplex*)malloc((numPt+NUMCHIEF)*(numHorDirs+numVertDirs)*sizeof(cuFloatComplex));
+        cuFloatComplex *left_hrtfs = (cuFloatComplex*)malloc((numHorDirs+2*numVertDirs)*numFreqs*sizeof(cuFloatComplex));
+        cuFloatComplex *right_hrtfs = (cuFloatComplex*)malloc((numHorDirs+2*numVertDirs)*numFreqs*sizeof(cuFloatComplex));
+        cuFloatComplex* B = (cuFloatComplex*)malloc((numPt+NUMCHIEF)*(numHorDirs+2*numVertDirs)*sizeof(cuFloatComplex));
         const float speed = 343.21;
         float wavNum;
         int freqIdx = 0;
         for(float freq=low_freq;freq<=high_freq;freq+=freq_interp) {
             printf("Current frequency: %f\n",freq);
             wavNum = 2*PI*freq/speed; //omega/c
-            HOST_CALL(bemSolver_dir(wavNum,elem,numElem,pt,numPt,chief,NUMCHIEF,dirs,numHorDirs+numVertDirs,B,numPt+NUMCHIEF));
+            HOST_CALL(bemSolver_dir(wavNum,elem,numElem,pt,numPt,chief,NUMCHIEF,dirs,numHorDirs+2*numVertDirs,B,numPt+NUMCHIEF));
             //HOST_CALL(bemSolver_dir(k,elem,numElem,pt,numPt,chief,NUMCHIEF,&dir,1,B,numPt+NUMCHIEF));
-            for(int i=0;i<numHorDirs+numVertDirs;i++) {
-                left_hrtfs[IDXC0(i,freqIdx,numHorDirs+numVertDirs)] = B[IDXC0(left_index,i,numPt+NUMCHIEF)];
-                right_hrtfs[IDXC0(i,freqIdx,numHorDirs+numVertDirs)] = B[IDXC0(right_index,i,numPt+NUMCHIEF)];
+            for(int i=0;i<numHorDirs+2*numVertDirs;i++) {
+                left_hrtfs[IDXC0(i,freqIdx,numHorDirs+2*numVertDirs)] = B[IDXC0(left_index,i,numPt+NUMCHIEF)];
+                right_hrtfs[IDXC0(i,freqIdx,numHorDirs+2*numVertDirs)] = B[IDXC0(right_index,i,numPt+NUMCHIEF)];
             }
             freqIdx++;
         }
         
         char left_file_name[50] = "left_hrtfs_dir", right_file_name[50] = "right_hrtfs_dir";
-        HOST_CALL(write_hrtfs_to_file(left_hrtfs,right_hrtfs,numHorDirs+numVertDirs,numFreqs,left_file_name,right_file_name));
+        HOST_CALL(write_hrtfs_to_file(left_hrtfs,right_hrtfs,numHorDirs+2*numVertDirs,numFreqs,left_file_name,right_file_name));
         
         free(dirs);
         free(B);
@@ -277,8 +294,12 @@ int main(int argc, char *argv[]) {
         int numHorDirs = floor((high_phi-low_phi)/phi_interp)+1;
         int numVertDirs = floor((high_theta-low_theta)/theta_interp)+1;
         
-        cart_coord_float* srcLocs = (cart_coord_float*)malloc((numHorDirs+numVertDirs)
-                *sizeof(cart_coord_float)); // memory for directions
+        /* memory allocation for all directions */
+        cart_coord_float* srcLocs = (cart_coord_float*)malloc((numHorDirs+2*numVertDirs)*sizeof(cart_coord_float));
+        
+        /* set up all sources */
+        
+        /* set up horizontal sources */
         for(int i=0;i<numHorDirs;i++) {
             float phi = low_phi+i*phi_interp;
             phi = PI/180*phi;
@@ -293,7 +314,7 @@ int main(int argc, char *argv[]) {
             srcLocs[i] = srcLoc;
         }
         
-        // set up vertical directions
+        /* set up vertical directions in the front */
         for(int i=0;i<numVertDirs;i++) {
             float theta = low_theta+i*theta_interp;
             theta = PI/180*theta;
@@ -305,31 +326,55 @@ int main(int argc, char *argv[]) {
             srcLocs[numHorDirs+i] = srcLoc;
         }
         
+        /* set up vertical directions in the back */
+        for(int i=0;i<numVertDirs;i++) {
+            float theta = low_theta+i*theta_interp;
+            theta = PI/180*theta;
+            float r = radius;
+            float x = -r*sin(theta);
+            float y = 0;
+            float z = r*cos(theta);
+            cart_coord_float srcLoc = {x,y,z};
+            srcLocs[numHorDirs+numVertDirs+i] = srcLoc;
+        }
+        
         printf("Locations of sources set up.\n");
         
-        // find the number of frequencies
+        /* find the number of frequencies */
         int numFreqs = floor((high_freq-low_freq)/freq_interp)+1;
-        cuFloatComplex *left_hrtfs = (cuFloatComplex*)malloc((numHorDirs+numVertDirs)*numFreqs*sizeof(cuFloatComplex));
-        cuFloatComplex *right_hrtfs = (cuFloatComplex*)malloc((numHorDirs+numVertDirs)*numFreqs*sizeof(cuFloatComplex));
-        cuFloatComplex* B = (cuFloatComplex*)malloc((numPt+NUMCHIEF)*(numHorDirs+numVertDirs)*sizeof(cuFloatComplex));
+        
+        /* allocate memory for left and right hrtfs */
+        cuFloatComplex *left_hrtfs = (cuFloatComplex*)malloc((numHorDirs+2*numVertDirs)*numFreqs*sizeof(cuFloatComplex));
+        cuFloatComplex *right_hrtfs = (cuFloatComplex*)malloc((numHorDirs+2*numVertDirs)*numFreqs*sizeof(cuFloatComplex));
+        
+        /* allcoate memory for B matrix */
+        cuFloatComplex* B = (cuFloatComplex*)malloc((numPt+NUMCHIEF)*(numHorDirs+2*numVertDirs)*sizeof(cuFloatComplex));
         const float speed = 343.21;
         float wavNum;
         int freqIdx = 0;
         for(float freq=low_freq;freq<=high_freq;freq+=freq_interp) {
             printf("Current frequency: %f\n",freq);
-            wavNum = 2*PI*freq/speed; //omega/c
-            HOST_CALL(bemSolver_pt(wavNum,elem,numElem,pt,numPt,chief,NUMCHIEF,srcLocs,numHorDirs+numVertDirs,B,numPt+NUMCHIEF));
+            
+            /* compute the current wave number */
+            wavNum = 2*PI*freq/speed;
+            
+            /* run the solver */
+            HOST_CALL(bemSolver_pt(wavNum,elem,numElem,pt,numPt,chief,NUMCHIEF,srcLocs,numHorDirs+2*numVertDirs,B,numPt+NUMCHIEF));
             printf("solution of the first source: (%f,%f)\n",
                     cuCrealf(B[IDXC0(left_index,0,numPt+NUMCHIEF)]),cuCimagf(B[IDXC0(left_index,0,numPt+NUMCHIEF)]));
-            //HOST_CALL(bemSolver_dir(k,elem,numElem,pt,numPt,chief,NUMCHIEF,&dir,1,B,numPt+NUMCHIEF));
-            for(int i=0;i<numHorDirs+numVertDirs;i++) {
-                left_hrtfs[IDXC0(i,freqIdx,numHorDirs+numVertDirs)] = B[IDXC0(left_index,i,numPt+NUMCHIEF)];
-                right_hrtfs[IDXC0(i,freqIdx,numHorDirs+numVertDirs)] = B[IDXC0(right_index,i,numPt+NUMCHIEF)];
+            
+            for(int i=0;i<numHorDirs+2*numVertDirs;i++) {
+                left_hrtfs[IDXC0(i,freqIdx,numHorDirs+2*numVertDirs)] = B[IDXC0(left_index,i,numPt+NUMCHIEF)];
+                right_hrtfs[IDXC0(i,freqIdx,numHorDirs+2*numVertDirs)] = B[IDXC0(right_index,i,numPt+NUMCHIEF)];
             }
+            
+            /* increase frequency index */
             freqIdx++;
         }
+        
+        /* write hrtfs to file */
         char left_file_name[50] = "data/left_hrtfs_pt", right_file_name[50] = "data/right_hrtfs_pt";
-        HOST_CALL(write_hrtfs_to_file(left_hrtfs,right_hrtfs,numHorDirs+numVertDirs,numFreqs,left_file_name,right_file_name));
+        HOST_CALL(write_hrtfs_to_file(left_hrtfs,right_hrtfs,numHorDirs+2*numVertDirs,numFreqs,left_file_name,right_file_name));
         
         free(srcLocs);
         free(B);
@@ -343,8 +388,7 @@ int main(int argc, char *argv[]) {
         int numHorDirs = floor((high_phi-low_phi)/phi_interp)+1;
         int numVertDirs = floor((high_theta-low_theta)/theta_interp)+1;
         
-        cart_coord_float* srcLocs = (cart_coord_float*)malloc((numHorDirs+numVertDirs)
-                *sizeof(cart_coord_float)); // memory for directions
+        cart_coord_float* srcLocs = (cart_coord_float*)malloc((numHorDirs+2*numVertDirs)*sizeof(cart_coord_float));
         for(int i=0;i<numHorDirs;i++) {
             float phi = low_phi+i*phi_interp;
             phi = PI/180*phi;
@@ -359,7 +403,7 @@ int main(int argc, char *argv[]) {
             srcLocs[i] = srcLoc;
         }
         
-        // set up vertical directions
+        /* set up front vertical sources */
         for(int i=0;i<numVertDirs;i++) {
             float theta = low_theta+i*theta_interp;
             theta = PI/180*theta;
@@ -371,28 +415,40 @@ int main(int argc, char *argv[]) {
             srcLocs[numHorDirs+i] = srcLoc;
         }
         
+        /* set up back vertical sources */
+        for(int i=0;i<numVertDirs;i++) {
+            float theta = low_theta+i*theta_interp;
+            theta = PI/180*theta;
+            float r = radius;
+            float x = -r*sin(theta);
+            float y = 0;
+            float z = r*cos(theta);
+            cart_coord_float srcLoc = {x,y,z};
+            srcLocs[numHorDirs+numVertDirs+i] = srcLoc;
+        }
+        
         printf("Locations of sources set up.\n");
         
         // find the number of frequencies
         int numFreqs = floor((high_freq-low_freq)/freq_interp)+1;
-        cuFloatComplex *left_hrtfs = (cuFloatComplex*)malloc((numHorDirs+numVertDirs)*numFreqs*sizeof(cuFloatComplex));
-        cuFloatComplex *right_hrtfs = (cuFloatComplex*)malloc((numHorDirs+numVertDirs)*numFreqs*sizeof(cuFloatComplex));
-        cuFloatComplex* B = (cuFloatComplex*)malloc((numPt+NUMCHIEF)*(numHorDirs+numVertDirs)*sizeof(cuFloatComplex));
+        cuFloatComplex *left_hrtfs = (cuFloatComplex*)malloc((numHorDirs+2*numVertDirs)*numFreqs*sizeof(cuFloatComplex));
+        cuFloatComplex *right_hrtfs = (cuFloatComplex*)malloc((numHorDirs+2*numVertDirs)*numFreqs*sizeof(cuFloatComplex));
+        cuFloatComplex* B = (cuFloatComplex*)malloc((numPt+NUMCHIEF)*(numHorDirs+2*numVertDirs)*sizeof(cuFloatComplex));
         float wavNum;
         int freqIdx = 0;
         for(float freq=low_freq;freq<=high_freq;freq+=freq_interp) {
             printf("Current frequency: %f\n",freq);
             wavNum = 2*PI*freq/SPEED_SOUND; //omega/c
-            HOST_CALL(bemSolver_mp(wavNum,elem,numElem,pt,numPt,chief,NUMCHIEF,srcLocs,numHorDirs+numVertDirs,B,numPt+NUMCHIEF));
+            HOST_CALL(bemSolver_mp(wavNum,elem,numElem,pt,numPt,chief,NUMCHIEF,srcLocs,numHorDirs+2*numVertDirs,B,numPt+NUMCHIEF));
             //HOST_CALL(bemSolver_dir(k,elem,numElem,pt,numPt,chief,NUMCHIEF,&dir,1,B,numPt+NUMCHIEF));
-            for(int i=0;i<numHorDirs+numVertDirs;i++) {
-                left_hrtfs[IDXC0(i,freqIdx,numHorDirs+numVertDirs)] = B[IDXC0(left_index,i,numPt+NUMCHIEF)];
-                right_hrtfs[IDXC0(i,freqIdx,numHorDirs+numVertDirs)] = B[IDXC0(right_index,i,numPt+NUMCHIEF)];
+            for(int i=0;i<numHorDirs+2*numVertDirs;i++) {
+                left_hrtfs[IDXC0(i,freqIdx,numHorDirs+2*numVertDirs)] = B[IDXC0(left_index,i,numPt+NUMCHIEF)];
+                right_hrtfs[IDXC0(i,freqIdx,numHorDirs+2*numVertDirs)] = B[IDXC0(right_index,i,numPt+NUMCHIEF)];
             }
             freqIdx++;
         }
         char left_file_name[50] = "data/left_hrtfs_mp", right_file_name[50] = "data/right_hrtfs_mp";
-        HOST_CALL(write_hrtfs_to_file(left_hrtfs,right_hrtfs,numHorDirs+numVertDirs,numFreqs,left_file_name,right_file_name));
+        HOST_CALL(write_hrtfs_to_file(left_hrtfs,right_hrtfs,numHorDirs+2*numVertDirs,numFreqs,left_file_name,right_file_name));
         
         free(srcLocs);
         free(B);
