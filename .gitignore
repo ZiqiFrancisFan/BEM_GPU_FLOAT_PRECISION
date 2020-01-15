@@ -14,7 +14,11 @@ vox*
 
 *.mat
 
-*.obj
+data/test/mesh/*.obj
+
+data/val/mesh/*.obj
+
+data/train/mesh/*.obj
 
 data/loudness*
 

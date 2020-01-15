@@ -2,14 +2,12 @@
 clear; close all; clc;
 
 %% specify the path
-inputbase = '../data/train/input/raw/';
-outputbase = '../data/train/output/raw/';
+inputbase = '../data/test/input/raw/';
+outputbase = '../data/test/output/raw/';
 
-inputbase = '../data/';
-outputbase = '../data/';
-
-gridnamebase = 'vox';
-fieldnamebase = 'field';
+idx = 0;
+gridnamebase = ['vox',num2str(idx)];
+fieldnamebase = ['field',num2str(idx)];
 
 gridpath = [inputbase,gridnamebase];
 numOct = 4;

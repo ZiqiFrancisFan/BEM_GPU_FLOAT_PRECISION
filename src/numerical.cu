@@ -3180,43 +3180,55 @@ int WrtOctLoudGeomGenBd(const char* file_path, const int numOctave, const char* 
         const float* mag, const vec3f* src_loc, const int numSrc, const aarect3d rect, 
         const double len, const char* vox_grid_path, const char* field_grid_path)
 {
-    /*write the loudness fields and their corresponding occupancy grid of object
-     file_path: path of objects
-     band: freqeuncy bands in radians
-     src_type: the type of sources, "point" or "monopole"
-     mag: magnitudes of sources
-     vox_grid_path: path of the occupancy grid file
-     field_grid_path: path of files of the fields*/
+    /* write the loudness fields and their corresponding occupancy grid of object
+     * file_path: input path of the object file
+     * numOctave: number of octave bands
+     * src_type: the type of the sound source
+     * mag: the magnitudes of sources
+     * src_loc: locations of sources
+     * numSrc: number of sources
+     * rect: the bounding box
+     * len: length of each unit cube
+     * vox_grid_path: the path of the voxel grid file
+     * field_grid_path: the path of the field grid files */
+    
+    /* find the number of nodes and elements and read in mesh */
     int numNod, numElem;
     findNum(file_path,&numNod,&numElem);
     vec3d *nod_d = (vec3d*)malloc(numNod*sizeof(vec3d));
     tri_elem *elem = (tri_elem*)malloc(numElem*sizeof(tri_elem));
     readOBJ(file_path,nod_d,elem);
     
+    /* convert double nodes to float */
     vec3f *nod_f = (vec3f*)malloc(numNod*sizeof(vec3f));
     vecd2f(nod_d,numNod,nod_f);
     
+    /* decide the number of voxes on each dimension of the gird */
     int grid_size[3];
     for(int i=0;i<3;i++) {
         grid_size[i] = floor(rect.len[i]/len);
     }
     
+    /* decide the extrapolation points */
     vec3f *pt_extrap = (vec3f*)malloc(grid_size[0]*grid_size[1]*grid_size[2]*sizeof(vec3f));
     vec3f cnr;
     for(int i=0;i<3;i++) {
         cnr.coords[i] = rect.cnr.coords[i];
     }
-    // get the center of each voxel as the evaluation point
+    
     for(int z=0;z<grid_size[2];z++) {
         for(int y=0;y<grid_size[1];y++) {
             for(int x=0;x<grid_size[0];x++) {
-                int idx = z*grid_size[0]*grid_size[1]+y*grid_size[0]+x;
+                int idx = z*grid_size[0]*grid_size[1]+y*grid_size[0]+x; // the index of the current voxel
+                /* get the center of each vox as the evaluation point */
                 pt_extrap[idx].coords[0] = cnr.coords[0]+x*len+len/2;
                 pt_extrap[idx].coords[1] = cnr.coords[1]+y*len+len/2;
-                pt_extrap[idx].coords[2] = cnr.coords[2]+z*len+len/2;
+                pt_extrap[idx].coords[2] = cnr.coords[2]+z*len+len/2; 
             }
         }
     }
+    
+    /* generate and write the voxel grid on GPU and generate chief points */
     vec3f *chief = (vec3f*)malloc(NUMCHIEF*sizeof(vec3f));
     HOST_CALL(RectSpaceToOccGridGenChiefOnGPU(rect,len,nod_d,elem,numElem,vox_grid_path,chief)); //voxelize the rectangular space on GPU
     
@@ -3226,6 +3238,7 @@ int WrtOctLoudGeomGenBd(const char* file_path, const int numOctave, const char* 
         return EXIT_FAILURE;
     }
     
+    /* calculate loudness bands */
     float band[2];
     for(int i=0;i<numOctave;i++) {
         band[0] = 2*PI*125.0*powf(2,i);
@@ -3269,7 +3282,9 @@ int WriteZSliceVoxLoudness(const char* file_path, const float band[2], const cha
         const double len, const aarect2d rect_2d, const char* vox_grid_path, 
         const char* field_grid_path)
 {
-    // create a rectangle volume
+    /* writes a z slice of the mesh grid and the loudness fields */
+    
+    /* create a rectangular volume */
     aarect3d rect_3d;
     rect_3d.cnr.coords[0] = rect_2d.cnr.coords[0];
     rect_3d.cnr.coords[1] = rect_2d.cnr.coords[1];
@@ -3289,7 +3304,7 @@ int WriteZSliceVoxOctaveLoudness(const char* file_path, const int numOctave, con
         const double len, const aarect2d rect_2d, const char* vox_grid_path, 
         const char* field_grid_path)
 {
-    /*write the voxel grid and the ocatave loudness fields of a z height to file*/
+    /* write the voxel grid and the ocatave loudness fields of a z height to file */
     
     // create a rectangle volume
     aarect3d rect_3d;

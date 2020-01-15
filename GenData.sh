@@ -32,9 +32,9 @@ radius=0.5
 height=1
 freq_max=2000
 
-numPolyEachType_train=1
-numPolyEachType_val=1
-numPolyEachType_test=1
+numPolyEachType_train=2
+numPolyEachType_val=2
+numPolyEachType_test=2
 
 lowNumSide=4
 upNumSide=4

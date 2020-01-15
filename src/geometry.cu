@@ -1429,30 +1429,28 @@ int DiffOutBdIn(int* vox, const int dimsize[3])
 int RectSpaceToOccGridGenChiefOnGPU(const aarect3d sp, const double len, const vec3d* pt, 
         const tri_elem* elem, const int numElem, const char* filePath, vec3f* chief)
 {
-    /*voxelizes a rectangular space into an occupancy grid and write it to a file
+    /* voxelizes a rectangular space into an occupancy grid and write it to a file
      and generate chief points
-     sp: a rectangular space
-     len: side length of the cube
-     pt: an array of points
-     elem: an array of triangular elements
-     numElem: the number of triangular elements
-     filePath: the path to the file
-     return: success or failure flag of the program
-     */
+     * sp: a rectangular space
+     * len: side length of the cube
+     * pt: an array of points
+     * elem: an array of triangular elements
+     * numElem: the number of triangular elements
+     * filePath: the path to the file */
     
     int dimsize[3], totNumCb; //x, y, z in order
     for(int i=0;i<3;i++) {
         dimsize[i] = floor(sp.len[i]/len);
     }
-    totNumCb = dimsize[0]*dimsize[1]*dimsize[2];
+    totNumCb = dimsize[0]*dimsize[1]*dimsize[2]; // the total number of cubes
     //printf("The size of each dimension determined.\n");
     
-    int *flag = (int*)malloc(totNumCb*sizeof(int)); //allocate host memory for flags
-    memset(flag,0,totNumCb*sizeof(int));
+    int *flag = (int*)malloc(totNumCb*sizeof(int)); // allocate host memory for flags
+    memset(flag,0,totNumCb*sizeof(int)); // set all flags as zero (external to the boundary)
     //printf("Flags initialized.\n");
     
+    /* allocate an array for all triangles */
     tri3d *tris = (tri3d*)malloc(numElem*sizeof(tri3d)); //allocate memory for triangles
-    /*set up the tris array from the mesh*/
     for(int i=0;i<numElem;i++) {
         for(int j=0;j<3;j++) {
             tris[i].nod[j] = pt[elem[i].nod[j]];
@@ -1460,7 +1458,7 @@ int RectSpaceToOccGridGenChiefOnGPU(const aarect3d sp, const double len, const v
     }
     //printf("Triangles set up.\n");
     
-    
+    /* allocate memory for cubes */
     int idx;
     aacb3d *cbs = (aacb3d*)malloc(totNumCb*sizeof(aacb3d)), cb;
     vec3d offset[3];
@@ -1480,6 +1478,7 @@ int RectSpaceToOccGridGenChiefOnGPU(const aarect3d sp, const double len, const v
     }
     //printf("Cube array set up.\n");
     
+    /* tell intersection between triangles and cubes on GPU */
     int numCbGroup = (totNumCb+NUM_CB_PER_LAUNCH-1)/NUM_CB_PER_LAUNCH, 
             numTriGroup = (numElem+NUM_TRI_PER_LAUNCH-1)/NUM_TRI_PER_LAUNCH,
             currNumTri, currNumCb, flagArrIdx;
@@ -1508,35 +1507,35 @@ int RectSpaceToOccGridGenChiefOnGPU(const aarect3d sp, const double len, const v
                     cbs+i*NUM_CB_PER_LAUNCH,currNumCb,flag+flagArrIdx));
         }
     }
+    /* differentiate outside, boundary and inside */
     HOST_CALL(DiffOutBdIn(flag,dimsize));
     //printf("completed voxelization.\n");
     HOST_CALL(write_voxels(flag,dimsize,filePath));
     
-    //find chief points
+    /* look for chief points */
     int chief_idx = 0;
     for(int z=0;z<dimsize[2];z++) {
+        if(chief_idx==NUMCHIEF) {
+            break;
+        }
         for(int y=0;y<dimsize[1];y++) {
+            if(chief_idx==NUMCHIEF) {
+                break;
+            }
             for(int x=0;x<dimsize[0];x++) {
+                if(chief_idx==NUMCHIEF) {
+                    break;
+                }
                 if(flag[z*dimsize[0]*dimsize[1]+y*dimsize[0]+x]==2) {
-                    // found an inside point
+                    /* found an inside cube. use the center of the cube as the chief point */
                     vec3d temp = vecAdd(vecAdd(vecAdd(sp.cnr,scaVecMul((x+0.5)*len,bases[0])),
                             scaVecMul((y+0.5)*len,bases[1])),scaVecMul((z+0.5)*len,bases[2]));
                     vecd2f(&temp,1,&chief[chief_idx]);
                     chief_idx++;
                 }
-                if(chief_idx==NUMCHIEF) {
-                    break;
-                }
             }
-            if(chief_idx==NUMCHIEF) {
-                break;
-            }
-        }
-        if(chief_idx==NUMCHIEF) {
-            break;
         }
     }
-    
     
     free(flag);
     free(tris);
