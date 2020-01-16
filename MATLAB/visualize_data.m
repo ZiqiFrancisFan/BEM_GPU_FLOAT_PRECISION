@@ -5,7 +5,7 @@ clear; close all; clc;
 inputbase = '../data/test/input/raw/';
 outputbase = '../data/test/output/raw/';
 
-idx = 0;
+idx = 1;
 gridnamebase = ['vox',num2str(idx)];
 fieldnamebase = ['field',num2str(idx)];
 

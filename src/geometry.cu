@@ -1536,6 +1536,10 @@ int RectSpaceToOccGridGenChiefOnGPU(const aarect3d sp, const double len, const v
             }
         }
     }
+    if(chief_idx != NUMCHIEF) {
+        printf("The object has no interior.");
+        return EXIT_FAILURE;
+    }
     
     free(flag);
     free(tris);

@@ -32,12 +32,12 @@ radius=0.5
 height=1
 freq_max=2000
 
-numPolyEachType_train=2
-numPolyEachType_val=2
-numPolyEachType_test=2
+numPolyEachType_train=1000
+numPolyEachType_val=10
+numPolyEachType_test=10
 
-lowNumSide=4
-upNumSide=4
+lowNumSide=3
+upNumSide=7
 
 for group in "train" "validation" "test"
 do
