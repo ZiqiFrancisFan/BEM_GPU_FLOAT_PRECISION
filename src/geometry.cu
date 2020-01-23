@@ -77,10 +77,9 @@ __host__ __device__ int DeterPtPlaneRel(const vec3d& pt, const plane3d& plane)
     }
 }
 
+/*
 __host__ __device__ int DeterPtCubeEdgeVolRel(const vec3d& pt, const aacb3d& cb)
 {
-    /*determine the relationship between a point and the volume bounded by edge faces
-     of a cube*/
     
     //declare two vec3d arrays for nod at the bottom and the top face 
     vec3d btm[4], top[4], left[4], right[4], back[4], front[4];
@@ -309,6 +308,7 @@ __host__ __device__ int DeterPtCubeEdgeVolRel(const vec3d& pt, const aacb3d& cb)
     // if not returned 0, then return 1, the point is inside the volume
     return 1;
 }
+*/
 
 __host__ __device__ int DeterPtCubeVtxVolRel(const vec3d& pt, const aacb3d& cb)
 {

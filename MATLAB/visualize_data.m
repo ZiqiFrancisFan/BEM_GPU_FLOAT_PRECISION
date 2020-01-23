@@ -2,8 +2,8 @@
 clear; close all; clc;
 
 %% specify the path
-inputbase = '../data/test/input/raw/';
-outputbase = '../data/test/output/raw/';
+inputbase = '../data/validation/input/raw/';
+outputbase = '../data/validation/output/raw/';
 
 idx = 1;
 gridnamebase = ['vox',num2str(idx)];

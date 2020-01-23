@@ -37,7 +37,7 @@ numPolyEachType_val=1
 numPolyEachType_test=1
 
 lowNumSide=3
-upNumSide=7
+upNumSide=4
 
 for group in "train" "validation" "test"
 do
