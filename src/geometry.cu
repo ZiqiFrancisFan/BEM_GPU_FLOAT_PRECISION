@@ -2697,3 +2697,40 @@ int DeterTriAaCbRel(const tri3d& tri, const aacb3d& cb)
     return 0;
 }
 #endif
+
+__host__ __device__ int deterSglPntInOutBndry2D(const int x, const int y, const int *grid, const int xDim, const int yDim)
+{
+    /* this function determines if a cube with index (x,y,z) is inside or outside the boundary of objects
+     * x, y, z: index
+     * grid: occupancy grid
+     * xDim, yDim, zDim: dimensions of x, y and z directions
+     * returns the number of intersection with the boundary */
+    int xCurrPos = x;
+    int yCurrPos = y;
+    int idx, s = 0;
+    while(xCurrPos < xDim && yCurrPos < yDim)
+    {
+        x++;
+        y++;
+        idx = y*xDim+x;
+        if(grid[idx] == 1)
+        {
+            s++;
+        }
+    }
+    return s;
+}
+
+__global__ void deterPntsInOutBndry2D(const int *gridIn, const int xDim, const int yDim, int *gridOut)
+{
+    int x = blockIdx.x*blockDim.x+threadIdx.x;
+    int y = blockIdx.y*blockDim.y+threadIdx.y;
+    int idx = y*xDim+x;
+    if(gridIn[idx] == 0 && x < xDim && y < yDim)
+    {
+        /* the cube has not been occupied by the boundary */
+        
+    }
+    
+}
+
