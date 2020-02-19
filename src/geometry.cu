@@ -2710,8 +2710,8 @@ __host__ __device__ int deterSglPntInOutBndry2D(const int x, const int y, const 
     int idx, s = 0;
     while(xCurrPos < xDim && yCurrPos < yDim)
     {
-        x++;
-        y++;
+        xCurrPos++;
+        yCurrPos++;
         idx = y*xDim+x;
         if(grid[idx] == 1)
         {
