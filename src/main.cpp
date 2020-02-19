@@ -60,11 +60,11 @@ int main(int argc, char *argv[])
     int option_index = 0;
     char obj_file[200] = "./mesh/test.obj", src_type[50] = "point", vox_file[200] = "./data/vox", 
             field_file[200] = "./data/loudness";
-    double z_coord, len, radius = 3.0, src_mag = 1.0, x_cnr = -5, y_cnr = -5, 
-            x_len = 10, y_len = 10;
+    double len, radius = 3.0, src_z_coord = 0.0, src_mag = 1.0, x_cnr = -5, y_cnr = -5, z_cnr = -5, 
+            x_len = 10, y_len = 10, z_len = 10;
     float band[2];
-    int src_num = 4, oct_num = 0;
-    aarect2d rect = {x_cnr,y_cnr,x_len,y_len};
+    int src_num = 4;
+    aarect3d rect;
     struct option long_options[] = {
         {"obj_file", required_argument, NULL, 0},
         {"src_type", required_argument, NULL, 1},
@@ -73,15 +73,16 @@ int main(int argc, char *argv[])
         {"low_ng_freq", required_argument, NULL, 4},
         {"up_ng_freq", required_argument, NULL, 5},
         {"src_radi", required_argument, NULL, 6},
-        {"src_num", required_argument, NULL, 7},
-        {"src_mag", required_argument, NULL, 8},
-        {"x_cnr", required_argument, NULL, 9},
-        {"y_cnr", required_argument, NULL, 10},
-        {"x_len", required_argument, NULL, 11}, 
-        {"y_len", required_argument, NULL, 12},
-        {"z_coord", required_argument, NULL, 13},
-        {"side_len", required_argument, NULL, 14},
-        {"oct_num",required_argument,NULL,15},
+        {"src_z_coord", required_argument, NULL, 7},
+        {"src_num", required_argument, NULL, 8},
+        {"src_mag", required_argument, NULL, 9},
+        {"x_cnr", required_argument, NULL, 10},
+        {"y_cnr", required_argument, NULL, 11},
+        {"z_cnr", required_argument, NULL, 12},
+        {"x_len", required_argument, NULL, 13}, 
+        {"y_len", required_argument, NULL, 14},
+        {"z_len", required_argument, NULL, 15},
+        {"side_len", required_argument, NULL, 16},
         {0,0,0,0}
     };
     // parse command line arguments
@@ -119,39 +120,42 @@ int main(int argc, char *argv[])
                 //printf("radius of sources: %lf\n",radius);
                 break;
             case 7:
-                src_num = atof(optarg);
-                //printf("number of sources: %d\n",src_num);
+                src_z_coord = atof(optarg);
                 break;
             case 8:
+                src_num = atoi(optarg);
+                //printf("number of sources: %d\n",src_num);
+                break;
+            case 9:
                 src_mag = atof(optarg);
                 //printf("magnitude of sources: %lf\n",src_mag);
                 break;
-            case 9:
+            case 10:
                 x_cnr = atof(optarg);
                 //printf("x coordinate of the corner: %lf\n",x_cnr);
                 break;
-            case 10:
+            case 11:
                 y_cnr = atof(optarg);
                 //printf("y coordinate of the corner: %lf\n",y_cnr);
                 break;
-            case 11:
-                x_len = atof(optarg);
+            case 12:
+                z_cnr = atof(optarg);
                 //printf("length in x direction: %lf\n",x_len);
                 break;
-            case 12:
-                y_len = atof(optarg);
+            case 13:
+                x_len = atof(optarg);
                 //printf("length in y direction: %lf\n",y_len);
                 break;
-            case 13:
-                z_coord = atof(optarg);
+            case 14:
+                y_len = atof(optarg);
                 //printf("coordinate of z slice: %lf\n",z_coord);
                 break;
-            case 14:
-                len = atof(optarg);
+            case 15:
+                z_len = atof(optarg);
                 //printf("side length: %lf\n",len);
                 break;
-            case 15:
-                oct_num = atoi(optarg);
+            case 16:
+                len = atof(optarg);
                 break;
             default:
                 printf("The current option is not recognized.\n");
@@ -166,7 +170,7 @@ int main(int argc, char *argv[])
         double y = radius*sin(theta);
         src[i].coords[0] = x;
         src[i].coords[1] = y;
-        src[i].coords[2] = z_coord;
+        src[i].coords[2] = src_z_coord;
     }
     float *mag = (float*)malloc(src_num*sizeof(float));
     for(int i=0;i<src_num;i++) {
@@ -174,16 +178,12 @@ int main(int argc, char *argv[])
     }
     rect.cnr.coords[0] = x_cnr;
     rect.cnr.coords[1] = y_cnr;
+    rect.cnr.coords[2] = z_cnr;
     rect.len[0] = x_len;
     rect.len[1] = y_len;
-    if(oct_num==0) {
-        HOST_CALL(WriteZSliceVoxLoudness(obj_file,band,"point",mag,src,src_num,z_coord,
-            len,rect,vox_file,field_file));
-    }
-    else {
-        HOST_CALL(WriteZSliceVoxOctaveLoudness(obj_file,oct_num,"point",mag,src,
-                src_num,z_coord,len,rect,vox_file,field_file));
-    }
+    rect.len[2] = z_len;
+    
+    HOST_CALL(WriteLoudnessGeometry(obj_file,band,"point",mag,src,src_num,rect,len,vox_file,field_file));
     
     CUDA_CALL(cudaDeviceReset());
     free(mag);

@@ -1,11 +1,7 @@
 This repo is for generating acoustic fields fast for inverse estimation of objects.
 
-Example of the command to use the executable:
-./main --obj_file ./mesh/test.obj --src_type point --src_radi 3 --src_num 4 --low_ng_freq 6283.18530718 --up_ng_freq 12566.3706144 
-    --src_mag 1.0 --x_cnr -2.5 --y_cnr -2.5 --x_len 5 --y_len 5 --z_coord 0.5 --side_len 0.01 --vox_file ./data/vox --field_file ./data/loudness
-
-./main --obj_file="./mesh/test.obj" --src_type="point" --src_radi=5 --src_num=8 --oct_num=4
-    --src_mag=1.0 --x_cnr=-2.56 --y_cnr=-2.56 --x_len=5.12 --y_len=5.12 --z_coord 0.5 --side_len=0.01 --vox_file ./data/vox --field_file ./data/loudness
+./main --obj_file="./mesh/sphere5120.obj" --src_type="point" --vox_file="./data/vox" --field_file="./data/field" --low_ng_freq=1000 --up_ng_freq=2000 --src_radi=4 --src_z_coord=0 --src_num=1 --src_mag=1.0
+	--x_cnr=-0.5 --y_cnr=-0.5 --z_cnr=-0.5 --x_len=1.0 --y_len=1.0 --z_len=1.0 --side_len=0.01
 
 obj_file: path for the obj object
 
