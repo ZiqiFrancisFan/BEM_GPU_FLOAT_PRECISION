@@ -8,4 +8,6 @@
 
 *.[oa]
 
-**/data
+*.obj
+
+./data
