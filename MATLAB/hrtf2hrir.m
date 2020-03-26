@@ -12,49 +12,52 @@ low_theta = 5;
 up_theta = 135;
 theta_interp = 5;
 
-numFreqs = floor((up_freq-low_freq)/freq_interp)+1;
-numHorizontalSrcs = floor((up_phi-low_phi)/phi_interp)+1;
-numVerticalSrcs = 2*(floor((up_theta-low_theta)/theta_interp)+1);
-c = 343.21; %speed of sound
+numFreqs = floor((up_freq-low_freq)/freq_interp)+1; % calculate the number of frequencies
+numHorizontalSrcs = floor((up_phi-low_phi)/phi_interp)+1; % calculate the number of sources on the horizontal plane
+numVerticalSrcs = 2*(floor((up_theta-low_theta)/theta_interp)+1); % calculate the number of sources on the vertical plane
+c = 343.21; % speed of sound
 
 coeffs = zeros(1,numFreqs);
 
 %% setting up locations
-radius = 1;
+radius = 1; % radius of the circle is equal to 1m
 locs = zeros(numHorizontalSrcs+numVerticalSrcs,3);
 for i = 1 : numHorizontalSrcs
     theta = pi/2; % theta = pi/2 denotes the horizontal plane 
-    phi = phi_interp*(i-1)*(pi/180);
-    x = radius*sin(theta)*cos(phi);
-    y = radius*sin(theta)*sin(phi);
-    z = 0;
-    locs(i,:) = [x,y,z];
+    phi = phi_interp*(i-1)*(pi/180); % calculate the variable phi
+    x = radius*sin(theta)*cos(phi); % calculate the variable x
+    y = radius*sin(theta)*sin(phi); % calculate the variable y
+    z = 0; % horizontal plane, z = 0
+    locs(i,:) = [x,y,z]; % set up the ith location
 end
 
 for i = 1 : numVerticalSrcs
     if i <= numVerticalSrcs/2
-        phi = 0;
-        theta = low_theta+theta_interp*(i-1)*(pi/180);
+        phi = 0; % sources of the first half are in the front
+        theta = low_theta+theta_interp*(i-1)*(pi/180); % calculate the variable theta for the ith vertical location
     else
-        phi = pi;
-        theta = low_theta+theta_interp*(i-numVerticalSrcs/2-1)*(pi/180);
+        phi = pi; % sources of the second half are in the back
+        theta = low_theta+theta_interp*(i-numVerticalSrcs/2-1)*(pi/180); % calculate the variable theta for the ith vertical location
     end
-    x = radius*sin(theta)*cos(phi);
-    y = radius*sin(theta)*sin(phi);
-    z = radius*cos(theta);
-    locs(numHorizontalSrcs+i,:) = [x,y,z];
+    x = radius*sin(theta)*cos(phi); % calculate the variable x
+    y = radius*sin(theta)*sin(phi); % calculate the variable y
+    z = radius*cos(theta); % calculate the variable z
+    locs(numHorizontalSrcs+i,:) = [x,y,z]; % vertical sources come after horizontal ones
 end
 
-qs = 0.1;
+qs = 0.1; % the strength of the sources
 
 %% read files
-folder = '/media/ziqi/HardDisk/Lab/BEM_GPU_FLOAT_PRECISION/MATLAB/';
-filename = 'left_hrtfs_mp_fabian';
-format = '(%f,%f) ';
-path = [folder,filename];
-fileID = fopen(path,'r');
-temp = fscanf(fileID,format);
-left_hrtfs = zeros(numHorizontalSrcs+numVerticalSrcs,numFreqs);
+
+% hrtfs of the left ear
+folder = '/media/ziqi/HardDisk/Lab/BEM_GPU_FLOAT_PRECISION/MATLAB/'; % the path for the folder
+filename = 'left_hrtfs_mp_fabian'; % the name of the file
+format = '(%f,%f) '; % the format of each input entry
+path = [folder,filename]; % specify the path of the file
+fileID = fopen(path,'r'); % open a file
+temp = fscanf(fileID,format); % scan the file and save the results in the variable "temp"
+left_hrtfs = zeros(numHorizontalSrcs+numVerticalSrcs,numFreqs); % a variable for the left hrtfs
+
 for i = 1 : numHorizontalSrcs+numVerticalSrcs
     for j = 1 : numFreqs
         idx = (i-1)*numFreqs+j;
@@ -74,6 +77,7 @@ fclose(fileID);
 %     end
 % end
 
+% hrtfs of the right ear
 filename = 'right_hrtfs_mp_fabian';
 format = '(%f,%f) ';
 path = [folder,filename];
@@ -101,23 +105,24 @@ fclose(fileID);
 % end
 
 %% convert hrtfs to hrirs
-% adding an element for the 0Hz
+
 temp = left_hrtfs;
-left_hrtfs = ones(size(left_hrtfs,1),size(left_hrtfs,2)+1);
+left_hrtfs = ones(size(left_hrtfs,1),size(left_hrtfs,2)+1); % adding an element for the 0Hz, not simulated
 left_hrtfs(:,2:end) = temp;
 
 temp = right_hrtfs;
-right_hrtfs = ones(size(right_hrtfs,1),size(right_hrtfs,2)+1);
+right_hrtfs = ones(size(right_hrtfs,1),size(right_hrtfs,2)+1); % adding an element for the 0Hz, not simulated
 right_hrtfs(:,2:end) = temp;
 
 % adding another half of the frquency content
-temp = conj(flip(left_hrtfs,2));
-left_hrtfs_full_freq = [left_hrtfs,temp(:,1:end-1)];
-temp = conj(flip(right_hrtfs,2));
-right_hrtfs_full_freq  = [right_hrtfs,temp(:,1:end-1)];
+temp = conj(flip(left_hrtfs,2)); % flip and get the conjugate, for the symmetric half
+left_hrtfs_full_freq = [left_hrtfs,temp(:,1:end-1)]; % abandon the one for the 0Hz
 
-left_hrirs = ifft(left_hrtfs_full_freq,[],2);
-right_hrirs = ifft(right_hrtfs_full_freq,[],2);
+temp = conj(flip(right_hrtfs,2)); % flip and get the conjugate, for the symmetric half
+right_hrtfs_full_freq  = [right_hrtfs,temp(:,1:end-1)]; % abandon the one for the 0Hz
+
+left_hrirs = ifft(left_hrtfs_full_freq,[],2); % calculate the hrirs
+right_hrirs = ifft(right_hrtfs_full_freq,[],2); % calculate the hrirs
 
 left_hrirs_max = max(max(abs(left_hrirs)));
 right_hrirs_max = max(max(abs(left_hrirs)));
