@@ -57,7 +57,7 @@ _x < _y ? -_x : _x; })
 #endif
 
 #ifndef STRENGTH
-#define STRENGTH 0.1f
+#define STRENGTH (0.1)
 #endif
 
 #ifndef INTORDER

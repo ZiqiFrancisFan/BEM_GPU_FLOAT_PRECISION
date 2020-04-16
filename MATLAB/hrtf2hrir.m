@@ -14,7 +14,8 @@ theta_interp = 5;
 
 numFreqs = floor((up_freq-low_freq)/freq_interp)+1; % calculate the number of frequencies
 numHorizontalSrcs = floor((up_phi-low_phi)/phi_interp)+1; % calculate the number of sources on the horizontal plane
-numVerticalSrcs = 2*(floor((up_theta-low_theta)/theta_interp)+1); % calculate the number of sources on the vertical plane
+%numVerticalSrcs = 2*(floor((up_theta-low_theta)/theta_interp)+1); % calculate the number of sources on the vertical plane
+numVerticalSrcs = 0;
 c = 343.21; % speed of sound
 
 coeffs = zeros(1,numFreqs);
@@ -60,10 +61,14 @@ left_hrtfs = zeros(numHorizontalSrcs+numVerticalSrcs,numFreqs); % a variable for
 
 for i = 1 : numHorizontalSrcs+numVerticalSrcs
     for j = 1 : numFreqs
+        freq = low_freq+(j-1)*freq_interp;
+        wavNum = 2*pi*freq/c;
+        ref = mpSrc(qs,wavNum,locs(i,:),[0,0,0]);
         idx = (i-1)*numFreqs+j;
         x = temp(2*(idx-1)+1);
         y = temp(2*(idx-1)+2);
         left_hrtfs(i,j) = complex(x,y);
+        left_hrtfs(i,j) = left_hrtfs(i,j)/ref;
     end
 end
 fclose(fileID);
@@ -86,10 +91,14 @@ temp = fscanf(fileID,format);
 right_hrtfs = zeros(numHorizontalSrcs+numVerticalSrcs,numFreqs);
 for i = 1 : numHorizontalSrcs+numVerticalSrcs
     for j = 1 : numFreqs
+        freq = low_freq+(j-1)*freq_interp;
+        wavNum = 2*pi*freq/c;
+        ref = mpSrc(qs,wavNum,locs(i,:),[0,0,0]);
         idx = (i-1)*numFreqs+j;
         x = temp(2*(idx-1)+1);
         y = temp(2*(idx-1)+2);
         right_hrtfs(i,j) = complex(x,y);
+        right_hrtfs(i,j) = right_hrtfs(i,j)/ref;
     end
 end
 
@@ -150,7 +159,7 @@ hfig = figure;
 hax = axes(hfig);
 fs = 44100;
 duration = 1.0/fs*(0:size(left_hrirs,2)-1);
-for i= 1 : numHorizontalSrcs
+for i= 1 : numHorizontalSrcs+numVerticalSrcs
     left_hrir = left_hrirs(i,:);
     right_hrir = right_hrirs(i,:);
     plt_l = plot(hax,duration,left_hrir,'r');
@@ -162,15 +171,23 @@ for i= 1 : numHorizontalSrcs
 end
 
 %% plot figures
-% freqs = freq_interp*(0:(size(left_hrtfs,2)-1));
-% 
-% hFig = figure;
-% hAx = axes(hFig);
-% 
-% plot(hAx,freqs,abs(left_hrtfs(1,:)));
-% saveas(hFig,'../figure/front_monopole_source.png');
-% hFig = figure;
-% hAx = axes(hFig);
-% semilogx(hAx,freqs,20*log(abs(left_hrtfs(1,:))));
-% saveas(hFig,'../figure/front_monopole_source_semilog.png');
-% 
+freqs = freq_interp*(0:(size(left_hrtfs,2)-1));
+
+hFig = figure;
+hAx = axes(hFig);
+for i= 1 : 1
+    plot(hAx,freqs,abs(left_hrtfs(i,:)));
+    pause(1.0);
+    semilogx(hAx,freqs,20*log(abs(left_hrtfs(i,:))));
+    pause(1.0);
+end
+
+saveas(hFig,'./figure/front_monopole_source.png');
+hFig = figure;
+hAx = axes(hFig);
+%hold(hAx,'on');
+semilogx(hAx,freqs,20*log(abs(left_hrtfs(7,:))));
+hold(hAx,'on');
+semilogx(hAx,freqs,20*log(abs(right_hrtfs(7,:))));
+saveas(hFig,'./figure/front_monopole_source_semilog.png');
+
